@@ -1,0 +1,38 @@
+[
+  {
+    "beerId": "beer:1",
+    "filename": "black-horizon-ale.png",
+    "name": "Black Horizon Ale",
+    "brand": "Black Horizon",
+    "packSize": "6-pack",
+    "embedding": [0.2847, 0.1923, 0.8174, 0.5639, 0.9183, 0.3427, 0.7856, 0.1245, 0.6891, 0.4578],
+    "imageDigest": "precomputed_black-horizon-ale.png"
+  },
+  {
+    "beerId": "beer:2", 
+    "filename": "aether-brew.png",
+    "name": "Aether Brew",
+    "brand": "Aether",
+    "packSize": "4-pack",
+    "embedding": [0.6751, 0.3194, 0.9427, 0.1836, 0.7295, 0.5618, 0.8392, 0.2745, 0.4673, 0.9158],
+    "imageDigest": "precomputed_aether-brew.png"
+  },
+  {
+    "beerId": "beer:3",
+    "filename": "hop-haven.png", 
+    "name": "Hop Haven",
+    "brand": "Haven",
+    "packSize": "6-pack",
+    "embedding": [0.8392, 0.5617, 0.2943, 0.7851, 0.1486, 0.9275, 0.3647, 0.6129, 0.8574, 0.4362],
+    "imageDigest": "precomputed_hop-haven.png"
+  },
+  {
+    "beerId": "beer:4",
+    "filename": "neon-peak-brew.png",
+    "name": "Neon Peak Brew", 
+    "brand": "Neon Peak",
+    "packSize": "6-pack",
+    "embedding": [0.1574, 0.8296, 0.4751, 0.6183, 0.9437, 0.2865, 0.7149, 0.3528, 0.8692, 0.5314],
+    "imageDigest": "precomputed_neon-peak-brew.png"
+  }
+]
