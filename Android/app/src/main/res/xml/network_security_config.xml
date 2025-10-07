@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">orqhtoi5jy2tbev.apps.cloud.couchbase.com</domain>
+        <domain includeSubdomains="true">apps.cloud.couchbase.com</domain>
+        <domain includeSubdomains="true">couchbase.com</domain>
+        <domain includeSubdomains="true">couchbaseclouds.com</domain>
+    </domain-config>
+    
+    <!-- Allow all traffic for development (remove in production) -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>
