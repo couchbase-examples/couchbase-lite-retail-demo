@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SyncStatus } from "@/components/SyncStatus";
 import { Package2, ShoppingCart, ClipboardList, LogOut } from "lucide-react";
 
 const Dashboard = () => {
@@ -52,10 +53,13 @@ const Dashboard = () => {
               <p className="text-xs text-muted-foreground">Store Number: #2847</p>
             </div>
           </div>
-          <Button variant="ghost" onClick={handleLogout} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-4">
+            <SyncStatus />
+            <Button variant="ghost" onClick={handleLogout} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 

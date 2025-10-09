@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { InventoryItem as InventoryItemType } from "@/lib/mockData";
+import { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import { Minus, Plus, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,10 +13,11 @@ interface InventoryItemProps {
 
 const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
   const [showAlert, setShowAlert] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleCountChange = (increment: boolean) => {
-    const newCount = increment ? item.count + 1 : Math.max(0, item.count - 1);
-    onCountChange(item.id, newCount);
+    const newCount = increment ? item.stockQty + 1 : Math.max(0, item.stockQty - 1);
+    onCountChange(item._id, newCount);
   };
 
   const handleReorder = () => {
@@ -29,8 +30,12 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
   const getCountColor = (count: number) => {
     if (count <= 10) return "text-destructive font-bold";
-    if (count <= 20) return "text-warning font-semibold";
+    if (count <= 50) return "text-warning font-semibold";
     return "text-success font-semibold";
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -49,36 +54,45 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
         <div className="flex flex-col h-full">
           {/* Item Image */}
           <div className="w-full h-32 bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-            <img 
-              src={item.image} 
-              alt={item.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                target.parentElement!.innerHTML = `<Package className="h-12 w-12 text-muted-foreground" />`;
-              }}
-            />
+            {!imageError ? (
+              <img 
+                src={item.imageURL} 
+                alt={item.name}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <Package className="h-12 w-12 text-muted-foreground" />
+            )}
           </div>
 
           {/* Item Info */}
           <div className="flex-1 space-y-2">
             <h4 className="font-semibold text-lg">{item.name}</h4>
+            <p className="text-sm text-muted-foreground">{item.brand}</p>
             
             <div className="space-y-1 text-sm text-muted-foreground">
-              <p><span className="font-medium">ID:</span> {item.id}</p>
-              <p><span className="font-medium">Barcode:</span> {item.barcode}</p>
+              <p><span className="font-medium">SKU:</span> {item.sku}</p>
               <p><span className="font-medium">Price:</span> ${item.price.toFixed(2)}</p>
+              {item.location && (
+                <p><span className="font-medium">Location:</span> Aisle {item.location.aisle}, Bin {item.location.bin}</p>
+              )}
+              {item.attributes?.organic && (
+                <Badge variant="secondary" className="text-xs">
+                  Organic
+                </Badge>
+              )}
             </div>
 
             {/* Count Display */}
             <div className="py-3">
               <div className="text-center mb-3">
-                <p className="text-sm font-medium mb-1">Inventory Count</p>
-                <div className={`text-4xl font-extrabold ${getCountColor(item.count)}`}>
-                  {item.count}
+                <p className="text-sm font-medium mb-1">Stock Quantity</p>
+                <div className={`text-4xl font-extrabold ${getCountColor(item.stockQty)}`}>
+                  {item.stockQty}
                 </div>
-                {item.count <= 10 && (
+                <p className="text-xs text-muted-foreground mt-1">{item.unit}</p>
+                {item.stockQty <= 10 && (
                   <Badge variant="destructive" className="mt-1 text-xs">
                     Low Stock
                   </Badge>
@@ -91,7 +105,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
                   variant="outline"
                   size="icon"
                   onClick={() => handleCountChange(false)}
-                  disabled={item.count === 0}
+                  disabled={item.stockQty === 0}
                   className="h-8 w-8 rounded-full"
                 >
                   <Minus className="h-3 w-3" />

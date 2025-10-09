@@ -1,0 +1,2002 @@
+[
+  {
+    "_id": "Inventory_AAStore_10000",
+    "docType": "Inventory",
+    "productId": 10000,
+    "sku": "AA--10000",
+    "name": "Organic Milk",
+    "brand": "BudgetBest",
+    "category": "Dairy",
+    "price": 29.86,
+    "unit": "gallon",
+    "stockQty": 71,
+    "location": {
+      "aisle": 24,
+      "bin": 7
+    },
+    "attributes": {
+      "organic": true,
+      "size": "1 gallon",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10000.png",
+    "expirationDate": 1758488734450,
+    "lastUpdated": 1748483079450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10001",
+    "docType": "Inventory",
+    "productId": 10001,
+    "sku": "AA--10001",
+    "name": "Family Coffee",
+    "brand": "BudgetBest",
+    "category": "Beverages",
+    "price": 20.6,
+    "unit": "bag",
+    "stockQty": 101,
+    "location": {
+      "aisle": 23,
+      "bin": 42
+    },
+    "attributes": {
+      "organic": true,
+      "size": "12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10001.png",
+    "expirationDate": 1809896734450,
+    "lastUpdated": 1751578399450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10002",
+    "docType": "Inventory",
+    "productId": 10002,
+    "sku": "AA--10002",
+    "name": "Premium Chicken",
+    "brand": "SilverValley",
+    "category": "Meat",
+    "price": 28.16,
+    "unit": "lb",
+    "stockQty": 79,
+    "location": {
+      "aisle": 7,
+      "bin": 49
+    },
+    "attributes": {
+      "organic": true,
+      "size": "2.5 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10002.png",
+    "expirationDate": 1758661534450,
+    "lastUpdated": 1752933808450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10003",
+    "docType": "Inventory",
+    "productId": 10003,
+    "sku": "AA--10003",
+    "name": "Fresh Chips",
+    "brand": "GoLocal",
+    "category": "Snacks",
+    "price": 11.16,
+    "unit": "bag",
+    "stockQty": 235,
+    "location": {
+      "aisle": 18,
+      "bin": 8
+    },
+    "attributes": {
+      "organic": false,
+      "size": "8 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10003.png",
+    "expirationDate": 1779743134450,
+    "lastUpdated": 1750137201450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10004",
+    "docType": "Inventory",
+    "productId": 10004,
+    "sku": "AA--10004",
+    "name": "Organic Bread",
+    "brand": "GoLocal",
+    "category": "Bakery",
+    "price": 26.71,
+    "unit": "loaf",
+    "stockQty": 437,
+    "location": {
+      "aisle": 8,
+      "bin": 7
+    },
+    "attributes": {
+      "organic": true,
+      "size": "24 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10004.png",
+    "expirationDate": 1797368734450,
+    "lastUpdated": 1753121740450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10005",
+    "docType": "Inventory",
+    "productId": 10005,
+    "sku": "AA--10005",
+    "name": "Fresh Salmon",
+    "brand": "Sunrise",
+    "category": "Seafood",
+    "price": 27.06,
+    "unit": "lb",
+    "stockQty": 325,
+    "location": {
+      "aisle": 6,
+      "bin": 35
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10005.png",
+    "expirationDate": 1759266334450,
+    "lastUpdated": 1756255200450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10006",
+    "docType": "Inventory",
+    "productId": 10006,
+    "sku": "AA--10006",
+    "name": "Family Juice",
+    "brand": "GoLocal",
+    "category": "Beverages",
+    "price": 13.5,
+    "unit": "bottle",
+    "stockQty": 420,
+    "location": {
+      "aisle": 2,
+      "bin": 21
+    },
+    "attributes": {
+      "organic": true,
+      "size": "64 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10006.png",
+    "expirationDate": 1760475934450,
+    "lastUpdated": 1752190552450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10007",
+    "docType": "Inventory",
+    "productId": 10007,
+    "sku": "AA--10007",
+    "name": "Family Soda",
+    "brand": "BudgetBest",
+    "category": "Beverages",
+    "price": 20.36,
+    "unit": "12-pack",
+    "stockQty": 135,
+    "location": {
+      "aisle": 5,
+      "bin": 16
+    },
+    "attributes": {
+      "organic": false,
+      "size": "12 x 12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10007.png",
+    "expirationDate": 1796072734450,
+    "lastUpdated": 1750590725450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10008",
+    "docType": "Inventory",
+    "productId": 10008,
+    "sku": "AA--10008",
+    "name": "Classic Detergent",
+    "brand": "GoLocal",
+    "category": "Household",
+    "price": 20.14,
+    "unit": "bottle",
+    "stockQty": 78,
+    "location": {
+      "aisle": 21,
+      "bin": 11
+    },
+    "attributes": {
+      "organic": false,
+      "size": "64 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10008.png",
+    "expirationDate": 1778447134450,
+    "lastUpdated": 1754763708450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10009",
+    "docType": "Inventory",
+    "productId": 10009,
+    "sku": "AA--10009",
+    "name": "Imported Tea",
+    "brand": "BudgetBest",
+    "category": "Beverages",
+    "price": 38.86,
+    "unit": "box",
+    "stockQty": 369,
+    "location": {
+      "aisle": 4,
+      "bin": 44
+    },
+    "attributes": {
+      "organic": false,
+      "size": "20 bags",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10009.png",
+    "expirationDate": 1760475934450,
+    "lastUpdated": 1754205284450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10010",
+    "docType": "Inventory",
+    "productId": 10010,
+    "sku": "AA--10010",
+    "name": "Classic Cheese",
+    "brand": "FarmFresh",
+    "category": "Dairy",
+    "price": 0.92,
+    "unit": "block",
+    "stockQty": 390,
+    "location": {
+      "aisle": 6,
+      "bin": 33
+    },
+    "attributes": {
+      "organic": true,
+      "size": "8 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10010.png",
+    "expirationDate": 1799183134450,
+    "lastUpdated": 1749621477450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10011",
+    "docType": "Inventory",
+    "productId": 10011,
+    "sku": "AA--10011",
+    "name": "Imported Detergent",
+    "brand": "BluePeak",
+    "category": "Household",
+    "price": 36.79,
+    "unit": "bottle",
+    "stockQty": 9,
+    "location": {
+      "aisle": 4,
+      "bin": 24
+    },
+    "attributes": {
+      "organic": true,
+      "size": "100 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10011.png",
+    "expirationDate": 1760130334450,
+    "lastUpdated": 1748232458450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10012",
+    "docType": "Inventory",
+    "productId": 10012,
+    "sku": "AA--10012",
+    "name": "Organic Soap",
+    "brand": "BudgetBest",
+    "category": "Personal Care",
+    "price": 32.78,
+    "unit": "bar",
+    "stockQty": 65,
+    "location": {
+      "aisle": 22,
+      "bin": 31
+    },
+    "attributes": {
+      "organic": true,
+      "size": "4.5 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10012.png",
+    "expirationDate": 1787432734450,
+    "lastUpdated": 1755959020450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10013",
+    "docType": "Inventory",
+    "productId": 10013,
+    "sku": "AA--10013",
+    "name": "Family Rice",
+    "brand": "FarmFresh",
+    "category": "Pantry",
+    "price": 16.43,
+    "unit": "bag",
+    "stockQty": 460,
+    "location": {
+      "aisle": 17,
+      "bin": 29
+    },
+    "attributes": {
+      "organic": true,
+      "size": "5 lb",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10013.png",
+    "expirationDate": 1760216734450,
+    "lastUpdated": 1747264030450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10014",
+    "docType": "Inventory",
+    "productId": 10014,
+    "sku": "AA--10014",
+    "name": "Chef Shampoo",
+    "brand": "Acme",
+    "category": "Personal Care",
+    "price": 9.81,
+    "unit": "bottle",
+    "stockQty": 36,
+    "location": {
+      "aisle": 23,
+      "bin": 41
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10014.png",
+    "expirationDate": 1793048734450,
+    "lastUpdated": 1748099923450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10015",
+    "docType": "Inventory",
+    "productId": 10015,
+    "sku": "AA--10015",
+    "name": "Imported Coffee",
+    "brand": "GoldenFarm",
+    "category": "Beverages",
+    "price": 11.71,
+    "unit": "bag",
+    "stockQty": 276,
+    "location": {
+      "aisle": 5,
+      "bin": 47
+    },
+    "attributes": {
+      "organic": false,
+      "size": "12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10015.png",
+    "expirationDate": 1763845534450,
+    "lastUpdated": 1753740466450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10016",
+    "docType": "Inventory",
+    "productId": 10016,
+    "sku": "AA--10016",
+    "name": "Family Apples",
+    "brand": "Acme",
+    "category": "Produce",
+    "price": 4.59,
+    "unit": "lb",
+    "stockQty": 216,
+    "location": {
+      "aisle": 14,
+      "bin": 30
+    },
+    "attributes": {
+      "organic": true,
+      "size": "3 lb bag",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10016.png",
+    "expirationDate": 1764968734450,
+    "lastUpdated": 1752603687450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10017",
+    "docType": "Inventory",
+    "productId": 10017,
+    "sku": "AA--10017",
+    "name": "Organic Coffee",
+    "brand": "BluePeak",
+    "category": "Beverages",
+    "price": 8.3,
+    "unit": "bag",
+    "stockQty": 71,
+    "location": {
+      "aisle": 14,
+      "bin": 12
+    },
+    "attributes": {
+      "organic": true,
+      "size": "10 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10017.png",
+    "expirationDate": 1762635934450,
+    "lastUpdated": 1756144060450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10018",
+    "docType": "Inventory",
+    "productId": 10018,
+    "sku": "AA--10018",
+    "name": "Organic Bread",
+    "brand": "Sunrise",
+    "category": "Bakery",
+    "price": 26.35,
+    "unit": "loaf",
+    "stockQty": 496,
+    "location": {
+      "aisle": 3,
+      "bin": 49
+    },
+    "attributes": {
+      "organic": true,
+      "size": "22 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10018.png",
+    "expirationDate": 1787519134450,
+    "lastUpdated": 1750497218450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10019",
+    "docType": "Inventory",
+    "productId": 10019,
+    "sku": "AA--10019",
+    "name": "Artisan Bread",
+    "brand": "GoLocal",
+    "category": "Bakery",
+    "price": 7.24,
+    "unit": "loaf",
+    "stockQty": 135,
+    "location": {
+      "aisle": 15,
+      "bin": 19
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10019.png",
+    "expirationDate": 1815858334450,
+    "lastUpdated": 1750563548450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10020",
+    "docType": "Inventory",
+    "productId": 10020,
+    "sku": "AA--10020",
+    "name": "Premium Toothpaste",
+    "brand": "GoldenFarm",
+    "category": "Personal Care",
+    "price": 29.63,
+    "unit": "tube",
+    "stockQty": 160,
+    "location": {
+      "aisle": 2,
+      "bin": 4
+    },
+    "attributes": {
+      "organic": true,
+      "size": "6 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10020.png",
+    "expirationDate": 1814994334450,
+    "lastUpdated": 1748255181450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10021",
+    "docType": "Inventory",
+    "productId": 10021,
+    "sku": "AA--10021",
+    "name": "Classic Eggs",
+    "brand": "GoldenFarm",
+    "category": "Dairy",
+    "price": 24.12,
+    "unit": "dozen",
+    "stockQty": 61,
+    "location": {
+      "aisle": 19,
+      "bin": 16
+    },
+    "attributes": {
+      "organic": true,
+      "size": "12 count",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10021.png",
+    "expirationDate": 1776287134450,
+    "lastUpdated": 1756394068450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10022",
+    "docType": "Inventory",
+    "productId": 10022,
+    "sku": "AA--10022",
+    "name": "Imported Pasta",
+    "brand": "BluePeak",
+    "category": "Pantry",
+    "price": 37.43,
+    "unit": "box",
+    "stockQty": 366,
+    "location": {
+      "aisle": 11,
+      "bin": 16
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10022.png",
+    "expirationDate": 1761858334450,
+    "lastUpdated": 1752215707450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10023",
+    "docType": "Inventory",
+    "productId": 10023,
+    "sku": "AA--10023",
+    "name": "Organic Milk",
+    "brand": "BluePeak",
+    "category": "Dairy",
+    "price": 18.75,
+    "unit": "half-gallon",
+    "stockQty": 275,
+    "location": {
+      "aisle": 7,
+      "bin": 33
+    },
+    "attributes": {
+      "organic": true,
+      "size": "64 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10023.png",
+    "expirationDate": 1784495134450,
+    "lastUpdated": 1753110769450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10024",
+    "docType": "Inventory",
+    "productId": 10024,
+    "sku": "AA--10024",
+    "name": "Value Chicken",
+    "brand": "BudgetBest",
+    "category": "Meat",
+    "price": 17.97,
+    "unit": "lb",
+    "stockQty": 154,
+    "location": {
+      "aisle": 20,
+      "bin": 42
+    },
+    "attributes": {
+      "organic": false,
+      "size": "4 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10024.png",
+    "expirationDate": 1773522334450,
+    "lastUpdated": 1751348135450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10025",
+    "docType": "Inventory",
+    "productId": 10025,
+    "sku": "AA--10025",
+    "name": "Organic Apples",
+    "brand": "SilverValley",
+    "category": "Produce",
+    "price": 29.89,
+    "unit": "lb",
+    "stockQty": 144,
+    "location": {
+      "aisle": 20,
+      "bin": 14
+    },
+    "attributes": {
+      "organic": true,
+      "size": "3 lb bag",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10025.png",
+    "expirationDate": 1759784734450,
+    "lastUpdated": 1747763398450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10026",
+    "docType": "Inventory",
+    "productId": 10026,
+    "sku": "AA--10026",
+    "name": "Organic Soda",
+    "brand": "GreenLeaf",
+    "category": "Beverages",
+    "price": 17.39,
+    "unit": "6-pack",
+    "stockQty": 1,
+    "location": {
+      "aisle": 11,
+      "bin": 50
+    },
+    "attributes": {
+      "organic": true,
+      "size": "6 x 12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10026.png",
+    "expirationDate": 1795986334450,
+    "lastUpdated": 1754086529450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10027",
+    "docType": "Inventory",
+    "productId": 10027,
+    "sku": "AA--10027",
+    "name": "Imported Milk",
+    "brand": "BudgetBest",
+    "category": "Dairy",
+    "price": 5.18,
+    "unit": "quart",
+    "stockQty": 18,
+    "location": {
+      "aisle": 12,
+      "bin": 38
+    },
+    "attributes": {
+      "organic": false,
+      "size": "32 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10027.png",
+    "expirationDate": 1785877534450,
+    "lastUpdated": 1752082850450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10028",
+    "docType": "Inventory",
+    "productId": 10028,
+    "sku": "AA--10028",
+    "name": "Fresh Bread",
+    "brand": "SilverValley",
+    "category": "Bakery",
+    "price": 36.03,
+    "unit": "loaf",
+    "stockQty": 127,
+    "location": {
+      "aisle": 22,
+      "bin": 7
+    },
+    "attributes": {
+      "organic": false,
+      "size": "20 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10028.png",
+    "expirationDate": 1763672734450,
+    "lastUpdated": 1749637461450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10029",
+    "docType": "Inventory",
+    "productId": 10029,
+    "sku": "AA--10029",
+    "name": "Classic Butter",
+    "brand": "Sunrise",
+    "category": "Dairy",
+    "price": 1.76,
+    "unit": "lb",
+    "stockQty": 410,
+    "location": {
+      "aisle": 22,
+      "bin": 48
+    },
+    "attributes": {
+      "organic": true,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10029.png",
+    "expirationDate": 1796418334450,
+    "lastUpdated": 1747560825450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10030",
+    "docType": "Inventory",
+    "productId": 10030,
+    "sku": "AA--10030",
+    "name": "Local Coffee",
+    "brand": "Acme",
+    "category": "Beverages",
+    "price": 8.61,
+    "unit": "bag",
+    "stockQty": 156,
+    "location": {
+      "aisle": 8,
+      "bin": 15
+    },
+    "attributes": {
+      "organic": true,
+      "size": "12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10030.png",
+    "expirationDate": 1764795934450,
+    "lastUpdated": 1751585317450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10031",
+    "docType": "Inventory",
+    "productId": 10031,
+    "sku": "AA--10031",
+    "name": "Organic Tea",
+    "brand": "Acme",
+    "category": "Beverages",
+    "price": 14.55,
+    "unit": "box",
+    "stockQty": 347,
+    "location": {
+      "aisle": 18,
+      "bin": 22
+    },
+    "attributes": {
+      "organic": true,
+      "size": "18 bags",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10031.png",
+    "expirationDate": 1783026334450,
+    "lastUpdated": 1751364920450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10032",
+    "docType": "Inventory",
+    "productId": 10032,
+    "sku": "AA--10032",
+    "name": "Premium Apples",
+    "brand": "GoldenFarm",
+    "category": "Produce",
+    "price": 24.18,
+    "unit": "lb",
+    "stockQty": 402,
+    "location": {
+      "aisle": 11,
+      "bin": 28
+    },
+    "attributes": {
+      "organic": true,
+      "size": "5 lb bag",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10032.png",
+    "expirationDate": 1818018334450,
+    "lastUpdated": 1750100126450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10033",
+    "docType": "Inventory",
+    "productId": 10033,
+    "sku": "AA--10033",
+    "name": "Value Bread",
+    "brand": "Sunrise",
+    "category": "Bakery",
+    "price": 28.57,
+    "unit": "loaf",
+    "stockQty": 473,
+    "location": {
+      "aisle": 18,
+      "bin": 44
+    },
+    "attributes": {
+      "organic": false,
+      "size": "24 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10033.png",
+    "expirationDate": 1804971934450,
+    "lastUpdated": 1752177764450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10034",
+    "docType": "Inventory",
+    "productId": 10034,
+    "sku": "AA--10034",
+    "name": "Organic Rice",
+    "brand": "BudgetBest",
+    "category": "Pantry",
+    "price": 20.67,
+    "unit": "bag",
+    "stockQty": 206,
+    "location": {
+      "aisle": 23,
+      "bin": 19
+    },
+    "attributes": {
+      "organic": true,
+      "size": "2 lb",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10034.png",
+    "expirationDate": 1758920734450,
+    "lastUpdated": 1749830828450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10035",
+    "docType": "Inventory",
+    "productId": 10035,
+    "sku": "AA--10035",
+    "name": "Chef Toothpaste",
+    "brand": "GoLocal",
+    "category": "Personal Care",
+    "price": 12.59,
+    "unit": "tube",
+    "stockQty": 155,
+    "location": {
+      "aisle": 10,
+      "bin": 14
+    },
+    "attributes": {
+      "organic": false,
+      "size": "4.6 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10035.png",
+    "expirationDate": 1801256734450,
+    "lastUpdated": 1750496448450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10036",
+    "docType": "Inventory",
+    "productId": 10036,
+    "sku": "AA--10036",
+    "name": "Imported Soap",
+    "brand": "GoldenFarm",
+    "category": "Personal Care",
+    "price": 31.9,
+    "unit": "bar",
+    "stockQty": 43,
+    "location": {
+      "aisle": 10,
+      "bin": 33
+    },
+    "attributes": {
+      "organic": true,
+      "size": "5 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10036.png",
+    "expirationDate": 1761167134450,
+    "lastUpdated": 1750679978450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10037",
+    "docType": "Inventory",
+    "productId": 10037,
+    "sku": "AA--10037",
+    "name": "Family Bananas",
+    "brand": "PrimeChoice",
+    "category": "Produce",
+    "price": 1.75,
+    "unit": "bunch",
+    "stockQty": 312,
+    "location": {
+      "aisle": 25,
+      "bin": 5
+    },
+    "attributes": {
+      "organic": true,
+      "size": "2 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10037.png",
+    "expirationDate": 1762117534450,
+    "lastUpdated": 1753616196450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10038",
+    "docType": "Inventory",
+    "productId": 10038,
+    "sku": "AA--10038",
+    "name": "Family Bananas",
+    "brand": "GreenLeaf",
+    "category": "Produce",
+    "price": 26.51,
+    "unit": "lb",
+    "stockQty": 398,
+    "location": {
+      "aisle": 14,
+      "bin": 15
+    },
+    "attributes": {
+      "organic": false,
+      "size": "3 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10038.png",
+    "expirationDate": 1818623134450,
+    "lastUpdated": 1751091987450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10039",
+    "docType": "Inventory",
+    "productId": 10039,
+    "sku": "AA--10039",
+    "name": "Organic Cheese",
+    "brand": "SilverValley",
+    "category": "Dairy",
+    "price": 6.02,
+    "unit": "block",
+    "stockQty": 271,
+    "location": {
+      "aisle": 18,
+      "bin": 39
+    },
+    "attributes": {
+      "organic": true,
+      "size": "12 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10039.png",
+    "expirationDate": 1762376734450,
+    "lastUpdated": 1754874849450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10040",
+    "docType": "Inventory",
+    "productId": 10040,
+    "sku": "AA--10040",
+    "name": "Local Tea",
+    "brand": "BluePeak",
+    "category": "Beverages",
+    "price": 30.26,
+    "unit": "box",
+    "stockQty": 248,
+    "location": {
+      "aisle": 21,
+      "bin": 16
+    },
+    "attributes": {
+      "organic": true,
+      "size": "24 bags",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10040.png",
+    "expirationDate": 1811711134450,
+    "lastUpdated": 1751469757450,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10041",
+    "docType": "Inventory",
+    "productId": 10041,
+    "sku": "AA--10041",
+    "name": "Fresh Pasta",
+    "brand": "GreenLeaf",
+    "category": "Pantry",
+    "price": 35.8,
+    "unit": "box",
+    "stockQty": 77,
+    "location": {
+      "aisle": 8,
+      "bin": 25
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10041.png",
+    "expirationDate": 1791752734451,
+    "lastUpdated": 1752462402451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10042",
+    "docType": "Inventory",
+    "productId": 10042,
+    "sku": "AA--10042",
+    "name": "Imported Cheese",
+    "brand": "Acme",
+    "category": "Dairy",
+    "price": 17.09,
+    "unit": "wedge",
+    "stockQty": 199,
+    "location": {
+      "aisle": 25,
+      "bin": 38
+    },
+    "attributes": {
+      "organic": false,
+      "size": "6 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10042.png",
+    "expirationDate": 1806440734451,
+    "lastUpdated": 1751921022451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10043",
+    "docType": "Inventory",
+    "productId": 10043,
+    "sku": "AA--10043",
+    "name": "Artisan Butter",
+    "brand": "Sunrise",
+    "category": "Dairy",
+    "price": 21.89,
+    "unit": "lb",
+    "stockQty": 459,
+    "location": {
+      "aisle": 8,
+      "bin": 32
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10043.png",
+    "expirationDate": 1760475934451,
+    "lastUpdated": 1753435075451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10044",
+    "docType": "Inventory",
+    "productId": 10044,
+    "sku": "AA--10044",
+    "name": "Fresh Juice",
+    "brand": "GoldenFarm",
+    "category": "Beverages",
+    "price": 27.41,
+    "unit": "bottle",
+    "stockQty": 84,
+    "location": {
+      "aisle": 15,
+      "bin": 9
+    },
+    "attributes": {
+      "organic": false,
+      "size": "64 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10044.png",
+    "expirationDate": 1775163934451,
+    "lastUpdated": 1754102063451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10045",
+    "docType": "Inventory",
+    "productId": 10045,
+    "sku": "AA--10045",
+    "name": "Classic Cheese",
+    "brand": "SilverValley",
+    "category": "Dairy",
+    "price": 7.91,
+    "unit": "block",
+    "stockQty": 167,
+    "location": {
+      "aisle": 7,
+      "bin": 30
+    },
+    "attributes": {
+      "organic": false,
+      "size": "8 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10045.png",
+    "expirationDate": 1802639134451,
+    "lastUpdated": 1751143547451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10046",
+    "docType": "Inventory",
+    "productId": 10046,
+    "sku": "AA--10046",
+    "name": "Organic Soap",
+    "brand": "FarmFresh",
+    "category": "Personal Care",
+    "price": 1.55,
+    "unit": "bar",
+    "stockQty": 487,
+    "location": {
+      "aisle": 12,
+      "bin": 15
+    },
+    "attributes": {
+      "organic": true,
+      "size": "4 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10046.png",
+    "expirationDate": 1776373534451,
+    "lastUpdated": 1747253053451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10047",
+    "docType": "Inventory",
+    "productId": 10047,
+    "sku": "AA--10047",
+    "name": "Chef Bananas",
+    "brand": "PrimeChoice",
+    "category": "Produce",
+    "price": 10.14,
+    "unit": "bunch",
+    "stockQty": 58,
+    "location": {
+      "aisle": 19,
+      "bin": 14
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1.5 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10047.png",
+    "expirationDate": 1760303134451,
+    "lastUpdated": 1757099056451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10048",
+    "docType": "Inventory",
+    "productId": 10048,
+    "sku": "AA--10048",
+    "name": "Organic Chicken",
+    "brand": "GoLocal",
+    "category": "Meat",
+    "price": 38.61,
+    "unit": "lb",
+    "stockQty": 13,
+    "location": {
+      "aisle": 10,
+      "bin": 37
+    },
+    "attributes": {
+      "organic": true,
+      "size": "3 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10048.png",
+    "expirationDate": 1761858334451,
+    "lastUpdated": 1750985470451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10049",
+    "docType": "Inventory",
+    "productId": 10049,
+    "sku": "AA--10049",
+    "name": "Organic Rice",
+    "brand": "BudgetBest",
+    "category": "Pantry",
+    "price": 34.12,
+    "unit": "bag",
+    "stockQty": 400,
+    "location": {
+      "aisle": 2,
+      "bin": 23
+    },
+    "attributes": {
+      "organic": true,
+      "size": "5 lb",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10049.png",
+    "expirationDate": 1762203934451,
+    "lastUpdated": 1752636043451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10050",
+    "docType": "Inventory",
+    "productId": 10050,
+    "sku": "AA--10050",
+    "name": "Premium Butter",
+    "brand": "PrimeChoice",
+    "category": "Dairy",
+    "price": 33.03,
+    "unit": "lb",
+    "stockQty": 491,
+    "location": {
+      "aisle": 12,
+      "bin": 41
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10050.png",
+    "expirationDate": 1786309534451,
+    "lastUpdated": 1751442364451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10051",
+    "docType": "Inventory",
+    "productId": 10051,
+    "sku": "AA--10051",
+    "name": "Chef Shampoo",
+    "brand": "BluePeak",
+    "category": "Personal Care",
+    "price": 31.16,
+    "unit": "bottle",
+    "stockQty": 422,
+    "location": {
+      "aisle": 24,
+      "bin": 38
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10051.png",
+    "expirationDate": 1801343134451,
+    "lastUpdated": 1754474336451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10052",
+    "docType": "Inventory",
+    "productId": 10052,
+    "sku": "AA--10052",
+    "name": "Family Cheese",
+    "brand": "GreenLeaf",
+    "category": "Dairy",
+    "price": 23.13,
+    "unit": "block",
+    "stockQty": 14,
+    "location": {
+      "aisle": 16,
+      "bin": 21
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10052.png",
+    "expirationDate": 1762895134451,
+    "lastUpdated": 1752621072451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10053",
+    "docType": "Inventory",
+    "productId": 10053,
+    "sku": "AA--10053",
+    "name": "Value Chips",
+    "brand": "FarmFresh",
+    "category": "Snacks",
+    "price": 28.28,
+    "unit": "bag",
+    "stockQty": 5,
+    "location": {
+      "aisle": 17,
+      "bin": 13
+    },
+    "attributes": {
+      "organic": false,
+      "size": "12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10053.png",
+    "expirationDate": 1794171934451,
+    "lastUpdated": 1750943100451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10054",
+    "docType": "Inventory",
+    "productId": 10054,
+    "sku": "AA--10054",
+    "name": "Local Soda",
+    "brand": "GoLocal",
+    "category": "Beverages",
+    "price": 28.69,
+    "unit": "12-pack",
+    "stockQty": 47,
+    "location": {
+      "aisle": 10,
+      "bin": 15
+    },
+    "attributes": {
+      "organic": false,
+      "size": "12 x 12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10054.png",
+    "expirationDate": 1794344734451,
+    "lastUpdated": 1756196869451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10055",
+    "docType": "Inventory",
+    "productId": 10055,
+    "sku": "AA--10055",
+    "name": "Imported Cereal",
+    "brand": "BluePeak",
+    "category": "Pantry",
+    "price": 17.47,
+    "unit": "box",
+    "stockQty": 180,
+    "location": {
+      "aisle": 23,
+      "bin": 30
+    },
+    "attributes": {
+      "organic": false,
+      "size": "18 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10055.png",
+    "expirationDate": 1760907934451,
+    "lastUpdated": 1750142162451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10056",
+    "docType": "Inventory",
+    "productId": 10056,
+    "sku": "AA--10056",
+    "name": "Fresh Apples",
+    "brand": "BluePeak",
+    "category": "Produce",
+    "price": 29.91,
+    "unit": "lb",
+    "stockQty": 110,
+    "location": {
+      "aisle": 24,
+      "bin": 31
+    },
+    "attributes": {
+      "organic": false,
+      "size": "3 lb bag",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10056.png",
+    "expirationDate": 1764018334451,
+    "lastUpdated": 1751881324451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10057",
+    "docType": "Inventory",
+    "productId": 10057,
+    "sku": "AA--10057",
+    "name": "Family Cereal",
+    "brand": "Acme",
+    "category": "Pantry",
+    "price": 7.82,
+    "unit": "box",
+    "stockQty": 273,
+    "location": {
+      "aisle": 5,
+      "bin": 18
+    },
+    "attributes": {
+      "organic": false,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10057.png",
+    "expirationDate": 1777583134451,
+    "lastUpdated": 1748632269451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10058",
+    "docType": "Inventory",
+    "productId": 10058,
+    "sku": "AA--10058",
+    "name": "Premium Toothpaste",
+    "brand": "BluePeak",
+    "category": "Personal Care",
+    "price": 11.94,
+    "unit": "tube",
+    "stockQty": 174,
+    "location": {
+      "aisle": 6,
+      "bin": 4
+    },
+    "attributes": {
+      "organic": true,
+      "size": "6.5 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10058.png",
+    "expirationDate": 1762808734451,
+    "lastUpdated": 1755161272451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10059",
+    "docType": "Inventory",
+    "productId": 10059,
+    "sku": "AA--10059",
+    "name": "Organic Toothpaste",
+    "brand": "FarmFresh",
+    "category": "Personal Care",
+    "price": 25.46,
+    "unit": "tube",
+    "stockQty": 76,
+    "location": {
+      "aisle": 19,
+      "bin": 20
+    },
+    "attributes": {
+      "organic": true,
+      "size": "4.2 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10059.png",
+    "expirationDate": 1794776734451,
+    "lastUpdated": 1756912482451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10060",
+    "docType": "Inventory",
+    "productId": 10060,
+    "sku": "AA--10060",
+    "name": "Chef Coffee",
+    "brand": "GoldenFarm",
+    "category": "Beverages",
+    "price": 31.2,
+    "unit": "bag",
+    "stockQty": 465,
+    "location": {
+      "aisle": 15,
+      "bin": 20
+    },
+    "attributes": {
+      "organic": false,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10060.png",
+    "expirationDate": 1762203934451,
+    "lastUpdated": 1748575997451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10061",
+    "docType": "Inventory",
+    "productId": 10061,
+    "sku": "AA--10061",
+    "name": "Family Soda",
+    "brand": "FarmFresh",
+    "category": "Beverages",
+    "price": 9.06,
+    "unit": "6-pack",
+    "stockQty": 122,
+    "location": {
+      "aisle": 6,
+      "bin": 36
+    },
+    "attributes": {
+      "organic": true,
+      "size": "6 x 12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10061.png",
+    "expirationDate": 1786655134451,
+    "lastUpdated": 1756873632451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10062",
+    "docType": "Inventory",
+    "productId": 10062,
+    "sku": "AA--10062",
+    "name": "Local Rice",
+    "brand": "FarmFresh",
+    "category": "Pantry",
+    "price": 2.07,
+    "unit": "bag",
+    "stockQty": 144,
+    "location": {
+      "aisle": 23,
+      "bin": 30
+    },
+    "attributes": {
+      "organic": false,
+      "size": "2 lb",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10062.png",
+    "expirationDate": 1793480734451,
+    "lastUpdated": 1748836760451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10063",
+    "docType": "Inventory",
+    "productId": 10063,
+    "sku": "AA--10063",
+    "name": "Imported Coffee",
+    "brand": "BluePeak",
+    "category": "Beverages",
+    "price": 26.18,
+    "unit": "bag",
+    "stockQty": 36,
+    "location": {
+      "aisle": 2,
+      "bin": 11
+    },
+    "attributes": {
+      "organic": false,
+      "size": "12 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10063.png",
+    "expirationDate": 1798319134451,
+    "lastUpdated": 1752012937451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10064",
+    "docType": "Inventory",
+    "productId": 10064,
+    "sku": "AA--10064",
+    "name": "Artisan Tea",
+    "brand": "GoLocal",
+    "category": "Beverages",
+    "price": 20.41,
+    "unit": "box",
+    "stockQty": 41,
+    "location": {
+      "aisle": 20,
+      "bin": 3
+    },
+    "attributes": {
+      "organic": false,
+      "size": "20 bags",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10064.png",
+    "expirationDate": 1761080734451,
+    "lastUpdated": 1750751848451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10065",
+    "docType": "Inventory",
+    "productId": 10065,
+    "sku": "AA--10065",
+    "name": "Chef Toothpaste",
+    "brand": "GreenLeaf",
+    "category": "Personal Care",
+    "price": 38.06,
+    "unit": "tube",
+    "stockQty": 20,
+    "location": {
+      "aisle": 25,
+      "bin": 49
+    },
+    "attributes": {
+      "organic": false,
+      "size": "6 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10065.png",
+    "expirationDate": 1762722334451,
+    "lastUpdated": 1756731335451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10066",
+    "docType": "Inventory",
+    "productId": 10066,
+    "sku": "AA--10066",
+    "name": "Artisan Soda",
+    "brand": "SilverValley",
+    "category": "Beverages",
+    "price": 32.71,
+    "unit": "bottle",
+    "stockQty": 178,
+    "location": {
+      "aisle": 14,
+      "bin": 22
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10066.png",
+    "expirationDate": 1764882334451,
+    "lastUpdated": 1753817392451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10067",
+    "docType": "Inventory",
+    "productId": 10067,
+    "sku": "AA--10067",
+    "name": "Local Rice",
+    "brand": "SilverValley",
+    "category": "Pantry",
+    "price": 26.76,
+    "unit": "bag",
+    "stockQty": 18,
+    "location": {
+      "aisle": 15,
+      "bin": 6
+    },
+    "attributes": {
+      "organic": false,
+      "size": "3 lb",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10067.png",
+    "expirationDate": 1795122334451,
+    "lastUpdated": 1755544626451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10068",
+    "docType": "Inventory",
+    "productId": 10068,
+    "sku": "AA--10068",
+    "name": "Premium Juice",
+    "brand": "SilverValley",
+    "category": "Beverages",
+    "price": 34.87,
+    "unit": "bottle",
+    "stockQty": 27,
+    "location": {
+      "aisle": 7,
+      "bin": 34
+    },
+    "attributes": {
+      "organic": false,
+      "size": "64 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10068.png",
+    "expirationDate": 1816895134451,
+    "lastUpdated": 1751391594451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10069",
+    "docType": "Inventory",
+    "productId": 10069,
+    "sku": "AA--10069",
+    "name": "Imported Bananas",
+    "brand": "GoldenFarm",
+    "category": "Produce",
+    "price": 37.15,
+    "unit": "bunch",
+    "stockQty": 248,
+    "location": {
+      "aisle": 4,
+      "bin": 2
+    },
+    "attributes": {
+      "organic": true,
+      "size": "2 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10069.png",
+    "expirationDate": 1793999134451,
+    "lastUpdated": 1747140553451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10070",
+    "docType": "Inventory",
+    "productId": 10070,
+    "sku": "AA--10070",
+    "name": "Imported Butter",
+    "brand": "GreenLeaf",
+    "category": "Dairy",
+    "price": 4.44,
+    "unit": "lb",
+    "stockQty": 484,
+    "location": {
+      "aisle": 4,
+      "bin": 42
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10070.png",
+    "expirationDate": 1762981534451,
+    "lastUpdated": 1755006133451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10071",
+    "docType": "Inventory",
+    "productId": 10071,
+    "sku": "AA--10071",
+    "name": "Local Coffee",
+    "brand": "GreenLeaf",
+    "category": "Beverages",
+    "price": 18.7,
+    "unit": "bag",
+    "stockQty": 97,
+    "location": {
+      "aisle": 20,
+      "bin": 33
+    },
+    "attributes": {
+      "organic": false,
+      "size": "14 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10071.png",
+    "expirationDate": 1778965534451,
+    "lastUpdated": 1755429558451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10072",
+    "docType": "Inventory",
+    "productId": 10072,
+    "sku": "AA--10072",
+    "name": "Value Milk",
+    "brand": "GreenLeaf",
+    "category": "Dairy",
+    "price": 11.88,
+    "unit": "gallon",
+    "stockQty": 296,
+    "location": {
+      "aisle": 22,
+      "bin": 32
+    },
+    "attributes": {
+      "organic": false,
+      "size": "1 gallon",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10072.png",
+    "expirationDate": 1762463134451,
+    "lastUpdated": 1756170771451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10073",
+    "docType": "Inventory",
+    "productId": 10073,
+    "sku": "AA--10073",
+    "name": "Imported Yogurt",
+    "brand": "GoLocal",
+    "category": "Dairy",
+    "price": 18.64,
+    "unit": "container",
+    "stockQty": 357,
+    "location": {
+      "aisle": 8,
+      "bin": 37
+    },
+    "attributes": {
+      "organic": false,
+      "size": "32 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10073.png",
+    "expirationDate": 1760043934451,
+    "lastUpdated": 1754846358451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10074",
+    "docType": "Inventory",
+    "productId": 10074,
+    "sku": "AA--10074",
+    "name": "Artisan Yogurt",
+    "brand": "BudgetBest",
+    "category": "Dairy",
+    "price": 39.54,
+    "unit": "container",
+    "stockQty": 493,
+    "location": {
+      "aisle": 2,
+      "bin": 9
+    },
+    "attributes": {
+      "organic": false,
+      "size": "24 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10074.png",
+    "expirationDate": 1764018334451,
+    "lastUpdated": 1748584018451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10075",
+    "docType": "Inventory",
+    "productId": 10075,
+    "sku": "AA--10075",
+    "name": "Imported Cheese",
+    "brand": "FarmFresh",
+    "category": "Dairy",
+    "price": 1.39,
+    "unit": "wedge",
+    "stockQty": 445,
+    "location": {
+      "aisle": 21,
+      "bin": 10
+    },
+    "attributes": {
+      "organic": false,
+      "size": "8 oz",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10075.png",
+    "expirationDate": 1814303134451,
+    "lastUpdated": 1753579797451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10076",
+    "docType": "Inventory",
+    "productId": 10076,
+    "sku": "AA--10076",
+    "name": "Organic Pasta",
+    "brand": "PrimeChoice",
+    "category": "Pantry",
+    "price": 34.2,
+    "unit": "box",
+    "stockQty": 488,
+    "location": {
+      "aisle": 11,
+      "bin": 41
+    },
+    "attributes": {
+      "organic": true,
+      "size": "16 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10076.png",
+    "expirationDate": 1775941534451,
+    "lastUpdated": 1750727720451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10077",
+    "docType": "Inventory",
+    "productId": 10077,
+    "sku": "AA--10077",
+    "name": "Organic Butter",
+    "brand": "Acme",
+    "category": "Dairy",
+    "price": 39.14,
+    "unit": "lb",
+    "stockQty": 85,
+    "location": {
+      "aisle": 23,
+      "bin": 20
+    },
+    "attributes": {
+      "organic": true,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10077.png",
+    "expirationDate": 1757970334451,
+    "lastUpdated": 1752925150451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10078",
+    "docType": "Inventory",
+    "productId": 10078,
+    "sku": "AA--10078",
+    "name": "Fresh Butter",
+    "brand": "GreenLeaf",
+    "category": "Dairy",
+    "price": 6.5,
+    "unit": "lb",
+    "stockQty": 289,
+    "location": {
+      "aisle": 22,
+      "bin": 12
+    },
+    "attributes": {
+      "organic": true,
+      "size": "1 lb",
+      "perishable": true
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10078.png",
+    "expirationDate": 1788296734451,
+    "lastUpdated": 1750951587451,
+    "storeId": "aa-store-01"
+  },
+  {
+    "_id": "Inventory_AAStore_10079",
+    "docType": "Inventory",
+    "productId": 10079,
+    "sku": "AA--10079",
+    "name": "Local Toothpaste",
+    "brand": "Acme",
+    "category": "Personal Care",
+    "price": 6.4,
+    "unit": "tube",
+    "stockQty": 130,
+    "location": {
+      "aisle": 15,
+      "bin": 17
+    },
+    "attributes": {
+      "organic": false,
+      "size": "4.6 oz",
+      "perishable": false
+    },
+    "imageURL": "https://res.cloudinary.com/dijypy0i8/image/upload/v1759681306/10079.png",
+    "expirationDate": 1762635934451,
+    "lastUpdated": 1754322129451,
+    "storeId": "aa-store-01"
+  }
+]

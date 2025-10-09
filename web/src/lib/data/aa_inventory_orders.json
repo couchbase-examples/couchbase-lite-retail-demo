@@ -1,0 +1,26 @@
+[
+  {
+    "_id": "Order_AAStore_1",
+    "docType": "Order",
+    "orderId": 1,
+    "storeId": "aa-store-01",
+    "orderDate": 1755257767451,
+    "orderStatus": "Submitted",
+    "productId": 10000,
+    "sku": "AA-10000",
+    "unit": "gallon",
+    "orderQty": 30
+  },
+  {
+    "_id": "Order_AAStore_2",
+    "docType": "Order",
+    "orderId": 2,
+    "storeId": "aa-store-01",
+    "orderDate": 1755257767451,
+    "orderStatus": "Received",
+    "productId": 10001,
+    "sku": "AA-10001",
+    "unit": "bag",
+    "orderQty": 100
+  }
+]

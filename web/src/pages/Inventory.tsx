@@ -1,17 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { inventoryData, categories, InventoryItem as InventoryItemType } from "@/lib/mockData";
+import { useDatabase } from "@/lib/database/DatabaseProvider";
+import type { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import InventoryItem from "@/components/InventoryItem";
+import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
+import { DocID } from "@couchbaselabs/couchbase-lite";
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState<InventoryItemType[]>(inventoryData);
+  const db = useDatabase();
+  const [items, setItems] = useState<InventoryItemType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery) return items;
@@ -19,8 +24,9 @@ const Inventory = () => {
     return items.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.barcode.includes(searchQuery)
+      item._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.sku.includes(searchQuery) ||
+      item.brand.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [items, searchQuery]);
 
@@ -45,16 +51,65 @@ const Inventory = () => {
     return sortedGrouped;
   }, [filteredItems]);
 
-  const handleCountChange = (id: string, newCount: number) => {
-    setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, count: newCount } : item
-      )
-    );
+  // Load items from database
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        setLoading(true);
+        console.log('Loading inventory from database...');
+        
+        // Check collection count first
+        const count = await db.collections.inventory.count();
+        console.log(`Inventory collection has ${count} documents`);
+        
+        const query = db.createQuery('SELECT * FROM inventory');
+        const inventoryItems: InventoryItemType[] = [];
+        
+        await query.execute((row) => {
+          console.log('Query row:', row);
+          if (row.inventory) {
+            inventoryItems.push(row.inventory);
+          }
+        });
+        
+        console.log(`Loaded ${inventoryItems.length} inventory items`, inventoryItems);
+        setItems(inventoryItems);
+      } catch (error) {
+        console.error('Error loading inventory:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadItems();
+  }, [db]);
+
+  const handleCountChange = async (id: string, newCount: number) => {
+    try {
+      // Update in database
+      const doc = await db.collections.inventory.getDocument(DocID(id));
+      if (doc) {
+        // Modify the document directly (it's a plain JavaScript object)
+        doc.stockQty = newCount;
+        doc.lastUpdated = Date.now();
+        await db.collections.inventory.save(doc);
+        
+        console.log(`Updated item ${id} stockQty to ${newCount}`);
+        
+        // Update local state
+        setItems(prevItems =>
+          prevItems.map(item =>
+            item._id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating count:', error);
+    }
   };
 
   const totalItems = filteredItems.length;
-  const lowStockItems = filteredItems.filter(item => item.count <= 10).length;
+  const lowStockItems = filteredItems.filter(item => item.stockQty <= 10).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/5">
@@ -80,6 +135,7 @@ const Inventory = () => {
                 </div>
               </div>
             </div>
+            <SyncStatus />
           </div>
         </div>
       </header>
@@ -116,7 +172,15 @@ const Inventory = () => {
 
         {/* Inventory Categories */}
         <div className="space-y-8">
-          {Object.keys(groupedItems).length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <Package2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+              <h3 className="text-lg font-semibold mb-2">Loading inventory...</h3>
+              <p className="text-muted-foreground">
+                Please wait while we fetch your items.
+              </p>
+            </div>
+          ) : Object.keys(groupedItems).length === 0 ? (
             <div className="text-center py-12">
               <Package2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No items found</h3>
@@ -139,7 +203,7 @@ const Inventory = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {categoryItems.map((item) => (
                       <InventoryItem
-                        key={item.id}
+                        key={item._id}
                         item={item}
                         onCountChange={handleCountChange}
                       />
