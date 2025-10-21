@@ -26,7 +26,7 @@ class MultipeerP2PSyncManager: NSObject, ObservableObject {
     
     // MARK: - Configuration
     
-    private let serviceType = "_liquor-sync._tcp"
+    private let serviceType = "liquor-sync"
     private let myPeerID: MCPeerID
     private let myPeerUUID: String
     private let connectionManager: LiquorConnectionManager
@@ -60,8 +60,8 @@ class MultipeerP2PSyncManager: NSObject, ObservableObject {
         self.myPeerID = MCPeerID(displayName: UIDevice.current.name + "-Liquor")
         self.myPeerUUID = UUID().uuidString
         
-        // Initialize connection manager with collections
-        let collection = try! database.defaultCollection()
+        // Initialize connection manager with the liquor_items collection (same as DatabaseManager)
+        let collection = try! database.collection(name: "liquor_items") ?? database.createCollection(name: "liquor_items")
         self.connectionManager = LiquorConnectionManager(collections: [collection])
         
         // Initialize MultipeerConnectivity components
@@ -429,19 +429,44 @@ fileprivate class LiquorConnectionManager {
         config.continuous = true
         config.replicatorType = .pushAndPull
         
-        // Create and start replicator
+        // Create and start replicator (following MultipeerSync sample pattern)
         let replicator = Replicator(config: config)
         replicators[connection.peerID] = replicator
         
-        // Add change listener for logging
-        _ = replicator.addChangeListener { change in
-            MultipeerP2PSyncManager.logger.info("📊 Sync with \(connection.peerID.displayName): \(change.status.activity)")
-            if let error = change.status.error {
-                MultipeerP2PSyncManager.logger.error("❌ Sync error: \(error.localizedDescription)")
+        // ⚠️ CRITICAL: Add change listener to monitor replication activity
+        let peerName = connection.peerID.displayName
+        replicator.addChangeListener { change in
+            let status = change.status
+            print("📊 [P2P-REPLICATION] Peer: \(peerName)")
+            print("   Activity: \(status.activity)")
+            print("   Progress: \(status.progress.completed)/\(status.progress.total)")
+            
+            if let error = status.error {
+                print("   ❌ P2P Replication Error: \(error.localizedDescription)")
+            }
+            
+            if status.progress.completed > 0 {
+                print("   📦 Replicated \(status.progress.completed) documents")
+            }
+        }
+        
+        // ⚠️ FIX: Add document replication listener to trigger UI updates!
+        // Collection change listeners don't fire for MessageEndpoint replication
+        replicator.addDocumentReplicationListener { replication in
+            print("🔔 [P2P-DOC-REPLICATION] Documents changed via P2P!")
+            print("   Pushed: \(replication.documents.filter { !$0.flags.contains(.deleted) && $0.error == nil }.count)")
+            print("   Pulled: \(replication.documents.filter { !$0.flags.contains(.deleted) && $0.error == nil }.count)")
+            
+            // Trigger UI refresh when documents are replicated
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
+                print("📡 [P2P-DOC-REPLICATION] Posted inventory changed notification for UI refresh")
             }
         }
         
         replicator.start()
+        
+        MultipeerP2PSyncManager.logger.info("✅ Started replicator to: \(connection.peerID.displayName)")
     }
 }
 

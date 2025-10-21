@@ -9,6 +9,7 @@
 import Foundation
 import CouchbaseLiteSwift
 import Combine
+import MultipeerConnectivity
 
 /// Wrapper class to bridge the new MultipeerP2PSyncManager with existing UI components
 /// This maintains compatibility while migrating to MultipeerConnectivity
@@ -23,6 +24,11 @@ class MultipeerP2PSyncManagerWrapper: ObservableObject {
     @Published var isRunning = false
     @Published var connectedPeers: [String] = []
     @Published var syncStatus = "Stopped"
+    
+    // Expose underlying manager for debugging
+    var multipeerSyncManager: MultipeerP2PSyncManager? {
+        return multipeerManager
+    }
     
     // MARK: - Initialization
     
@@ -75,5 +81,12 @@ class MultipeerP2PSyncManagerWrapper: ObservableObject {
             hasNetworkPermission: true, // MultipeerConnectivity handles permissions better
             networkPermissionStatus: "MultipeerConnectivity managed ✅"
         )
+    }
+    
+    // MARK: - Debug Access
+    
+    /// Get the actual MCPeerID objects for detailed debugging
+    var connectedPeerIDs: [MCPeerID] {
+        return multipeerManager.connectedPeers
     }
 }

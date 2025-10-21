@@ -5,6 +5,7 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_liquor-sync._tcp</string>
+		<string>_liquor-sync._udp</string>
 	</array>
 </dict>
 </plist>

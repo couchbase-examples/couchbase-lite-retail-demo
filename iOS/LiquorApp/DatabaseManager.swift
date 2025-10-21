@@ -1,39 +1,89 @@
 import Foundation
 import CouchbaseLiteSwift
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let liquorInventoryChanged = Notification.Name("liquorInventoryChanged")
+}
+
 class DatabaseManager: ObservableObject {
     var database: Database?
-    private let databaseName = "LiquorInventoryDB"
-    private let collectionName = "liquor_items"
+    private let databaseName = AppConfig.databaseName
+    private let collectionName = AppConfig.collectionName
+    
+    // Change listener token to prevent deallocation (following working sample pattern)
+    private var collectionChangeListenerToken: ListenerToken?
 
     // App Services Integration
     @Published var appServicesSyncManager: AppServicesSyncManager?
     @Published var isAppServicesEnabled: Bool = false
 
     init() {
+        // Print configuration on startup
+        AppConfig.printConfiguration()
+        
         openDatabase()
-        seedSampleDataIfNeeded()
+        // REMOVED: Hard-coded data seeding - data will come from App Services
+        // seedSampleDataIfNeeded()
         setupChangeListeners()
         setupAppServicesIntegration()
+        
+        // Auto-enable App Services if configured
+        if AppConfig.enableAppServicesSync {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.enableAppServices()
+            }
+        }
+    }
+    
+    deinit {
+        // Clean up change listener
+        collectionChangeListenerToken?.remove()
+        print("🧹 [LiquorSync] DatabaseManager cleaned up change listeners")
     }
     
     private func setupChangeListeners() {
-        guard let database = database else { return }
+        guard let database = database else { 
+            print("❌ [LiquorSync] No database available for change listener setup")
+            return 
+        }
         
         do {
-            // Listen for collection changes to update UI automatically when sync occurs
-            let collection = try database.collection(name: collectionName) ?? database.createCollection(name: collectionName)
-            collection.addChangeListener { [weak self] change in
-                DispatchQueue.main.async {
-                    print("[LiquorSync] Collection changed: \(change.documentIDs)")
+            print("🔧 [LiquorSync] Setting up change listeners...")
+            print("🔧 [LiquorSync] Using scope: \(AppConfig.scopeName), collection: \(collectionName)")
+            
+            // Get the inventory collection from the correct scope (matches Capella structure)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
+            
+            // Add collection-level change listener (following the working sample pattern)
+            collectionChangeListenerToken = collection.addChangeListener { change in
+                print("🔔🔔🔔 [LiquorSync] COLLECTION CHANGE LISTENER TRIGGERED!")
+                print("🔧 [LiquorSync] Changed document IDs: \(change.documentIDs)")
+                print("🔧 [LiquorSync] Document count: \(change.documentIDs.count)")
+                
+                // Always execute on main queue for UI updates (like the working sample)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    print("🔄🔄🔄 [LiquorSync] Collection changed: \(change.documentIDs.count) documents")
+                    for docId in change.documentIDs {
+                        print("📄 [LiquorSync] Collection document changed: \(docId)")
+                    }
+                    
                     // Trigger UI update by notifying observers
-                    self?.objectWillChange.send()
+                    self.objectWillChange.send()
+                    
+                    // Post notification for views to refresh
+                    NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
+                    print("📡📡📡 [LiquorSync] Posted collection inventory changed notification")
                 }
             }
             
-            print("[LiquorSync] Collection change listener configured")
+            print("✅ [LiquorSync] Collection change listener configured for '\(collectionName)'")
+            print("🔧 [LiquorSync] Collection token: \(collectionChangeListenerToken != nil ? "✅" : "❌")")
         } catch {
-            print("Error setting up change listeners: \(error)")
+            print("❌ Error setting up change listeners: \(error)")
         }
     }
     
@@ -41,48 +91,34 @@ class DatabaseManager: ObservableObject {
         do {
             let config = DatabaseConfiguration()
             database = try Database(name: databaseName, config: config)
-            print("Database opened successfully")
+            print("✅ Database opened successfully: \(databaseName)")
+            print("📍 Database path: \(database?.path ?? "unknown")")
+            
+            // Log initial document count
+            let itemCount = getAllLiquorItems().count
+            print("📊 Current inventory: \(itemCount) items")
+            
+            if itemCount == 0 {
+                print("🔄 Database is empty - waiting for App Services to sync data...")
+            }
         } catch {
-            print("Error opening database: \(error)")
+            print("❌ Error opening database: \(error)")
         }
     }
     
-    private func seedSampleDataIfNeeded() {
-        // Check if data already exists
-        let existingItems = getAllLiquorItems()
-        if !existingItems.isEmpty {
-            print("Sample data already exists (\(existingItems.count) items), skipping seeding")
-            return
-        }
-        
-        print("Starting to seed sample data...")
-        seedSampleData()
-    }
-    
-    private func seedSampleData() {
-        let sampleLiquors = [
-            LiquorItem(name: "Johnnie Walker Black Label", type: "Whiskey", price: 45.99, imageURL: "whiskey1"),
-            LiquorItem(name: "Grey Goose Vodka", type: "Vodka", price: 39.99, imageURL: "vodka1"),
-            LiquorItem(name: "Bacardi Superior Rum", type: "Rum", price: 24.99, imageURL: "rum1"),
-            LiquorItem(name: "Tanqueray Gin", type: "Gin", price: 29.99, imageURL: "gin1"),
-            LiquorItem(name: "Patron Silver Tequila", type: "Tequila", price: 54.99, imageURL: "tequila1"),
-            LiquorItem(name: "Hennessy VS Cognac", type: "Cognac", price: 49.99, imageURL: "cognac1"),
-            LiquorItem(name: "Macallan 12 Year", type: "Whiskey", price: 79.99, imageURL: "whiskey2"),
-            LiquorItem(name: "Belvedere Vodka", type: "Vodka", price: 44.99, imageURL: "vodka2"),
-            LiquorItem(name: "Captain Morgan Spiced Rum", type: "Rum", price: 22.99, imageURL: "rum2"),
-            LiquorItem(name: "Bombay Sapphire Gin", type: "Gin", price: 26.99, imageURL: "gin2"),
-            LiquorItem(name: "Don Julio Blanco", type: "Tequila", price: 49.99, imageURL: "tequila2"),
-            LiquorItem(name: "Remy Martin VSOP", type: "Cognac", price: 64.99, imageURL: "cognac2"),
-            LiquorItem(name: "Jack Daniel's Old No. 7", type: "Whiskey", price: 29.99, imageURL: "whiskey3"),
-            LiquorItem(name: "Absolut Original Vodka", type: "Vodka", price: 19.99, imageURL: "vodka3"),
-            LiquorItem(name: "Mount Gay Eclipse Rum", type: "Rum", price: 27.99, imageURL: "rum3")
-        ]
-        
-        for liquor in sampleLiquors {
-            saveLiquorItem(liquor)
-        }
-        print("Finished seeding \(sampleLiquors.count) sample items")
-    }
+    // MARK: - Data Seeding REMOVED
+    // ⚠️ All data seeding methods have been removed.
+    // Data will now be populated exclusively through App Services sync from Capella.
+    // This includes:
+    // - seedSampleDataIfNeeded() - REMOVED
+    // - seedSampleData() - REMOVED
+    // - seedFallbackData() - REMOVED
+    // - AAStoreInventoryItem struct - REMOVED
+    //
+    // To populate the database:
+    // 1. Ensure App Services sync is enabled in AppConfig
+    // 2. Launch the app - sync will start automatically
+    // 3. Data will be pulled from Capella endpoint
     
     func saveLiquorItem(_ item: LiquorItem) {
         guard let database = database else { 
@@ -91,16 +127,56 @@ class DatabaseManager: ObservableObject {
         }
         
         do {
-            let collection = try database.collection(name: collectionName) ?? database.createCollection(name: collectionName)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
             let document = MutableDocument(id: item.id)
             
-            // IMPORTANT: Save the id field in the document content
+            // Save using Capella field names for consistency
             document.setString(item.id, forKey: "id")
             document.setString(item.name, forKey: "name")
-            document.setString(item.type, forKey: "type")
+            document.setString(item.type, forKey: "category")  // Map 'type' to 'category' for Capella
             document.setDouble(item.price, forKey: "price")
             document.setString(item.imageURL, forKey: "imageURL")
-            document.setInt(item.quantity, forKey: "quantity")
+            document.setInt(item.quantity, forKey: "stockQty")  // Map 'quantity' to 'stockQty' for Capella
+            
+            // Save additional fields
+            if let productId = item.productId {
+                document.setInt(productId, forKey: "productId")
+            }
+            if let sku = item.sku {
+                document.setString(sku, forKey: "sku")
+            }
+            if let brand = item.brand {
+                document.setString(brand, forKey: "brand")
+            }
+            if let unit = item.unit {
+                document.setString(unit, forKey: "unit")
+            }
+            if let location = item.location {
+                let locationDict = MutableDictionaryObject()
+                locationDict.setInt(location.aisle, forKey: "aisle")
+                locationDict.setInt(location.bin, forKey: "bin")
+                document.setDictionary(locationDict, forKey: "location")
+            }
+            if let attributes = item.attributes {
+                let attributesDict = MutableDictionaryObject()
+                attributesDict.setBoolean(attributes.organic, forKey: "organic")
+                attributesDict.setString(attributes.size, forKey: "size")
+                attributesDict.setBoolean(attributes.perishable, forKey: "perishable")
+                document.setDictionary(attributesDict, forKey: "attributes")
+            }
+            if let expirationDate = item.expirationDate {
+                document.setInt64(expirationDate, forKey: "expirationDate")
+            }
+            if let lastUpdated = item.lastUpdated {
+                document.setInt64(lastUpdated, forKey: "lastUpdated")
+            }
+            if let storeId = item.storeId {
+                document.setString(storeId, forKey: "storeId")
+            }
+            if let docType = item.docType {
+                document.setString(docType, forKey: "docType")
+            }
             
             try collection.save(document: document)
             print("Saved liquor item: \(item.name)")
@@ -116,8 +192,8 @@ class DatabaseManager: ObservableObject {
         }
         
         do {
-            guard let collection = try database.collection(name: collectionName) else {
-                print("Collection \(collectionName) not found")
+            guard let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) else {
+                print("Collection \(collectionName) in scope \(AppConfig.scopeName) not found")
                 return []
             }
             
@@ -134,19 +210,74 @@ class DatabaseManager: ObservableObject {
                 resultCount += 1
                 
                 // For SelectResult.all(), data is nested under collection name
-                if let dict = result.dictionary(forKey: collectionName),
-                   let id = dict.string(forKey: "id"),
-                   let name = dict.string(forKey: "name"),
-                   let type = dict.string(forKey: "type"),
-                   let imageURL = dict.string(forKey: "imageURL") {
+                if let dict = result.dictionary(forKey: collectionName) {
                     
+                    // Map Capella field names to app field names
+                    guard let id = dict.string(forKey: "id"),
+                          let name = dict.string(forKey: "name"),
+                          let imageURL = dict.string(forKey: "imageURL") else {
+                        // Skip documents missing required fields
+                        continue
+                    }
+                    
+                    // Map 'category' from Capella to 'type' in app
+                    let type = dict.string(forKey: "category") ?? dict.string(forKey: "type") ?? "Unknown"
                     let price = dict.double(forKey: "price")
                     
-                    // Create a temporary document to read quantity using CRDT counter
-                    let tempDoc = MutableDocument(data: dict.toDictionary())
-                    let quantity = getCurrentQuantity(from: tempDoc)
+                    // Map 'stockQty' from Capella to 'quantity' in app
+                    // 🔧 SYNC FIX: Try stockQty first (for App Services sync with Android), then fall back to CRDT counter (for P2P)
+                    var quantity = dict.int(forKey: "stockQty")
+                    if quantity == 0 {
+                        // Fall back to CRDT counter if stockQty is not set
+                        let tempDoc = MutableDocument(data: dict.toDictionary())
+                        quantity = getCurrentQuantity(from: tempDoc)
+                    }
                     
-                    let item = LiquorItem(id: id, name: name, type: type, price: price, imageURL: imageURL, quantity: quantity)
+                    // Read optional additional fields
+                    let productId = dict.int(forKey: "productId")
+                    let sku = dict.string(forKey: "sku")
+                    let brand = dict.string(forKey: "brand")
+                    let unit = dict.string(forKey: "unit")
+                    let expirationDate = dict.int64(forKey: "expirationDate")
+                    let lastUpdated = dict.int64(forKey: "lastUpdated")
+                    let storeId = dict.string(forKey: "storeId")
+                    let docType = dict.string(forKey: "docType")
+                    
+                    // Read location
+                    var location: LiquorItem.Location? = nil
+                    if let locationDict = dict.dictionary(forKey: "location") {
+                        let aisle = locationDict.int(forKey: "aisle")
+                        let bin = locationDict.int(forKey: "bin")
+                        location = LiquorItem.Location(aisle: aisle, bin: bin)
+                    }
+                    
+                    // Read attributes
+                    var attributes: LiquorItem.Attributes? = nil
+                    if let attributesDict = dict.dictionary(forKey: "attributes") {
+                        let organic = attributesDict.boolean(forKey: "organic")
+                        let size = attributesDict.string(forKey: "size") ?? ""
+                        let perishable = attributesDict.boolean(forKey: "perishable")
+                        attributes = LiquorItem.Attributes(organic: organic, size: size, perishable: perishable)
+                    }
+                    
+                    let item = LiquorItem(
+                        id: id,
+                        name: name,
+                        type: type,
+                        price: price,
+                        imageURL: imageURL,
+                        quantity: quantity,
+                        productId: productId,
+                        sku: sku,
+                        brand: brand,
+                        unit: unit,
+                        location: location,
+                        attributes: attributes,
+                        expirationDate: expirationDate,
+                        lastUpdated: lastUpdated,
+                        storeId: storeId,
+                        docType: docType
+                    )
                     liquorItems.append(item)
                     //print("Retrieved liquor item: \(name) (qty: \(quantity))")
                 } else {
@@ -163,29 +294,41 @@ class DatabaseManager: ObservableObject {
     }
     
     func updateQuantity(for itemId: String, newQuantity: Int) {
-        guard let database = database else { return }
+        print("🔧 [LiquorSync] updateQuantity called for \(itemId): new=\(newQuantity)")
+        guard let database = database else { 
+            print("❌ [LiquorSync] Database not available")
+            return 
+        }
         
         do {
-            guard let collection = try database.collection(name: collectionName) else { return }
+            guard let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) else { 
+                print("❌ [LiquorSync] Collection \(collectionName) in scope \(AppConfig.scopeName) not available")
+                return 
+            }
             
             // Get current document and quantity
             guard let document = try collection.document(id: itemId) else {
-                print("Document not found for item \(itemId)")
+                print("❌ [LiquorSync] Document not found for item \(itemId)")
                 return
             }
             
             let currentQuantity = getCurrentQuantity(from: document)
             let difference = newQuantity - currentQuantity
             
+            print("🔧 [LiquorSync] Current: \(currentQuantity), New: \(newQuantity), Diff: \(difference)")
+            
             if difference > 0 {
+                print("🔧 [LiquorSync] Incrementing by \(difference)")
                 incrementQuantity(for: itemId, by: UInt(difference), in: collection)
             } else if difference < 0 {
+                print("🔧 [LiquorSync] Decrementing by \(-difference)")
                 decrementQuantity(for: itemId, by: UInt(-difference), in: collection)
+            } else {
+                print("🔧 [LiquorSync] No change needed (difference = 0)")
             }
-            // If difference is 0, no update needed
             
         } catch {
-            print("Error updating quantity: \(error)")
+            print("❌ [LiquorSync] Error updating quantity: \(error)")
         }
     }
     
@@ -193,7 +336,7 @@ class DatabaseManager: ObservableObject {
         guard let database = database else { return }
         
         do {
-            guard let collection = try database.collection(name: collectionName) else { return }
+            guard let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) else { return }
             incrementQuantity(for: itemId, by: amount, in: collection)
         } catch {
             print("Error incrementing quantity: \(error)")
@@ -204,7 +347,7 @@ class DatabaseManager: ObservableObject {
         guard let database = database else { return }
         
         do {
-            guard let collection = try database.collection(name: collectionName) else { return }
+            guard let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) else { return }
             decrementQuantity(for: itemId, by: amount, in: collection)
         } catch {
             print("Error decrementing quantity: \(error)")
@@ -224,15 +367,30 @@ class DatabaseManager: ObservableObject {
                 let document = try collection.document(id: itemId)?.toMutable() ?? MutableDocument(id: itemId)
                 let quantityCounter = document.crdtCounter(forKey: "quantity", actor: database?.deviceUUID ?? "unknown")
                 
+                let oldValue = quantityCounter.value
+                
                 // Increment the counter
                 quantityCounter.increment(by: amount)
+                
+                // 🔧 SYNC FIX: Also update stockQty for App Services compatibility with Android
+                let newValue = quantityCounter.value
+                document.setInt(newValue, forKey: "stockQty")
                 
                 // Save with concurrency control and retry on failure
                 saved = (try? collection.save(document: document, concurrencyControl: .failOnConflict)) ?? false
                 
                 if saved {
                     let newValue = getCurrentQuantity(from: document)
-                    print("[LiquorSync] Incremented quantity for \(itemId) by \(amount) -> \(newValue)")
+                    print("✅ [LiquorSync] Incremented quantity for \(itemId)")
+                    print("   📊 Change: \(oldValue) → \(newValue) (+\(amount))")
+                    print("   🎭 Actor: \(database?.deviceUUID ?? "unknown")")
+                    print("   ⏱️  This change should sync to other devices NOW!")
+                    
+                    // 🔥 CRITICAL FIX: Manually post notification for local UI update
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
+                        print("📡 [LiquorSync] Posted inventory changed notification for LOCAL change")
+                    }
                 } else {
                     print("[LiquorSync] Increment failed, retrying... (attempt \(attempts))")
                 }
@@ -260,15 +418,30 @@ class DatabaseManager: ObservableObject {
                 let document = try collection.document(id: itemId)?.toMutable() ?? MutableDocument(id: itemId)
                 let quantityCounter = document.crdtCounter(forKey: "quantity", actor: database?.deviceUUID ?? "unknown")
                 
+                let oldValue = quantityCounter.value
+                
                 // Decrement the counter
                 quantityCounter.decrement(by: amount)
+                
+                // 🔧 SYNC FIX: Also update stockQty for App Services compatibility with Android
+                let newValue = quantityCounter.value
+                document.setInt(newValue, forKey: "stockQty")
                 
                 // Save with concurrency control and retry on failure
                 saved = (try? collection.save(document: document, concurrencyControl: .failOnConflict)) ?? false
                 
                 if saved {
                     let newValue = getCurrentQuantity(from: document)
-                    print("[LiquorSync] Decremented quantity for \(itemId) by \(amount) -> \(newValue)")
+                    print("✅ [LiquorSync] Decremented quantity for \(itemId)")
+                    print("   📊 Change: \(oldValue) → \(newValue) (-\(amount))")
+                    print("   🎭 Actor: \(database?.deviceUUID ?? "unknown")")
+                    print("   ⏱️  This change should sync to other devices NOW!")
+                    
+                    // 🔥 CRITICAL FIX: Manually post notification for local UI update
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
+                        print("📡 [LiquorSync] Posted inventory changed notification for LOCAL change")
+                    }
                 } else {
                     print("[LiquorSync] Decrement failed, retrying... (attempt \(attempts))")
                 }
@@ -297,16 +470,17 @@ class DatabaseManager: ObservableObject {
         guard let database = database else { return [] }
         
         do {
-            guard let collection = try database.collection(name: collectionName) else {
+            guard let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) else {
                 return []
             }
             
-            // Use text-based search
+            // Use text-based search (search both 'category' from Capella and 'type' for local docs)
             let query = QueryBuilder
                 .select(SelectResult.all())
                 .from(DataSource.collection(collection))
                 .where(
                     Expression.property("name").like(Expression.string("%\(searchText)%"))
+                    .or(Expression.property("category").like(Expression.string("%\(searchText)%")))
                     .or(Expression.property("type").like(Expression.string("%\(searchText)%")))
                 )
             
@@ -315,17 +489,25 @@ class DatabaseManager: ObservableObject {
             var liquorItems: [LiquorItem] = []
             for result in results {
                 // For SelectResult.all(), data is nested under collection name
-                if let dict = result.dictionary(forKey: collectionName),
-                   let id = dict.string(forKey: "id"),
-                   let name = dict.string(forKey: "name"),
-                   let type = dict.string(forKey: "type"),
-                   let imageURL = dict.string(forKey: "imageURL") {
+                if let dict = result.dictionary(forKey: collectionName) {
                     
+                    // Map Capella field names to app field names
+                    guard let id = dict.string(forKey: "id"),
+                          let name = dict.string(forKey: "name"),
+                          let imageURL = dict.string(forKey: "imageURL") else {
+                        continue
+                    }
+                    
+                    // Map 'category' from Capella to 'type' in app
+                    let type = dict.string(forKey: "category") ?? dict.string(forKey: "type") ?? "Unknown"
                     let price = dict.double(forKey: "price")
                     
-                    // Create a temporary document to read quantity using CRDT counter
+                    // Map 'stockQty' from Capella to 'quantity' in app
                     let tempDoc = MutableDocument(data: dict.toDictionary())
-                    let quantity = getCurrentQuantity(from: tempDoc)
+                    var quantity = getCurrentQuantity(from: tempDoc)
+                    if quantity == 0 {
+                        quantity = dict.int(forKey: "stockQty")
+                    }
                     
                     let item = LiquorItem(id: id, name: name, type: type, price: price, imageURL: imageURL, quantity: quantity)
                     liquorItems.append(item)

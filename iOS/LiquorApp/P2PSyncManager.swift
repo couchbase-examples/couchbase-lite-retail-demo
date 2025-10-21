@@ -7,7 +7,7 @@ import Combine
 
 /// P2P Sync Manager following Couchbase documentation pattern for URLEndpointListener
 final class P2PSyncManager {
-    private let name: String = "LiquorInventory"
+    private let name: String = "GroceryInventory"
     private let database: CouchbaseLiteSwift.Database
     private let collections: [CouchbaseLiteSwift.Collection]
     

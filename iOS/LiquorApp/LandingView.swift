@@ -22,7 +22,7 @@ struct LandingView: View {
                             .font(.system(size: 80))
                             .foregroundColor(.white)
                         
-                        Text("Liquor Inventory")
+                        Text("Grocery Inventory")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.white)

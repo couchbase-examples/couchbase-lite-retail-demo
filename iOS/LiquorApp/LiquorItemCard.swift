@@ -4,6 +4,7 @@ struct LiquorItemCard: View {
     let item: LiquorItem
     let onQuantityChanged: (Int) -> Void
     @State private var currentQuantity: Int
+    @State private var showOrderPlaced = false
     
     init(item: LiquorItem, onQuantityChanged: @escaping (Int) -> Void) {
         self.item = item
@@ -35,94 +36,144 @@ struct LiquorItemCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Liquor image - fixed size
-            AsyncImage(url: URL(string: item.imageURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-            } placeholder: {
-                Image(systemName: "wineglass.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.purple.opacity(0.6))
-            }
-            .frame(width: 80, height: 80)
+        ZStack {
+        VStack(alignment: .leading, spacing: 12) {
+            // Product image - larger size
+            CachedAsyncImage(
+                url: item.imageURL,
+                placeholder: Image(systemName: "cart.fill")
+            )
+            .aspectRatio(contentMode: .fill)
+            .frame(height: 120)
             .frame(maxWidth: .infinity)
+            .clipped()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(0)
             
-            VStack(alignment: .leading, spacing: 6) {
-                // Name - with consistent height and truncation
-                Text(formatName(item.name))
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(2)
-                    .frame(height: 34, alignment: .top)
-                    .foregroundColor(.primary)
-                
-                // Type - fixed size
-                Text(item.type)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(6)
-                    .frame(height: 20)
-                
-                // Price - fixed size
-                Text("$\(item.price, specifier: "%.2f")")
+            VStack(alignment: .leading, spacing: 8) {
+                // Product name - bold and left aligned
+                Text(item.name)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.green)
-                    .frame(height: 20)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            Spacer(minLength: 4)
-            
-            // Quantity controls - fixed size
-            HStack {
-                Text("Qty:")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Spacer()
+                // Price only
+                Text("Price: $\(item.price, specifier: "%.2f")")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
                 
-                HStack(spacing: 8) {
-                    Button(action: {
-                        if currentQuantity > 0 {
-                            currentQuantity -= 1
-                            onQuantityChanged(currentQuantity)
-                        }
-                    }) {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(currentQuantity > 0 ? .red : .gray)
-                    }
-                    .disabled(currentQuantity == 0)
-                    .frame(width: 24, height: 24)
+                // Inventory Count Section
+                VStack(spacing: 8) {
+                    Text("Inventory Count")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     
+                    // Large quantity number with color coding
                     Text("\(currentQuantity)")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(minWidth: 20)
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundColor(quantityColor)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     
-                    Button(action: {
-                        currentQuantity += 1
-                        onQuantityChanged(currentQuantity)
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.green)
+                    // Quantity controls - circular buttons
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            if currentQuantity > 0 {
+                                currentQuantity -= 1
+                                onQuantityChanged(currentQuantity)
+                            }
+                        }) {
+                            Image(systemName: "minus.circle")
+                                .font(.system(size: 32))
+                                .foregroundColor(currentQuantity > 0 ? .gray : .gray.opacity(0.3))
+                        }
+                        .disabled(currentQuantity == 0)
+                        
+                        Button(action: {
+                            currentQuantity += 1
+                            onQuantityChanged(currentQuantity)
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 32))
+                                .foregroundColor(.gray)
+                        }
                     }
-                    .frame(width: 24, height: 24)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                
+                // Re-order button
+                Button(action: {
+                    print("Re-order \(item.name)")
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showOrderPlaced = true
+                    }
+                    // Auto-hide after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showOrderPlaced = false
+                        }
+                    }
+                }) {
+                    Text("Re-order now")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(red: 0.95, green: 0.34, blue: 0.31))
+                        .cornerRadius(8)
                 }
             }
-            .frame(height: 24)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
         }
-        .padding(12)
-        .frame(width: 160, height: 220) // Fixed dimensions for consistency
+        .frame(height: 400)
+        .frame(maxWidth: .infinity)
         .background(Color.white)
-        .cornerRadius(15)
-        .shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 2)
+        .cornerRadius(12)
+        .shadow(color: .gray.opacity(0.2), radius: 8, x: 0, y: 4)
         .onAppear {
             currentQuantity = item.quantity
+        }
+        
+        // Order Placed Overlay
+        if showOrderPlaced {
+            Color(red: 0.30, green: 0.69, blue: 0.31)
+                .opacity(0.95)
+                .frame(height: 400)
+                .frame(maxWidth: .infinity)
+                .cornerRadius(12)
+                .overlay(
+                    VStack(spacing: 16) {
+                        // Package icon
+                        Text("📦")
+                            .font(.system(size: 64))
+                        
+                        Text("Order Placed!")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        Text("Replenishment order has been made")
+                            .font(.system(size: 16))
+                            .foregroundColor(.white.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                )
+                .transition(.opacity)
+        }
+        }
+    }
+    
+    // Color coding for quantity
+    private var quantityColor: Color {
+        if currentQuantity > 30 {
+            return Color(red: 0.18, green: 0.73, blue: 0.43) // Green
+        } else if currentQuantity > 10 {
+            return Color(red: 0.95, green: 0.76, blue: 0.06) // Yellow/Orange
+        } else {
+            return Color(red: 0.95, green: 0.34, blue: 0.31) // Red
         }
     }
 }

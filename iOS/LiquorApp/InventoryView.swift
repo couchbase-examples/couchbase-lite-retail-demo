@@ -4,6 +4,7 @@ import CouchbaseLiteSwift
 struct InventoryView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
     @EnvironmentObject var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var searchText = ""
     @State private var liquorItems: [LiquorItem] = []
     @State private var showDebugInfo = false
@@ -11,6 +12,7 @@ struct InventoryView: View {
     @State private var refreshTimer: Timer?
     @Environment(\.dismiss) private var dismiss
     
+    // Fixed 2-column layout to match Android
     private let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
@@ -93,12 +95,39 @@ struct InventoryView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Liquor Inventory")
+            .navigationTitle("Grocery Inventory")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                // Profile name on leading side
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") {
-                        dismiss()
+                    if let user = authManager.currentUser {
+                        Text("Welcome, \(user.fullName)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 12) {
+                        // User role badge
+                        if let user = authManager.currentUser {
+                            Text(user.role)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        
+                        // Logout button
+                        Button(action: {
+                            authManager.logout()
+                            dismiss()
+                        }) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .foregroundColor(.red)
+                                .font(.title2)
+                        }
                     }
                 }
             }
@@ -111,16 +140,27 @@ struct InventoryView: View {
             // Start refresh timer for real-time updates
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
                 debugInfo.refreshData()
+                // Also refresh inventory data to get sync updates
+                loadLiquorItems()
             }
         }
         .onDisappear {
             refreshTimer?.invalidate()
             refreshTimer = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .liquorInventoryChanged)) { _ in
+            // Immediate refresh when database changes from sync
+            print("🔄 [InventoryView] Database change notification received - refreshing inventory")
+            loadLiquorItems()
+        }
     }
     
     private func loadLiquorItems() {
-        liquorItems = databaseManager.getAllLiquorItems()
+        // ⚠️ CRITICAL: Ensure UI updates happen on main thread
+        DispatchQueue.main.async {
+            self.liquorItems = databaseManager.getAllLiquorItems()
+            print("🔄 [InventoryView] UI refreshed with \(self.liquorItems.count) items")
+        }
     }
 }
 

@@ -95,11 +95,14 @@ class BeerPhotoDatabaseManager: ObservableObject {
         }
         
         // When the collection changes, update the async indexes
-        collection.addChangeListener { [weak self] _ in
-            self?.asyncIndexQueue.async {
-                Task {
+        // Note: Not storing token - this listener lives for the lifetime of the manager
+        _ = collection.addChangeListener { [weak self] _ in
+            guard let self = self else { return }
+            self.asyncIndexQueue.async {
+                Task { [weak self] in
+                    guard let self = self else { return }
                     do {
-                        try await self?.updateAsyncIndexes(for: collection)
+                        try await self.updateAsyncIndexes(for: collection)
                     } catch {
                         print("Error updating beer photo async indexes: \(error)")
                     }
@@ -224,7 +227,7 @@ class BeerPhotoDatabaseManager: ObservableObject {
                 }
             }
             
-            print("📊 Retrieved \(beerPhotos.count) beer photos from database")
+           // print("📊 Retrieved \(beerPhotos.count) beer photos from database")
             return beerPhotos
         } catch {
             print("❌ Failed to retrieve beer photos: \(error.localizedDescription)")

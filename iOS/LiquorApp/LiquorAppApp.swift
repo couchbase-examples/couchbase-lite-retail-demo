@@ -14,6 +14,7 @@ import Network
 @main
 struct LiquorAppApp: App {
     @StateObject private var databaseManager = DatabaseManager()
+    @StateObject private var authManager = AuthenticationManager()
     @State private var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper?
     
     init() {
@@ -31,19 +32,27 @@ struct LiquorAppApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(databaseManager)
-                .environmentObject(p2pSyncManagerWrapper ?? MultipeerP2PSyncManagerWrapper(database: databaseManager.database!))
-                .onAppear {
-                    // Initialize MultipeerConnectivity P2P sync when the app appears
-                    initializeMultipeerP2PSync()
-                    
-                    // Auto-enable App Services sync for testing
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        print("🌐 Auto-enabling App Services sync for testing...")
-                        databaseManager.enableAppServices()
-                    }
+            Group {
+                if authManager.isAuthenticated {
+                    // Show main app after login
+                    AuthenticatedContentView()
+                        .environmentObject(databaseManager)
+                        .environmentObject(p2pSyncManagerWrapper ?? MultipeerP2PSyncManagerWrapper(database: databaseManager.database!))
+                        .environmentObject(authManager)
+                        .onAppear {
+                            // Initialize MultipeerConnectivity P2P sync when authenticated
+                            initializeMultipeerP2PSync()
+                            
+                            // Note: App Services sync is now auto-enabled in DatabaseManager
+                            // based on AppConfig.enableAppServicesSync flag
+                        }
+                } else {
+                    // Show login screen
+                    LoginView()
+                        .environmentObject(authManager)
                 }
+            }
+            .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
         }
     }
     

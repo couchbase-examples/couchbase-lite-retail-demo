@@ -21,16 +21,16 @@ class AppServicesSyncManager: ObservableObject {
     @Published var syncState = AppServicesSyncState()
     @Published var isEnabled: Bool = false
     
-    // MARK: - Configuration (using your credentials)
-    private let syncGatewayURL = "wss://orqhtoi5jy2tbev.apps.cloud.couchbase.com:4984/LiquorInventoryDB"
-    private let username = "liquor-seller"
-    private let password = "7z4DyAd#UpcgfS4"
+    // MARK: - Configuration (from AppConfig)
+    private let syncGatewayURL = AppConfig.syncGatewayURL
+    private let username = AppConfig.username
+    private let password = AppConfig.password
     
     // MARK: - Core Components
     private var database: Database
     private var replicator: Replicator?
     private var replicatorChangeToken: ListenerToken?
-    private let collectionName = "liquor_items"
+    private let collectionName = AppConfig.collectionName
     
     // MARK: - Sync Control
     private var isSyncActive = false
@@ -46,10 +46,12 @@ class AppServicesSyncManager: ObservableObject {
     // MARK: - Setup Methods
     private func setupAppServicesSync() {
         print("🔧 Setting up App Services sync configuration...")
+        print("🔧 Scope: \(AppConfig.scopeName), Collection: \(collectionName)")
         
         do {
-            // Ensure collection exists
-            let collection = try database.collection(name: collectionName) ?? database.createCollection(name: collectionName)
+            // Ensure collection exists (using scope from AppConfig to match Capella structure)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
             
             // Create target endpoint
             guard let url = URL(string: syncGatewayURL) else {
@@ -290,7 +292,7 @@ class AppServicesSyncManager: ObservableObject {
     
     func getConflictedDocuments() -> [String] {
         do {
-            let collection = try database.collection(name: collectionName)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName)
             let query = QueryBuilder
                 .select(SelectResult.expression(Meta.id))
                 .from(DataSource.collection(collection!))
@@ -377,7 +379,8 @@ extension AppServicesSyncManager {
     /// Create a new liquor item that will sync to the cloud
     func createLiquorItem(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0) -> String? {
         do {
-            let collection = try database.collection(name: collectionName) ?? database.createCollection(name: collectionName)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
             
             let itemId = UUID().uuidString
             let document = MutableDocument(id: itemId)
@@ -421,7 +424,8 @@ extension AppServicesSyncManager {
     /// Update quantity using CRDT counter (conflict-free)
     func updateLiquorItemQuantity(itemId: String, newQuantity: Int) -> Bool {
         do {
-            let collection = try database.collection(name: collectionName) ?? database.createCollection(name: collectionName)
+            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
             
             guard let document = try collection.document(id: itemId)?.toMutable() else {
                 print("❌ Document not found: \(itemId)")

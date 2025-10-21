@@ -90,7 +90,8 @@ final class LiquorSyncApp {
     private func setupDatabaseChangeListener() {
         guard let collection = collections.first else { return }
         
-        collection.addChangeListener { change in
+        // Note: Not storing token - deprecated listener, will be removed
+        _ = collection.addChangeListener { change in
             Log.info("Database change detected: \(change.documentIDs.count) documents")
             // Simulate P2P sync by logging changes
             for docId in change.documentIDs {
@@ -342,7 +343,7 @@ final class LiquorSyncApp {
         browser.stateUpdateHandler = { [weak self] newState in
             switch newState {
             case .ready:
-                Log.info("P2P Browser ready - searching for liquor inventory peers")
+                Log.info("P2P Browser ready - searching for grocery inventory peers")
             case .failed(let error):
                 Log.error("P2P Browser failed: \(error)")
                 self?.handleNetworkError(error)
@@ -417,7 +418,7 @@ final class LiquorSyncApp {
         let replicator = Replicator(config: config)
         
         // Add change listener for sync status
-        replicator.addChangeListener { change in
+        _ = replicator.addChangeListener { change in
             Log.info("Cloud sync status: \(change.status.activity)")
         }
         
@@ -446,7 +447,7 @@ final class LiquorSyncApp {
         replicators[HashableObject(connection)] = replicator
         
         // Add change listener for P2P sync status
-        replicator.addChangeListener { change in
+        _ = replicator.addChangeListener { change in
             Log.info("P2P sync status: \(change.status.activity)")
         }
         

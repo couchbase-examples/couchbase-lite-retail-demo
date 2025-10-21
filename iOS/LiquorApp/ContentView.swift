@@ -9,7 +9,22 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        LandingView()
+        TabView {
+            // Inventory Tab
+            InventoryView()
+                .tabItem {
+                    Image(systemName: "list.clipboard")
+                    Text("Inventory")
+                }
+            
+            // Merchandising Tab
+            SimpleMerchandisingView()
+                .tabItem {
+                    Image(systemName: "camera.viewfinder")
+                    Text("Scanner")
+                }
+        }
+        .accentColor(.blue)
     }
 }
 

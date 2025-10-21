@@ -349,7 +349,7 @@ class P2PDebugInfo: ObservableObject {
     @Published var discoveredDevices: [DebugDevice] = []
     @Published var username = "liquoruser"
     @Published var password = "liquorpass123"
-    @Published var serviceType = "_liquorapp._tcp"
+    @Published var serviceType = "liquor-sync"
     
     var multipeerSyncManager: MultipeerP2PSyncManagerWrapper?
     
