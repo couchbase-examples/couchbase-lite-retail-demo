@@ -13,32 +13,71 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.filled.Logout
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(
     onBackPressed: () -> Unit,
+    authManager: AuthenticationManager,
     databaseManager: DatabaseManager
 ) {
     var searchText by remember { mutableStateOf("") }
-    var liquorItems by remember { mutableStateOf<List<LiquorItem>>(emptyList()) }
-    var filteredItems by remember { mutableStateOf<List<LiquorItem>>(emptyList()) }
+    var groceryItems by remember { mutableStateOf<List<GroceryItem>>(emptyList()) }
+    var filteredItems by remember { mutableStateOf<List<GroceryItem>>(emptyList()) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
     LaunchedEffect(Unit) {
-        liquorItems = databaseManager.getAllLiquorItems()
-        filteredItems = liquorItems
+        groceryItems = databaseManager.getAllGroceryItems()
+        filteredItems = groceryItems
+    }
+    
+    // Logout confirmation dialog
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        authManager.logout()
+                        showLogoutDialog = false
+                        onBackPressed()
+                    }
+                ) {
+                    Text("Sign Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
     
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
-                Text("Liquor Inventory")
+                Column {
+                    Text("Grocery Mart Inventory")
+                    // Show store profile with Welcome
+                    authManager.currentUser?.let { user ->
+                        Text(
+                            text = "Welcome, ${user.fullName}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             },
             navigationIcon = {
-                IconButton(onClick = onBackPressed) {
+                IconButton(onClick = { showLogoutDialog = true }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back"
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = "Sign Out"
                     )
                 }
             },
@@ -58,16 +97,16 @@ fun InventoryScreen(
                 searchText = newValue
                 scope.launch {
                     filteredItems = if (newValue.isEmpty()) {
-                        liquorItems
+                        groceryItems
                     } else {
-                        databaseManager.searchLiquor(newValue)
+                        databaseManager.searchGrocery(newValue)
                     }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            placeholder = { Text("Search liquor...") },
+            placeholder = { Text("Search products...") },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -85,19 +124,23 @@ fun InventoryScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(filteredItems) { item ->
-                LiquorItemCard(
+                GroceryItemCard(
                     item = item,
                     onQuantityChanged = { newQuantity ->
                         scope.launch {
                             // Use App Services-aware update method
                             databaseManager.updateQuantityWithAppServices(item.id, newQuantity)
-                            liquorItems = databaseManager.getAllLiquorItems()
+                            groceryItems = databaseManager.getAllGroceryItems()
                             filteredItems = if (searchText.isEmpty()) {
-                                liquorItems
+                                groceryItems
                             } else {
-                                databaseManager.searchLiquor(searchText)
+                                databaseManager.searchGrocery(searchText)
                             }
                         }
+                    },
+                    onReorder = { groceryItem ->
+                        // TODO: Implement reorder functionality
+                        println("Reorder: ${groceryItem.name}")
                     }
                 )
             }

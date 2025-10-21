@@ -28,11 +28,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "1.8"
     }
     buildFeatures {
         compose = true
@@ -53,11 +53,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
-    // Couchbase - Local AAR files (unreleased 3.3.0 build)
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
-    // Or specify individual files:
-    // implementation(files("libs/couchbase-lite-android-ee-3.3.0-61-release.aar"))
-    // implementation(files("libs/couchbase-lite-android-ee-ktx-3.3.0-61-release.aar"))
+    // Couchbase Lite - Enterprise Edition 3.3.0 with KTX
+    implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:3.3.0")
+    
+    // Coil - Image loading library for Compose
+    implementation("io.coil-kt:coil-compose:2.5.0")
     
     // Coroutines for async operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

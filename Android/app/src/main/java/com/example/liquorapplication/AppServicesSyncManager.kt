@@ -37,17 +37,11 @@ class AppServicesSyncManager(
     
     companion object {
         private const val TAG = "AppServicesSync"
-        // Using your real App Services credentials - CORRECTED URL FORMAT with database name
-        private const val SYNC_GATEWAY_URL = "wss://orqhtoi5jy2tbev.apps.cloud.couchbase.com:4984/LiquorInventoryDB"
-        private const val SYNC_GATEWAY_URL_ALT1 = "wss://orqhtoi5jy2tbev.apps.cloud.couchbase.com/LiquorInventoryDB" 
-        private const val SYNC_GATEWAY_URL_ALT2 = "ws://orqhtoi5jy2tbev.apps.cloud.couchbase.com:4984/LiquorInventoryDB"
-        private const val SYNC_GATEWAY_URL_ALT3 = "ws://orqhtoi5jy2tbev.apps.cloud.couchbase.com/LiquorInventoryDB"
-        private const val SYNC_GATEWAY_URL_ALT4 = "https://orqhtoi5jy2tbev.apps.cloud.couchbase.com:4984/LiquorInventoryDB"
-        private const val SYNC_GATEWAY_URL_ALT5 = "https://orqhtoi5jy2tbev.apps.cloud.couchbase.com/LiquorInventoryDB"
-        private const val SYNC_GATEWAY_URL_ALT6 = "wss://orqhtoi5jy2tbev.apps.cloud.couchbase.com:4985/LiquorInventoryDB"
-        private const val USERNAME = "liquor-seller"
-        private const val PASSWORD = "7z4DyAd#UpcgfS4"
-        private const val COLLECTION_NAME = "liquor_items"
+        // Using App Services credentials from AppConfig
+        private val SYNC_GATEWAY_URL = AppConfig.syncGatewayURL
+        private val USERNAME = AppConfig.username
+        private val PASSWORD = AppConfig.password
+        private val COLLECTION_NAME = AppConfig.COLLECTION_NAME
     }
     
     // State management
@@ -72,62 +66,15 @@ class AppServicesSyncManager(
         viewModelScope.launch {
             try {
                 Log.d(TAG, "🔧 Setting up App Services sync configuration...")
+                Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}, Collection: $COLLECTION_NAME")
                 
-                // Use default collection for App Services sync (matches Couchbase Cloud setup)
-                val collection = database.defaultCollection
+                // Get collection from correct scope (matches Capella structure)
+                val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName)
+                    ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
                 
-                // Test connectivity and create target endpoint
-                Log.d(TAG, "📡 Testing connectivity to: $SYNC_GATEWAY_URL")
-                testNetworkConnectivity()
-                
-                // Try multiple URL formats including IP-based fallbacks
-                val urls = mutableListOf(
-                    SYNC_GATEWAY_URL,
-                    SYNC_GATEWAY_URL_ALT1,
-                    SYNC_GATEWAY_URL_ALT2,
-                    SYNC_GATEWAY_URL_ALT3
-                )
-                
-                // Try to resolve IPs and add them as fallbacks
-                try {
-                    val resolvedIPs = resolveHostToIPs("orqhtoi5jy2tbev.apps.cloud.couchbase.com")
-                    resolvedIPs.forEach { ip ->
-                        urls.add("wss://$ip:4984/LiquorInventoryDB")
-                        urls.add("ws://$ip:4984/LiquorInventoryDB")
-                        urls.add("wss://$ip/LiquorInventoryDB")
-                        urls.add("ws://$ip/LiquorInventoryDB")
-                        urls.add("https://$ip:4984/LiquorInventoryDB")
-                        urls.add("https://$ip/LiquorInventoryDB")
-                    }
-                    Log.d(TAG, "✅ Added ${resolvedIPs.size} IP-based fallback URLs")
-                } catch (e: Exception) {
-                    Log.w(TAG, "⚠️ Could not resolve IPs, using static fallbacks: ${e.message}")
-                    // Add some common IP fallbacks for Couchbase Cloud
-                    urls.addAll(listOf(
-                        "wss://13.107.246.51:4984/LiquorInventoryDB",
-                        "ws://13.107.246.51:4984/LiquorInventoryDB",
-                        "https://13.107.246.51:4984/LiquorInventoryDB"
-                    ))
-                }
-                
-                var target: URLEndpoint? = null
-                var lastException: Exception? = null
-                
-                for (url in urls) {
-                    try {
-                        Log.d(TAG, "🎯 Trying URL: $url")
-                        target = URLEndpoint(URI(url))
-                        Log.d(TAG, "✅ Successfully created endpoint with: $url")
-                        break
-                    } catch (e: Exception) {
-                        Log.w(TAG, "⚠️ URL failed: $url - ${e.message}")
-                        lastException = e
-                    }
-                }
-                
-                if (target == null) {
-                    throw lastException ?: Exception("All URL formats failed")
-                }
+                // Create target endpoint
+                Log.d(TAG, "📡 Connecting to: $SYNC_GATEWAY_URL")
+                val target = URLEndpoint(URI(SYNC_GATEWAY_URL))
                 
                 // Create replicator configuration
                 val config = ReplicatorConfiguration(target)
@@ -137,10 +84,10 @@ class AppServicesSyncManager(
                 
                 // Configure replication type and behavior
                 config.replicatorType = AbstractReplicatorConfiguration.ReplicatorType.PUSH_AND_PULL
-                config.isContinuous = true
-                config.heartbeat = 60 // seconds
-                config.maxAttempts = 10
-                config.maxAttemptWaitTime = 300 // 5 minutes
+                config.isContinuous = AppConfig.SYNC_CONTINUOUS
+                config.heartbeat = AppConfig.SYNC_HEARTBEAT.toInt()
+                config.maxAttempts = AppConfig.SYNC_MAX_ATTEMPTS
+                config.maxAttemptWaitTime = AppConfig.SYNC_MAX_ATTEMPT_WAIT_TIME.toInt()
                 
                 // Add collection to replication
                 config.addCollection(collection, null)
@@ -349,10 +296,10 @@ class AppServicesSyncManager(
         }
     }
     
-    fun createLiquorItem(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
+    fun createGroceryItem(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
         return try {
-            val collection = database.getCollection(COLLECTION_NAME) 
-                ?: database.createCollection(COLLECTION_NAME)
+            val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName) 
+                ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
             
             val itemId = UUID.randomUUID().toString()
             val document = MutableDocument(itemId)
@@ -373,7 +320,7 @@ class AppServicesSyncManager(
             
             collection.save(document)
             
-            Log.d(TAG, "✅ Created liquor item for App Services sync: $name (ID: $itemId)")
+            Log.d(TAG, "✅ Created grocery item for App Services sync: $name (ID: $itemId)")
             
             // Trigger immediate sync if enabled
             if (isEnabled) {
@@ -383,15 +330,15 @@ class AppServicesSyncManager(
             itemId
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to create liquor item", e)
+            Log.e(TAG, "❌ Failed to create grocery item", e)
             null
         }
     }
     
-    fun updateLiquorItemQuantity(itemId: String, newQuantity: Int): Boolean {
+    fun updateGroceryItemQuantity(itemId: String, newQuantity: Int): Boolean {
         return try {
-            val collection = database.getCollection(COLLECTION_NAME) 
-                ?: database.createCollection(COLLECTION_NAME)
+            val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName) 
+                ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
             
             val document = collection.getDocument(itemId)?.toMutable() ?: run {
                 Log.e(TAG, "❌ Document not found: $itemId")

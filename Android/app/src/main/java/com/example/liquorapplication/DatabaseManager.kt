@@ -11,8 +11,8 @@ import kotlinx.coroutines.withContext
 
 class DatabaseManager(private val context: Context) {
     private var database: Database? = null
-    private val databaseName = "LiquorInventoryDB"
-    private val collectionName = "liquor_items"
+    private val databaseName = AppConfig.DATABASE_NAME
+    private val collectionName = AppConfig.COLLECTION_NAME
     
     // App Services Integration
     var appServicesSyncManager: AppServicesSyncManager? = null
@@ -21,10 +21,19 @@ class DatabaseManager(private val context: Context) {
         private set
     
     init {
+        // Print configuration on startup
+        AppConfig.printConfiguration()
+        
         openDatabase()
         setupIndexes() // Setup both basic and vector indexes
-        seedSampleData()
+        // REMOVED: Hard-coded data seeding - data will come from App Services
+        // seedSampleData()
         setupAppServicesIntegration()
+        
+        // Auto-enable App Services if configured
+        if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
+            enableAppServices()
+        }
     }
     
     private fun openDatabase() {
@@ -32,107 +41,100 @@ class DatabaseManager(private val context: Context) {
             CouchbaseLite.init(context)
             val config = DatabaseConfiguration()
             database = Database(databaseName, config)
-            Log.d("DatabaseManager", "Database opened successfully")
+            Log.d("DatabaseManager", "✅ Database opened successfully: $databaseName")
+            Log.d("DatabaseManager", "📍 Database path: ${database?.path}")
+            Log.d("DatabaseManager", "🔄 Database ready - waiting for App Services to sync data...")
         } catch (e: Exception) {
-            Log.e("DatabaseManager", "Error opening database", e)
+            Log.e("DatabaseManager", "❌ Error opening database", e)
         }
     }
     
     private fun setupIndexes() {
         database?.let { db ->
             try {
-                val collection = db.getCollection(collectionName) ?: db.createCollection(collectionName)
+                // Get collection from correct scope
+                val collection = db.getCollection(collectionName, AppConfig.scopeName) 
+                    ?: db.createCollection(collectionName, AppConfig.scopeName)
                 
                 // Create basic value indexes for search
+                // Index both 'category' (Capella) and 'name' fields
                 val nameIndex = IndexBuilder.valueIndex(ValueIndexItem.property("name"))
                 collection.createIndex("name_index", nameIndex)
                 
-                val typeIndex = IndexBuilder.valueIndex(ValueIndexItem.property("type"))
-                collection.createIndex("type_index", typeIndex)
+                val categoryIndex = IndexBuilder.valueIndex(ValueIndexItem.property("category"))
+                collection.createIndex("category_index", categoryIndex)
                 
-                // Note: Vector search will be configured when available in the SDK
-                Log.d("DatabaseManager", "Basic indexes and database setup completed")
-                
-                Log.d("DatabaseManager", "Indexes created successfully")
+                Log.d("DatabaseManager", "✅ Indexes created successfully for scope: ${AppConfig.scopeName}")
             } catch (e: Exception) {
-                Log.e("DatabaseManager", "Error creating indexes", e)
+                Log.e("DatabaseManager", "❌ Error creating indexes", e)
             }
         }
     }
     
-    private fun seedSampleData() {
-        val sampleLiquors = listOf(
-            LiquorItem(name = "Johnnie Walker Black Label", type = "Whiskey", price = 45.99, imageURL = "whiskey1"),
-            LiquorItem(name = "Grey Goose Vodka", type = "Vodka", price = 39.99, imageURL = "vodka1"),
-            LiquorItem(name = "Bacardi Superior Rum", type = "Rum", price = 24.99, imageURL = "rum1"),
-            LiquorItem(name = "Tanqueray Gin", type = "Gin", price = 29.99, imageURL = "gin1"),
-            LiquorItem(name = "Patron Silver Tequila", type = "Tequila", price = 54.99, imageURL = "tequila1"),
-            LiquorItem(name = "Hennessy VS Cognac", type = "Cognac", price = 49.99, imageURL = "cognac1"),
-            LiquorItem(name = "Macallan 12 Year", type = "Whiskey", price = 79.99, imageURL = "whiskey2"),
-            LiquorItem(name = "Belvedere Vodka", type = "Vodka", price = 44.99, imageURL = "vodka2"),
-            LiquorItem(name = "Captain Morgan Spiced Rum", type = "Rum", price = 22.99, imageURL = "rum2"),
-            LiquorItem(name = "Bombay Sapphire Gin", type = "Gin", price = 26.99, imageURL = "gin2"),
-            LiquorItem(name = "Don Julio Blanco", type = "Tequila", price = 49.99, imageURL = "tequila2"),
-            LiquorItem(name = "Remy Martin VSOP", type = "Cognac", price = 64.99, imageURL = "cognac2"),
-            LiquorItem(name = "Jack Daniel's Old No. 7", type = "Whiskey", price = 29.99, imageURL = "whiskey3"),
-            LiquorItem(name = "Absolut Original Vodka", type = "Vodka", price = 19.99, imageURL = "vodka3"),
-            LiquorItem(name = "Mount Gay Eclipse Rum", type = "Rum", price = 27.99, imageURL = "rum3")
-        )
-        
-        sampleLiquors.forEach { saveLiquorItem(it) }
-    }
+    // MARK: - Data Seeding REMOVED
+    // ⚠️ All data seeding methods have been removed.
+    // Data will now be populated exclusively through App Services sync from Capella.
     
-    fun saveLiquorItem(item: LiquorItem) {
+    fun saveGroceryItem(item: GroceryItem) {
         database?.let { db ->
             try {
-                val collection = db.getCollection(collectionName) ?: db.createCollection(collectionName)
+                val collection = db.getCollection(collectionName, AppConfig.scopeName) 
+                    ?: db.createCollection(collectionName, AppConfig.scopeName)
                 val document = MutableDocument(item.id)
                 
-                document.setString("id", item.id) // Explicitly save the ID
+                // Save using Capella field names for consistency
+                document.setString("id", item.id)
                 document.setString("name", item.name)
-                document.setString("type", item.type)
+                document.setString("category", item.type)  // Map 'type' to 'category' for Capella
                 document.setDouble("price", item.price)
                 document.setString("imageURL", item.imageURL)
-                document.setInt("quantity", item.quantity)
+                document.setInt("stockQty", item.quantity)  // Map 'quantity' to 'stockQty' for Capella
                 
                 collection.save(document)
-                Log.d("DatabaseManager", "Saved liquor item: ${item.name}")
+                Log.d("DatabaseManager", "Saved grocery item: ${item.name}")
             } catch (e: Exception) {
-                Log.e("DatabaseManager", "Error saving liquor item", e)
+                Log.e("DatabaseManager", "Error saving grocery item", e)
             }
         }
     }
     
-    suspend fun getAllLiquorItems(): List<LiquorItem> = withContext(Dispatchers.IO) {
+    suspend fun getAllGroceryItems(): List<GroceryItem> = withContext(Dispatchers.IO) {
         database?.let { db ->
             try {
-                val collection = db.getCollection(collectionName) ?: return@withContext emptyList()
+                val collection = db.getCollection(collectionName, AppConfig.scopeName) 
+                    ?: return@withContext emptyList()
                 val query = QueryBuilder
                     .select(SelectResult.all())
                     .from(DataSource.collection(collection))
                 
                 val results = query.execute()
-                val liquorItems = mutableListOf<LiquorItem>()
+                val groceryItems = mutableListOf<GroceryItem>()
                 
                 results.forEach { result ->
                     val dict = result.getDictionary(collectionName)
                     dict?.let {
+                        // Map Capella field names to app field names
                         val id = it.getString("id") ?: return@let
                         val name = it.getString("name") ?: return@let
-                        val type = it.getString("type") ?: return@let
-                        val price = it.getDouble("price")
                         val imageURL = it.getString("imageURL") ?: return@let
-                        val quantity = it.getInt("quantity")
                         
-                        val item = LiquorItem(id, name, type, price, imageURL, quantity)
-                        liquorItems.add(item)
+                        // Map 'category' from Capella to 'type' in app
+                        val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
+                        val price = it.getDouble("price")
+                        
+                        // Map 'stockQty' from Capella to 'quantity' in app
+                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                            ?: it.getInt("quantity")
+                        
+                        val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                        groceryItems.add(item)
                     }
                 }
                 
-                Log.d("DatabaseManager", "Retrieved ${liquorItems.size} liquor items")
-                return@withContext liquorItems
+                Log.d("DatabaseManager", "Retrieved ${groceryItems.size} grocery items")
+                return@withContext groceryItems
             } catch (e: Exception) {
-                Log.e("DatabaseManager", "Error fetching liquor items", e)
+                Log.e("DatabaseManager", "Error fetching grocery items", e)
                 return@withContext emptyList()
             }
         } ?: emptyList()
@@ -141,11 +143,11 @@ class DatabaseManager(private val context: Context) {
     fun updateQuantity(itemId: String, newQuantity: Int) {
         database?.let { db ->
             try {
-                val collection = db.getCollection(collectionName) ?: return
+                val collection = db.getCollection(collectionName, AppConfig.scopeName) ?: return
                 val document = collection.getDocument(itemId)
                 document?.let {
                     val mutableDoc = it.toMutable()
-                    mutableDoc.setInt("quantity", newQuantity)
+                    mutableDoc.setInt("stockQty", newQuantity)  // Save as stockQty for Capella
                     collection.save(mutableDoc)
                     Log.d("DatabaseManager", "Updated quantity for $itemId to $newQuantity")
                 }
@@ -155,26 +157,13 @@ class DatabaseManager(private val context: Context) {
         }
     }
     
-    suspend fun searchLiquor(searchText: String): List<LiquorItem> = withContext(Dispatchers.IO) {
+    suspend fun searchGrocery(searchText: String): List<GroceryItem> = withContext(Dispatchers.IO) {
         database?.let { db ->
             try {
-                val collection = db.getCollection(collectionName) ?: return@withContext emptyList()
+                val collection = db.getCollection(collectionName, AppConfig.scopeName) 
+                    ?: return@withContext emptyList()
                 
                 Log.d("DatabaseManager", "Searching for: '$searchText'")
-                
-                // First, let's debug what data we actually have
-                if (searchText.lowercase() == "debug") {
-                    val allQuery = QueryBuilder
-                        .select(SelectResult.all())
-                        .from(DataSource.collection(collection))
-                    val allResults = allQuery.execute()
-                    allResults.forEach { result ->
-                        val dict = result.getDictionary(0)
-                        dict?.let {
-                            Log.d("DatabaseManager", "DEBUG - Item: ${it.getString("name")} (${it.getString("type")})")
-                        }
-                    }
-                }
                 
                 // Simplified search - match iOS exactly (case insensitive using uppercase comparison)
                 val upperSearchText = searchText.uppercase()
@@ -184,26 +173,31 @@ class DatabaseManager(private val context: Context) {
                     .from(DataSource.collection(collection))
                 
                 val results = query.execute()
-                val liquorItems = mutableListOf<LiquorItem>()
+                val groceryItems = mutableListOf<GroceryItem>()
                 val seenIds = mutableSetOf<String>() // Prevent duplicates
                 
                 results.forEach { result ->
-                    val dict = result.getDictionary(0)
+                    val dict = result.getDictionary(collectionName)
                     dict?.let {
                         val id = it.getString("id") ?: return@let
                         val name = it.getString("name") ?: return@let
-                        val type = it.getString("type") ?: return@let
-                        val price = it.getDouble("price")
                         val imageURL = it.getString("imageURL") ?: return@let
-                        val quantity = it.getInt("quantity")
+                        
+                        // Map 'category' from Capella to 'type' in app
+                        val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
+                        val price = it.getDouble("price")
+                        
+                        // Map 'stockQty' from Capella to 'quantity' in app
+                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                            ?: it.getInt("quantity")
                         
                         // Filter in code to match search text (case insensitive)
                         val nameUpper = name.uppercase()
                         val typeUpper = type.uppercase()
                         
                         if ((nameUpper.contains(upperSearchText) || typeUpper.contains(upperSearchText)) && !seenIds.contains(id)) {
-                            val item = LiquorItem(id, name, type, price, imageURL, quantity)
-                            liquorItems.add(item)
+                            val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                            groceryItems.add(item)
                             seenIds.add(id)
                             
                             Log.d("DatabaseManager", "Found item: $name (searching for: $searchText)")
@@ -211,10 +205,10 @@ class DatabaseManager(private val context: Context) {
                     }
                 }
                 
-                Log.d("DatabaseManager", "Search for '$searchText' returned ${liquorItems.size} items")
-                return@withContext liquorItems
+                Log.d("DatabaseManager", "Search for '$searchText' returned ${groceryItems.size} items")
+                return@withContext groceryItems
             } catch (e: Exception) {
-                Log.e("DatabaseManager", "Error searching liquor", e)
+                Log.e("DatabaseManager", "Error searching grocery", e)
                 return@withContext emptyList()
             }
         } ?: emptyList()
@@ -272,17 +266,17 @@ class DatabaseManager(private val context: Context) {
         }
     }
     
-    fun createLiquorItemWithSync(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
+    fun createGroceryItemWithSync(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
         // Create via App Services if enabled (will also save locally)
         if (isAppServicesEnabled) {
-            appServicesSyncManager?.createLiquorItem(name, type, price, imageURL, quantity)?.let { itemId ->
+            appServicesSyncManager?.createGroceryItem(name, type, price, imageURL, quantity)?.let { itemId ->
                 return itemId
             }
         }
         
         // Fallback to local creation
-        val item = LiquorItem(name = name, type = type, price = price, imageURL = imageURL, quantity = quantity)
-        saveLiquorItem(item)
+        val item = GroceryItem(name = name, type = type, price = price, imageURL = imageURL, quantity = quantity)
+        saveGroceryItem(item)
         return item.id
     }
     

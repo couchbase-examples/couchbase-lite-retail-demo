@@ -17,13 +17,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun LandingScreen() {
+fun LandingScreen(
+    authManager: AuthenticationManager,
+    onLogout: () -> Unit
+) {
     var showInventory by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
     if (showInventory) {
         InventoryScreen(
-            onBackPressed = { showInventory = false },
+            onBackPressed = { 
+                if (!authManager.isAuthenticated) {
+                    // User logged out, go back to login
+                    showInventory = false
+                    onLogout()
+                } else {
+                    showInventory = false
+                }
+            },
+            authManager = authManager,
             databaseManager = LiquorApplication.databaseManager
         )
     } else {
@@ -52,19 +64,19 @@ fun LandingScreen() {
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     Text(
-                        text = "🍷",
+                        text = "🛒",
                         fontSize = 80.sp
                     )
                     
                     Text(
-                        text = "Liquor Inventory",
+                        text = "Grocery Mart",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     
                     Text(
-                        text = "Manage your liquor collection with ease",
+                        text = "Manage your inventory with ease",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White.copy(alpha = 0.9f),
                         modifier = Modifier.padding(horizontal = 16.dp)
