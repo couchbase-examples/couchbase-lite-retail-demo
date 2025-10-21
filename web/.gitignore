@@ -12,11 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Environment variables (contains sensitive sync credentials)
-.env
-.env.local
-.env.*.local
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables (keep .env.example for reference)
+.env
+.env.local
+.env.production
+.env.development
+
+# Vercel
+.vercel

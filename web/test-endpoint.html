@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Test</title>
+</head>
+<body>
+  <h1>Couchbase App Services WebSocket Test</h1>
+  <div id="output"></div>
+  
+  <script>
+    const output = document.getElementById('output');
+    
+    function log(msg, color = 'black') {
+      const p = document.createElement('p');
+      p.style.color = color;
+      p.textContent = msg;
+      output.appendChild(p);
+    }
+    
+    log('Testing WebSocket connection to App Services...', 'blue');
+    
+    const wsUrl = 'wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984/supermarket-aa';
+    log(`URL: ${wsUrl}`);
+    
+    try {
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        log('✅ WebSocket OPENED successfully!', 'green');
+        log('This means the endpoint is reachable.', 'green');
+        ws.close();
+      };
+      
+      ws.onerror = (error) => {
+        log('❌ WebSocket ERROR:', 'red');
+        log(JSON.stringify(error, null, 2), 'red');
+      };
+      
+      ws.onclose = (event) => {
+        log(`WebSocket CLOSED. Code: ${event.code}, Reason: ${event.reason}`, 'orange');
+        if (event.code === 1006) {
+          log('Code 1006 = Abnormal closure (no status code from server)', 'red');
+          log('This could mean:', 'red');
+          log('- The endpoint URL is wrong', 'red');
+          log('- The server rejected the connection', 'red');
+          log('- Network/firewall blocking', 'red');
+          log('- TLS/SSL certificate issue', 'red');
+        }
+      };
+    } catch (err) {
+      log('❌ Exception creating WebSocket:', 'red');
+      log(err.message, 'red');
+    }
+  </script>
+</body>
+</html>
+

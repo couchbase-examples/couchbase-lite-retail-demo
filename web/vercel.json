@@ -1,0 +1,46 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "env": {
+    "VITE_CAPELLA_BASE_URL": "wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984",
+    "VITE_AA_STORE_ENDPOINT": "supermarket-aa",
+    "VITE_NYC_STORE_ENDPOINT": "supermarket-nyc",
+    "VITE_DATABASE_NAME": "retail-inventory",
+    "VITE_DATABASE_VERSION": "4",
+    "VITE_APP_NAME": "Inventory Pro",
+    "VITE_APP_VERSION": "1.0.0"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
