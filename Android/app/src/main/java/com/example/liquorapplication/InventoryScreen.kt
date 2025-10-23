@@ -34,34 +34,45 @@ fun InventoryScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
+    // Manual refresh now just gives visual feedback - Flow handles data updates automatically
     fun refreshData() {
         scope.launch {
             isRefreshing = true
-            android.util.Log.d("InventoryScreen", "🔄 Manual refresh started...")
+            android.util.Log.d("InventoryScreen", "🔄 [Manual Refresh] Started...")
             
-            // DON'T stop the replicator! Continuous sync should be running 24/7
-            // Just reload data from local DB - the continuous sync will have already pulled latest data
-            android.util.Log.d("InventoryScreen", "📖 Reading latest data from local database...")
+            // Reactive Flow will automatically update when data changes
+            // This manual refresh just gives visual feedback to user
+            kotlinx.coroutines.delay(500)
             
-            // Reload data
-            groceryItems = databaseManager.getAllGroceryItems()
-            filteredItems = if (searchText.isEmpty()) {
-                groceryItems
-            } else {
-                databaseManager.searchGrocery(searchText)
-            }
+            // Reload profile name
             profileName = databaseManager.getStoreProfile()?.name
             
             isRefreshing = false
-            android.util.Log.d("InventoryScreen", "✅ Manual refresh completed - items: ${groceryItems.size}")
+            android.util.Log.d("InventoryScreen", "✅ [Manual Refresh] Completed - Flow handles data updates")
         }
     }
     
+    // MARK: - Reactive API Setup (Kotlin Flow)
+    // Automatically collect updates from Flow - no manual refresh needed!
     LaunchedEffect(Unit) {
-        groceryItems = databaseManager.getAllGroceryItems()
-        filteredItems = groceryItems
+        android.util.Log.d("InventoryScreen", "🔄 [Reactive API] Setting up Flow collection...")
+        
         // Load profile name
         profileName = databaseManager.getStoreProfile()?.name
+        
+        // Collect from Flow - this automatically updates when data changes
+        databaseManager.getGroceryItemsFlow().collect { items ->
+            groceryItems = items
+            filteredItems = if (searchText.isEmpty()) {
+                items
+            } else {
+                items.filter { item ->
+                    item.name.contains(searchText, ignoreCase = true) ||
+                    item.type.contains(searchText, ignoreCase = true)
+                }
+            }
+            android.util.Log.d("InventoryScreen", "✅ [Reactive API] Flow emitted: ${items.size} items")
+        }
     }
     
     // Logout confirmation dialog

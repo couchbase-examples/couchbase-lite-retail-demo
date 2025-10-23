@@ -8,6 +8,10 @@ import androidx.compose.runtime.setValue
 import com.couchbase.lite.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 
 class DatabaseManager(private val context: Context) {
     private var database: Database? = null
@@ -97,6 +101,84 @@ class DatabaseManager(private val context: Context) {
             }
         }
     }
+    
+    // MARK: - Reactive API Methods (Flow-Based Queries)
+    
+    /**
+     * Creates a Flow of GroceryItems that automatically emits updates when data changes
+     * Uses Kotlin Flow for reactive programming (modern approach)
+     * This replaces manual polling/refresh - UI updates automatically!
+     */
+    fun getGroceryItemsFlow(): Flow<List<GroceryItem>> = callbackFlow {
+        val db = database
+        if (db == null) {
+            Log.e("DatabaseManager", "❌ Database not initialized")
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        
+        try {
+            val collection = db.getCollection(collectionName, AppConfig.scopeName)
+            if (collection == null) {
+                Log.e("DatabaseManager", "❌ Collection not found")
+                trySend(emptyList())
+                close()
+                return@callbackFlow
+            }
+            
+            // Create query
+            val query = QueryBuilder
+                .select(SelectResult.all())
+                .from(DataSource.collection(collection))
+            
+            Log.d("DatabaseManager", "🔄 [Reactive API] Setting up query change listener...")
+            
+            // Add change listener that emits to Flow
+            val token = query.addChangeListener { change ->
+                val results = change.results
+                if (results != null) {
+                    val items = mutableListOf<GroceryItem>()
+                    
+                    results.forEach { result ->
+                        val dict = result.getDictionary(collectionName)
+                        dict?.let {
+                            val id = it.getString("id") ?: return@let
+                            val name = it.getString("name") ?: return@let
+                            val imageURL = it.getString("imageURL") ?: return@let
+                            val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
+                            val price = it.getDouble("price")
+                            val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                                ?: it.getInt("quantity")
+                            
+                            val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                            items.add(item)
+                        }
+                    }
+                    
+                    Log.d("DatabaseManager", "✅ [Reactive API] Query changed: ${items.size} items")
+                    trySend(items)
+                }
+            }
+            
+            // Initial query execution
+            query.execute()
+            
+            Log.d("DatabaseManager", "✅ [Reactive API] Flow setup complete - automatic updates enabled!")
+            
+            // Cleanup when Flow is cancelled
+            awaitClose {
+                Log.d("DatabaseManager", "🔄 [Reactive API] Removing query change listener")
+                token.remove()
+            }
+        } catch (e: Exception) {
+            Log.e("DatabaseManager", "❌ [Reactive API] Error setting up Flow", e)
+            trySend(emptyList())
+            close()
+        }
+    }
+    
+    // MARK: - Legacy Methods (Keep for other screens until migrated)
     
     suspend fun getAllGroceryItems(): List<GroceryItem> = withContext(Dispatchers.IO) {
         database?.let { db ->
