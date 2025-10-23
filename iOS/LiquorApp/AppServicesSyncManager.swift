@@ -46,12 +46,19 @@ class AppServicesSyncManager: ObservableObject {
     // MARK: - Setup Methods
     private func setupAppServicesSync() {
         print("🔧 Setting up App Services sync configuration...")
-        print("🔧 Scope: \(AppConfig.scopeName), Collection: \(collectionName)")
+        print("🔧 Scope: \(AppConfig.scopeName)")
+        print("🔧 Collections: inventory, profile, orders")
         
         do {
-            // Ensure collection exists (using scope from AppConfig to match Capella structure)
-            let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+            // Ensure all collections exist (using scope from AppConfig to match Capella structure)
+            let inventoryCollection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
                 ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
+            
+            let profileCollection = try database.collection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+            
+            let ordersCollection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
             
             // Create target endpoint
             guard let url = URL(string: syncGatewayURL) else {
@@ -73,10 +80,15 @@ class AppServicesSyncManager: ObservableObject {
             config.maxAttemptWaitTime = 300 // 5 minutes
             config.allowReplicatingInBackground = true
             
-            // Configure collections with CRDT conflict resolver
-            var collectionConfig = CollectionConfiguration()
-            collectionConfig.conflictResolver = LiquorCRDTConflictResolver.shared
-            config.addCollection(collection, config: collectionConfig)
+            // Configure collections with CRDT conflict resolver (for inventory only)
+            var inventoryConfig = CollectionConfiguration()
+            inventoryConfig.conflictResolver = LiquorCRDTConflictResolver.shared
+            config.addCollection(inventoryCollection, config: inventoryConfig)
+            
+            // Add profile and orders collections (no CRDT needed for these)
+            var defaultConfig = CollectionConfiguration()
+            config.addCollection(profileCollection, config: defaultConfig)
+            config.addCollection(ordersCollection, config: defaultConfig)
             
             // Create replicator
             replicator = Replicator(config: config)

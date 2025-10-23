@@ -3,12 +3,14 @@ import SwiftUI
 struct LiquorItemCard: View {
     let item: LiquorItem
     let onQuantityChanged: (Int) -> Void
+    let onReorder: (LiquorItem) -> Void
     @State private var currentQuantity: Int
     @State private var showOrderPlaced = false
     
-    init(item: LiquorItem, onQuantityChanged: @escaping (Int) -> Void) {
+    init(item: LiquorItem, onQuantityChanged: @escaping (Int) -> Void, onReorder: @escaping (LiquorItem) -> Void = { _ in }) {
         self.item = item
         self.onQuantityChanged = onQuantityChanged
+        self.onReorder = onReorder
         self._currentQuantity = State(initialValue: item.quantity)
     }
     
@@ -106,6 +108,9 @@ struct LiquorItemCard: View {
                 // Re-order button
                 Button(action: {
                     print("Re-order \(item.name)")
+                    // Call the reorder callback
+                    onReorder(item)
+                    
                     withAnimation(.easeInOut(duration: 0.3)) {
                         showOrderPlaced = true
                     }

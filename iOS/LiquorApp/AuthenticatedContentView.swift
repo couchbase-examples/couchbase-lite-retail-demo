@@ -17,6 +17,20 @@ struct AuthenticatedContentView: View {
                     Text("Inventory")
                 }
             
+            // Store Profile Tab (NEW)
+            StoreProfileView()
+                .tabItem {
+                    Image(systemName: "building.2")
+                    Text("Profile")
+                }
+            
+            // Orders Tab (NEW)
+            OrdersView()
+                .tabItem {
+                    Image(systemName: "shippingbox")
+                    Text("Orders")
+                }
+            
             // Merchandising Tab
             SimpleMerchandisingView()
                 .tabItem {
@@ -24,19 +38,19 @@ struct AuthenticatedContentView: View {
                     Text("Scanner")
                 }
             
-            // Profile Tab
-            ProfileView()
+            // Settings Tab (Renamed from Profile)
+            SettingsView()
                 .tabItem {
-                    Image(systemName: "person.circle")
-                    Text("Profile")
+                    Image(systemName: "gear")
+                    Text("Settings")
                 }
         }
         .accentColor(.blue)
     }
 }
 
-// MARK: - Profile View
-struct ProfileView: View {
+// MARK: - Settings View (Renamed from Profile View)
+struct SettingsView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var databaseManager: DatabaseManager
     @EnvironmentObject var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper
@@ -166,7 +180,7 @@ struct ProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("Settings")
         }
     }
 }

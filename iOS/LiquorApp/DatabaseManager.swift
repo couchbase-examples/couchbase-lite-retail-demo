@@ -522,6 +522,170 @@ class DatabaseManager: ObservableObject {
         }
     }
     
+    // MARK: - Profile Operations
+    
+    func getStoreProfile() -> StoreProfile? {
+        guard let database = database else { return nil }
+        
+        do {
+            let collection = try database.collection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+            
+            let query = QueryBuilder
+                .select(SelectResult.all())
+                .from(DataSource.collection(collection))
+                .where(Expression.property("storeId").equalTo(Expression.string(AppConfig.storeId)))
+            
+            let results = try query.execute()
+            
+            for result in results {
+                guard let dict = result.dictionary(at: 0) else { continue }
+                
+                let id = dict.string(forKey: "id") ?? ""
+                let docType = dict.string(forKey: "docType") ?? "StoreProfile"
+                let storeId = dict.string(forKey: "storeId") ?? ""
+                let name = dict.string(forKey: "name") ?? ""
+                
+                // Parse contact
+                guard let contactDict = dict.dictionary(forKey: "contact") else { continue }
+                let contact = StoreProfile.Contact(
+                    email: contactDict.string(forKey: "email") ?? "",
+                    phone: contactDict.string(forKey: "phone") ?? ""
+                )
+                
+                // Parse location
+                guard let locationDict = dict.dictionary(forKey: "location") else { continue }
+                var coordinates: StoreProfile.Coordinates? = nil
+                if let coordDict = locationDict.dictionary(forKey: "coordinates") {
+                    coordinates = StoreProfile.Coordinates(
+                        lat: coordDict.double(forKey: "lat"),
+                        lon: coordDict.double(forKey: "lon")
+                    )
+                }
+                
+                let location = StoreProfile.Location(
+                    address1: locationDict.string(forKey: "address1") ?? "",
+                    address2: locationDict.string(forKey: "address2"),
+                    locality: locationDict.string(forKey: "locality") ?? "",
+                    region: locationDict.string(forKey: "region") ?? "",
+                    postalCode: locationDict.string(forKey: "postalCode") ?? "",
+                    country: locationDict.string(forKey: "country") ?? "",
+                    coordinates: coordinates
+                )
+                
+                let profile = StoreProfile(
+                    id: id,
+                    docType: docType,
+                    storeId: storeId,
+                    name: name,
+                    contact: contact,
+                    location: location,
+                    manager: dict.string(forKey: "manager"),
+                    openingHours: dict.string(forKey: "openingHours")
+                )
+                
+                print("✅ Retrieved store profile: \(profile.name)")
+                return profile
+            }
+            
+            return nil
+        } catch {
+            print("❌ Error fetching store profile: \(error)")
+            return nil
+        }
+    }
+    
+    // MARK: - Orders Operations
+    
+    func getAllOrders() -> [Order] {
+        guard let database = database else { return [] }
+        
+        do {
+            let collection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+            
+            let query = QueryBuilder
+                .select(SelectResult.all())
+                .from(DataSource.collection(collection))
+                .where(Expression.property("storeId").equalTo(Expression.string(AppConfig.storeId)))
+                .orderBy(Ordering.expression(Expression.property("orderDate")).descending())
+            
+            let results = try query.execute()
+            var orders: [Order] = []
+            
+            for result in results {
+                guard let dict = result.dictionary(at: 0) else { continue }
+                
+                let order = Order(
+                    id: dict.string(forKey: "id") ?? "",
+                    docType: dict.string(forKey: "docType") ?? "Order",
+                    orderId: dict.int(forKey: "orderId"),
+                    storeId: dict.string(forKey: "storeId") ?? "",
+                    orderDate: dict.int64(forKey: "orderDate"),
+                    orderStatus: dict.string(forKey: "orderStatus") ?? "Submitted",
+                    productId: dict.int(forKey: "productId"),
+                    sku: dict.string(forKey: "sku") ?? "",
+                    unit: dict.string(forKey: "unit") ?? "",
+                    orderQty: dict.int(forKey: "orderQty")
+                )
+                orders.append(order)
+            }
+            
+            print("✅ Retrieved \(orders.count) orders")
+            return orders
+        } catch {
+            print("❌ Error fetching orders: \(error)")
+            return []
+        }
+    }
+    
+    func createOrder(item: LiquorItem, quantity: Int = 100) -> Order? {
+        guard let database = database else { return nil }
+        
+        do {
+            let collection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+            
+            // Get next order ID
+            let existingOrders = getAllOrders()
+            let nextOrderId = (existingOrders.map { $0.orderId }.max() ?? 0) + 1
+            
+            let orderId = "Order_\(AppConfig.storeId.uppercased())_\(nextOrderId)"
+            let order = Order(
+                id: orderId,
+                docType: "Order",
+                orderId: nextOrderId,
+                storeId: AppConfig.storeId,
+                orderDate: Int64(Date().timeIntervalSince1970 * 1000),
+                orderStatus: "Submitted",
+                productId: item.productId ?? item.id.hashValue,
+                sku: item.sku ?? item.id,
+                unit: item.unit ?? "bag",
+                orderQty: quantity
+            )
+            
+            let document = MutableDocument(id: orderId)
+            document.setString(order.id, forKey: "id")
+            document.setString(order.docType, forKey: "docType")
+            document.setInt(order.orderId, forKey: "orderId")
+            document.setString(order.storeId, forKey: "storeId")
+            document.setInt64(order.orderDate, forKey: "orderDate")
+            document.setString(order.orderStatus, forKey: "orderStatus")
+            document.setInt(order.productId, forKey: "productId")
+            document.setString(order.sku, forKey: "sku")
+            document.setString(order.unit, forKey: "unit")
+            document.setInt(order.orderQty, forKey: "orderQty")
+            
+            try collection.save(document: document)
+            print("✅ Created order: \(orderId)")
+            
+            return order
+        } catch {
+            print("❌ Error creating order: \(error)")
+            return nil
+        }
+    }
+    
     // MARK: - App Services Integration
     
     private func setupAppServicesIntegration() {

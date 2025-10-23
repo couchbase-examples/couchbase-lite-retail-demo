@@ -9,7 +9,8 @@ struct InventoryView: View {
     @State private var liquorItems: [LiquorItem] = []
     @State private var showDebugInfo = false
     @StateObject private var debugInfo = P2PDebugInfo()
-    @State private var refreshTimer: Timer?
+    @State private var profileName: String?
+    @State private var isRefreshing = false
     @Environment(\.dismiss) private var dismiss
     
     // Fixed 2-column layout to match Android
@@ -77,7 +78,7 @@ struct InventoryView: View {
                         .transition(.opacity.combined(with: .slide))
                 }
                 
-                // Inventory grid
+                // Inventory grid with pull-to-refresh
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(filteredItems) { item in
@@ -86,6 +87,12 @@ struct InventoryView: View {
                                 onQuantityChanged: { newQuantity in
                                     databaseManager.updateQuantity(for: item.id, newQuantity: newQuantity)
                                     loadLiquorItems()
+                                },
+                                onReorder: { item in
+                                    // Create order in database
+                                    if let order = databaseManager.createOrder(item: item, quantity: 100) {
+                                        print("✅ Order created: \(order.id)")
+                                    }
                                 }
                             )
                         }
@@ -93,22 +100,40 @@ struct InventoryView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 20)
                 }
+                .refreshable {
+                    await refreshData()
+                }
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Grocery Inventory")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                // Profile name on leading side
+                // Profile name on leading side (from Capella) with truncation
                 ToolbarItem(placement: .navigationBarLeading) {
                     if let user = authManager.currentUser {
-                        Text("Welcome, \(user.fullName)")
+                        let displayName = profileName ?? user.fullName
+                        // Truncate if longer than 35 characters
+                        let truncatedName = displayName.count > 35 ? String(displayName.prefix(32)) + "..." : displayName
+                        Text("Welcome, \(truncatedName)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
+                        // Refresh button
+                        Button(action: {
+                            Task {
+                                await refreshData()
+                            }
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.blue)
+                                .font(.title3)
+                        }
+                        
                         // User role badge
                         if let user = authManager.currentUser {
                             Text(user.role)
@@ -134,19 +159,11 @@ struct InventoryView: View {
         }
         .onAppear {
             loadLiquorItems()
+            // Load profile name from Capella
+            profileName = databaseManager.getStoreProfile()?.name
             // Initialize P2P debug info
             debugInfo.multipeerSyncManager = p2pSyncManagerWrapper
             debugInfo.refreshData()
-            // Start refresh timer for real-time updates
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-                debugInfo.refreshData()
-                // Also refresh inventory data to get sync updates
-                loadLiquorItems()
-            }
-        }
-        .onDisappear {
-            refreshTimer?.invalidate()
-            refreshTimer = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .liquorInventoryChanged)) { _ in
             // Immediate refresh when database changes from sync
@@ -161,6 +178,24 @@ struct InventoryView: View {
             self.liquorItems = databaseManager.getAllLiquorItems()
             print("🔄 [InventoryView] UI refreshed with \(self.liquorItems.count) items")
         }
+    }
+    
+    private func refreshData() async {
+        isRefreshing = true
+        print("🔄 [InventoryView] Manual refresh started...")
+        print("📖 [InventoryView] Reading latest data from local database...")
+        
+        loadLiquorItems()
+        profileName = databaseManager.getStoreProfile()?.name
+        
+        // Force a notification to trigger UI update
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
+            print("📡 [InventoryView] Posted manual refresh notification")
+        }
+        
+        isRefreshing = false
+        print("✅ [InventoryView] Manual refresh completed - items: \(liquorItems.count)")
     }
 }
 
