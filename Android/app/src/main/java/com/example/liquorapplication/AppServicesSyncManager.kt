@@ -66,11 +66,18 @@ class AppServicesSyncManager(
         viewModelScope.launch {
             try {
                 Log.d(TAG, "🔧 Setting up App Services sync configuration...")
-                Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}, Collection: $COLLECTION_NAME")
+                Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}")
+                Log.d(TAG, "🔧 Collections: inventory, profile, orders")
                 
-                // Get collection from correct scope (matches Capella structure)
-                val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName)
-                    ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
+                // Get all collections from correct scope (matches Capella structure)
+                val inventoryCollection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
+                    ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
+                
+                val profileCollection = database.getCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
+                    ?: database.createCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
+                
+                val ordersCollection = database.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+                    ?: database.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
                 
                 // Create target endpoint
                 Log.d(TAG, "📡 Connecting to: $SYNC_GATEWAY_URL")
@@ -89,8 +96,10 @@ class AppServicesSyncManager(
                 config.maxAttempts = AppConfig.SYNC_MAX_ATTEMPTS
                 config.maxAttemptWaitTime = AppConfig.SYNC_MAX_ATTEMPT_WAIT_TIME.toInt()
                 
-                // Add collection to replication
-                config.addCollection(collection, null)
+                // Add all collections to replication
+                config.addCollection(inventoryCollection, null)
+                config.addCollection(profileCollection, null)
+                config.addCollection(ordersCollection, null)
                 
                 // Create replicator
                 replicator = Replicator(config)

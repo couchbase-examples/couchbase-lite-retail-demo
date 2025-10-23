@@ -23,8 +23,8 @@ class MainActivity : ComponentActivity() {
         
         Log.d("MainActivity", "🚀 Starting MainActivity with App Services integration...")
         
-        // Initialize AuthenticationManager with Couchbase Lite
-        authManager = AuthenticationManager(this)
+        // Initialize AuthenticationManager with Couchbase Lite and DatabaseManager
+        authManager = AuthenticationManager(this, LiquorApplication.databaseManager)
         
         enableEdgeToEdge()
         setContent {

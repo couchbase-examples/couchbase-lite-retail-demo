@@ -10,7 +10,10 @@ import kotlinx.coroutines.withContext
  * Authentication Manager using Couchbase Lite for session persistence
  * Stores user session in local database to maintain login state across app restarts
  */
-class AuthenticationManager(private val context: Context) {
+class AuthenticationManager(
+    private val context: Context,
+    private val databaseManager: DatabaseManager
+) {
     
     companion object {
         private const val TAG = "AuthManager"
@@ -22,6 +25,8 @@ class AuthenticationManager(private val context: Context) {
     var currentUser: User? = null
         private set
     var isAuthenticated: Boolean = false
+        private set
+    var storeProfile: StoreProfile? = null
         private set
     
     // Valid credentials (matches iOS)
@@ -82,11 +87,15 @@ class AuthenticationManager(private val context: Context) {
                 return@withContext LoginResult.Error("Invalid username or password")
             }
             
-            // Create user object
+            // Fetch store profile from database
+            storeProfile = databaseManager.getStoreProfile()
+            
+            // Create user object with profile name
             val user = User(
                 username = username.lowercase(),
                 fullName = credentials.fullName,
-                role = credentials.role
+                role = credentials.role,
+                profileName = storeProfile?.name  // Use profile name from Capella
             )
             
             // Store session in Couchbase Lite
@@ -97,6 +106,7 @@ class AuthenticationManager(private val context: Context) {
             isAuthenticated = true
             
             Log.d(TAG, "✅ Login successful: ${user.fullName}")
+            Log.d(TAG, "📋 Profile name: ${storeProfile?.name ?: "Not loaded"}")
             return@withContext LoginResult.Success(user)
             
         } catch (e: Exception) {
@@ -131,11 +141,12 @@ class AuthenticationManager(private val context: Context) {
                 val username = sessionDoc.getString("username")
                 val fullName = sessionDoc.getString("fullName")
                 val role = sessionDoc.getString("role")
+                val profileName = sessionDoc.getString("profileName")
                 val isAuth = sessionDoc.getBoolean("isAuthenticated")
                 
                 if (isAuth && username != null && fullName != null && role != null) {
                     // Restore session
-                    currentUser = User(username, fullName, role)
+                    currentUser = User(username, fullName, role, profileName)
                     isAuthenticated = true
                     Log.d(TAG, "🔄 Restored login session: $fullName")
                 }
@@ -156,6 +167,7 @@ class AuthenticationManager(private val context: Context) {
             sessionDoc.setString("username", user.username)
             sessionDoc.setString("fullName", user.fullName)
             sessionDoc.setString("role", user.role)
+            sessionDoc.setString("profileName", user.profileName)
             sessionDoc.setBoolean("isAuthenticated", true)
             sessionDoc.setLong("loginTime", System.currentTimeMillis())
             
@@ -202,7 +214,8 @@ class AuthenticationManager(private val context: Context) {
 data class User(
     val username: String,
     val fullName: String,
-    val role: String
+    val role: String,
+    val profileName: String? = null  // From profile collection in Capella
 )
 
 /**

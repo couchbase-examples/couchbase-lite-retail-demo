@@ -214,6 +214,180 @@ class DatabaseManager(private val context: Context) {
         } ?: emptyList()
     }
     
+    // MARK: - Profile Operations
+    suspend fun getStoreProfile(): StoreProfile? = withContext(Dispatchers.IO) {
+        database?.let { db ->
+            try {
+                val collection = db.getCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName) 
+                    ?: return@withContext null
+                    
+                val query = QueryBuilder
+                    .select(SelectResult.all())
+                    .from(DataSource.collection(collection))
+                    .where(Expression.property("storeId").equalTo(Expression.string(AppConfig.storeId)))
+                    
+                val results = query.execute()
+                
+                results.forEach { result ->
+                    val dict = result.getDictionary(AppConfig.PROFILE_COLLECTION_NAME)
+                    dict?.let {
+                        val id = it.getString("id") ?: return@let
+                        val docType = it.getString("docType") ?: "StoreProfile"
+                        val storeId = it.getString("storeId") ?: return@let
+                        val name = it.getString("name") ?: return@let
+                        
+                        // Parse contact
+                        val contactDict = it.getDictionary("contact")
+                        val contact = contactDict?.let { c ->
+                            StoreProfile.Contact(
+                                email = c.getString("email") ?: "",
+                                phone = c.getString("phone") ?: ""
+                            )
+                        } ?: return@let
+                        
+                        // Parse location
+                        val locationDict = it.getDictionary("location")
+                        val location = locationDict?.let { l ->
+                            val coordDict = l.getDictionary("coordinates")
+                            val coordinates = coordDict?.let { coord ->
+                                StoreProfile.Coordinates(
+                                    lat = coord.getDouble("lat"),
+                                    lon = coord.getDouble("lon")
+                                )
+                            }
+                            
+                            StoreProfile.Location(
+                                address1 = l.getString("address1") ?: "",
+                                address2 = l.getString("address2"),
+                                locality = l.getString("locality") ?: "",
+                                region = l.getString("region") ?: "",
+                                postalCode = l.getString("postalCode") ?: "",
+                                country = l.getString("country") ?: "",
+                                coordinates = coordinates
+                            )
+                        } ?: return@let
+                        
+                        val profile = StoreProfile(
+                            id = id,
+                            docType = docType,
+                            storeId = storeId,
+                            name = name,
+                            contact = contact,
+                            location = location,
+                            manager = it.getString("manager"),
+                            openingHours = it.getString("openingHours")
+                        )
+                        
+                        Log.d("DatabaseManager", "Retrieved store profile: ${profile.name}")
+                        return@withContext profile
+                    }
+                }
+                
+                Log.d("DatabaseManager", "No store profile found")
+                return@withContext null
+            } catch (e: Exception) {
+                Log.e("DatabaseManager", "Error fetching store profile", e)
+                return@withContext null
+            }
+        } ?: null
+    }
+    
+    // MARK: - Orders Operations
+    suspend fun getAllOrders(): List<Order> = withContext(Dispatchers.IO) {
+        database?.let { db ->
+            try {
+                val collection = db.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName) 
+                    ?: return@withContext emptyList()
+                    
+                val query = QueryBuilder
+                    .select(SelectResult.all())
+                    .from(DataSource.collection(collection))
+                    .where(Expression.property("storeId").equalTo(Expression.string(AppConfig.storeId)))
+                    .orderBy(Ordering.expression(Expression.property("orderDate")).descending())
+                
+                val results = query.execute()
+                val orders = mutableListOf<Order>()
+                
+                results.forEach { result ->
+                    val dict = result.getDictionary(AppConfig.ORDERS_COLLECTION_NAME)
+                    dict?.let {
+                        val order = Order(
+                            id = it.getString("id") ?: return@let,
+                            docType = it.getString("docType") ?: "Order",
+                            orderId = it.getInt("orderId"),
+                            storeId = it.getString("storeId") ?: "",
+                            orderDate = it.getLong("orderDate"),
+                            orderStatus = it.getString("orderStatus") ?: "Submitted",
+                            productId = it.getInt("productId"),
+                            sku = it.getString("sku") ?: "",
+                            unit = it.getString("unit") ?: "",
+                            orderQty = it.getInt("orderQty")
+                        )
+                        orders.add(order)
+                    }
+                }
+                
+                Log.d("DatabaseManager", "Retrieved ${orders.size} orders")
+                return@withContext orders
+            } catch (e: Exception) {
+                Log.e("DatabaseManager", "Error fetching orders", e)
+                return@withContext emptyList()
+            }
+        } ?: emptyList()
+    }
+    
+    suspend fun createOrder(item: GroceryItem, quantity: Int = 100): Order? = withContext(Dispatchers.IO) {
+        database?.let { db ->
+            try {
+                val collection = db.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName) 
+                    ?: db.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+                
+                // Get next order ID
+                val existingOrders = getAllOrders()
+                val nextOrderId = (existingOrders.maxOfOrNull { it.orderId } ?: 0) + 1
+                
+                val orderId = "Order_${AppConfig.storeId.uppercase()}_$nextOrderId"
+                val order = Order(
+                    id = orderId,
+                    docType = "Order",
+                    orderId = nextOrderId,
+                    storeId = AppConfig.storeId,
+                    orderDate = System.currentTimeMillis(),
+                    orderStatus = "Submitted",
+                    productId = item.id.hashCode(), // Simple productId generation
+                    sku = item.id,
+                    unit = "bag", // Default unit
+                    orderQty = quantity
+                )
+                
+                val document = MutableDocument(orderId)
+                document.setString("id", order.id)
+                document.setString("docType", order.docType)
+                document.setInt("orderId", order.orderId)
+                document.setString("storeId", order.storeId)
+                document.setLong("orderDate", order.orderDate)
+                document.setString("orderStatus", order.orderStatus)
+                document.setInt("productId", order.productId)
+                document.setString("sku", order.sku)
+                document.setString("unit", order.unit)
+                document.setInt("orderQty", order.orderQty)
+                
+                collection.save(document)
+                Log.d("DatabaseManager", "Created order: $orderId")
+                
+                // Trigger sync if App Services is enabled
+                if (isAppServicesEnabled) {
+                    appServicesSyncManager?.pushDocumentImmediately(orderId)
+                }
+                
+                return@withContext order
+            } catch (e: Exception) {
+                Log.e("DatabaseManager", "Error creating order", e)
+                return@withContext null
+            }
+        } ?: null
+    }
+    
     // MARK: - App Services Integration
     private fun setupAppServicesIntegration() {
         database?.let { db ->
