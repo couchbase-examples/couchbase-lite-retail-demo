@@ -1,11 +1,69 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Package2, ShoppingCart, ClipboardList, LogOut } from "lucide-react";
+import { useDatabase } from "@/lib/database/DatabaseProvider";
+import { getStoredCredentials, clearCredentials } from "@/lib/auth";
+import { startContinuousSync } from "@/main";
+import type { StoreProfile } from "@/lib/database/types";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const db = useDatabase();
+  const [storeProfile, setStoreProfile] = useState<StoreProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check authentication and load store profile
+  useEffect(() => {
+    const credentials = getStoredCredentials();
+    
+    // Redirect to login if not authenticated
+    if (!credentials) {
+      console.log('⚠️ No credentials found - redirecting to login');
+      navigate("/");
+      return;
+    }
+
+    // Load store profile from database
+    const loadStoreProfile = async () => {
+      try {
+        setLoading(true);
+        console.log('📊 Loading store profile...');
+        
+        const query = db.createQuery('SELECT * FROM profile LIMIT 1');
+        let profile: StoreProfile | null = null;
+        
+        await query.execute((row) => {
+          if (row.profile) {
+            profile = row.profile;
+          }
+        });
+        
+        if (profile) {
+          console.log('✅ Store profile loaded:', profile);
+          setStoreProfile(profile);
+        } else {
+          console.log('⚠️ No store profile found in database');
+        }
+      } catch (error) {
+        console.error('❌ Error loading store profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Start continuous sync for inventory and orders
+    const initSync = async () => {
+      if (!(window as any).__replicator) {
+        await startContinuousSync(db);
+      }
+    };
+
+    void loadStoreProfile();
+    void initSync();
+  }, [navigate, db]);
 
   const tiles = [
     {
@@ -35,6 +93,22 @@ const Dashboard = () => {
   ];
 
   const handleLogout = () => {
+    // Clear stored credentials
+    clearCredentials();
+    
+    // Stop sync if running
+    const replicator = (window as any).__replicator;
+    if (replicator) {
+      try {
+        // Note: Replicator doesn't have a stop() method in this SDK version
+        // It will stop automatically when the page reloads
+        console.log('🔄 Replicator will stop on logout');
+      } catch (error) {
+        console.error('Error stopping replicator:', error);
+      }
+    }
+    
+    // Redirect to login
     navigate("/");
   };
 
@@ -48,9 +122,21 @@ const Dashboard = () => {
               <Package2 className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Inventory Pro</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, Employee</p>
-              <p className="text-xs text-muted-foreground">Store Number: #2847</p>
+              <h1 className="text-xl font-bold">
+                {loading ? 'Inventory Pro' : (storeProfile?.name || 'Inventory Pro')}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {loading ? 'Loading...' : storeProfile ? 
+                  `${storeProfile.location.locality}, ${storeProfile.location.region}` : 
+                  'Welcome back, Employee'
+                }
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {loading ? '' : storeProfile ? 
+                  `Store ID: ${storeProfile.storeId}` : 
+                  'Store Number: #2847'
+                }
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">

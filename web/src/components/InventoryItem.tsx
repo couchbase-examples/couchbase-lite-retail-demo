@@ -17,7 +17,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
   const handleCountChange = (increment: boolean) => {
     const newCount = increment ? item.stockQty + 1 : Math.max(0, item.stockQty - 1);
-    onCountChange(item._id, newCount);
+    onCountChange(item.id, newCount);
   };
 
   const handleReorder = () => {

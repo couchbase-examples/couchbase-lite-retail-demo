@@ -68,7 +68,7 @@ const Orders = () => {
         // Update local state
         setOrders(prevOrders =>
           prevOrders.map(order =>
-            order._id === orderId 
+            order.id === orderId 
               ? { ...order, orderStatus: 'Received' as const, orderDate: updatedDate }
               : order
           )
@@ -114,7 +114,7 @@ const Orders = () => {
         </div>
       ) : (
         orders.map((order) => (
-          <Card key={order._id} className="shadow-soft border border-border/50 hover:shadow-medium transition-shadow">
+          <Card key={order.id} className="shadow-soft border border-border/50 hover:shadow-medium transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -151,7 +151,7 @@ const Orders = () => {
                 {showReceiveButton && order.orderStatus === 'Submitted' && (
                   <div className="ml-6">
                     <Button 
-                      onClick={() => handleOrderReceived(order._id)}
+                      onClick={() => handleOrderReceived(order.id)}
                       variant="default"
                       className="gap-2"
                     >
@@ -243,6 +243,7 @@ const Orders = () => {
                 <TabsTrigger value="submitted" className="gap-2">
                   <Package className="h-4 w-4" />
                   Submitted ({submittedOrders.length})
+
                 </TabsTrigger>
                 <TabsTrigger value="received" className="gap-2">
                   <CheckCircle className="h-4 w-4" />

@@ -1,0 +1,2 @@
+# Don't ignore anything - we need the local couchbase-lite package
+!couchbase-lite-js-main/

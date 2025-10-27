@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@couchbaselabs/couchbase-lite": path.resolve(__dirname, "../couchbase-lite-js-main/dist/couchbase-lite.es.js"),
+      "@couchbaselabs/couchbase-lite": path.resolve(__dirname, "./vendor/couchbase-lite/couchbase-lite.es.js"),
     },
   },
 }));

@@ -5,6 +5,46 @@ import "./index.css";
 import { initializeDatabase } from "./lib/database/initDatabase";
 import { DatabaseProvider } from "./lib/database/DatabaseProvider";
 import { setupSync } from "./lib/database/sync";
+import { getStoredCredentials, getAppEndpointUrl } from "./lib/auth";
+import type { RetailDatabase } from "./lib/database/types";
+
+/**
+ * Start continuous sync for inventory and orders after successful login
+ * This is called from the Dashboard component after authentication
+ */
+export async function startContinuousSync(db: RetailDatabase) {
+  // Get stored credentials
+  const credentials = getStoredCredentials();
+  if (!credentials) {
+    console.log('⚠️ No credentials found - cannot start sync');
+    return null;
+  }
+
+  console.log('🔄 Starting continuous sync for inventory and orders...');
+  console.log('🏪 Store ID:', credentials.storeId);
+  
+  const syncUrl = getAppEndpointUrl(credentials.storeId);
+  console.log('📡 Sync URL:', syncUrl);
+  
+  try {
+    const replicator = setupSync(db, {
+      url: syncUrl,
+      username: credentials.email,
+      password: credentials.password,
+      storeId: credentials.storeId,
+    });
+    
+    console.log('✅ Continuous sync started successfully');
+    
+    // Store replicator instance for later use
+    (window as any).__replicator = replicator;
+    
+    return replicator;
+  } catch (syncError) {
+    console.error('⚠️ Continuous sync setup failed:', syncError);
+    return null;
+  }
+}
 
 async function bootstrap() {
   try {
@@ -14,37 +54,9 @@ async function bootstrap() {
     const db = await initializeDatabase();
     console.log('✅ Database initialized');
     
-    // Set up sync if configured
-    const syncUrl = import.meta.env.VITE_SYNC_GATEWAY_URL;
-    const syncUsername = import.meta.env.VITE_SYNC_USERNAME;
-    const syncPassword = import.meta.env.VITE_SYNC_PASSWORD;
-    const enableSync = import.meta.env.VITE_ENABLE_SYNC !== 'false';
-    
-    if (syncUrl && syncUsername && syncPassword && enableSync) {
-      console.log('🔄 Starting sync with Capella App Services...');
-      console.log('📡 Sync Gateway URL:', syncUrl);
-      
-      try {
-        const replicator = setupSync(db, {
-          url: syncUrl,
-          username: syncUsername,
-          password: syncPassword,
-        });
-        
-        console.log('✅ Sync configured successfully');
-        
-        // Store replicator instance for later use
-        (window as any).__replicator = replicator;
-      } catch (syncError) {
-        console.error('⚠️ Sync setup failed:', syncError);
-        console.log('Continuing in offline-only mode');
-      }
-    } else {
-      console.log('⚠️ Sync not configured - running in offline-only mode');
-      if (!syncUrl) console.log('   Missing: VITE_SYNC_GATEWAY_URL');
-      if (!syncUsername) console.log('   Missing: VITE_SYNC_USERNAME');
-      if (!syncPassword) console.log('   Missing: VITE_SYNC_PASSWORD');
-    }
+    // Note: Continuous sync will be started AFTER successful login
+    // The Login page will perform one-shot profile sync, then Dashboard will start continuous sync
+    console.log('📝 Sync will start after user authentication');
     
     // Render app
     const rootElement = document.getElementById("root");

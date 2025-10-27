@@ -24,7 +24,7 @@ const Inventory = () => {
     return items.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.sku.includes(searchQuery) ||
       item.brand.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -89,19 +89,21 @@ const Inventory = () => {
       // Update in database
       const doc = await db.collections.inventory.getDocument(DocID(id));
       if (doc) {
-        // Modify the document directly (it's a plain JavaScript object)
+        // Update document properties
         doc.stockQty = newCount;
         doc.lastUpdated = Date.now();
+        
+        // Save the document to trigger sync
         await db.collections.inventory.save(doc);
         
-        console.log(`Updated item ${id} stockQty to ${newCount}`);
+        console.log(`Updated item ${id} stockQty to ${newCount} - this should trigger sync`);
         
-        // Update local state
-        setItems(prevItems =>
-          prevItems.map(item =>
-            item._id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
-          )
-        );
+            // Update local state
+            setItems(prevItems =>
+              prevItems.map(item =>
+                item.id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
+              )
+            );
       }
     } catch (error) {
       console.error('Error updating count:', error);
@@ -201,13 +203,13 @@ const Inventory = () => {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {categoryItems.map((item) => (
-                      <InventoryItem
-                        key={item._id}
-                        item={item}
-                        onCountChange={handleCountChange}
-                      />
-                    ))}
+                        {categoryItems.map((item) => (
+                          <InventoryItem
+                            key={item.id}
+                            item={item}
+                            onCountChange={handleCountChange}
+                          />
+                        ))}
                   </div>
                 </CardContent>
               </Card>

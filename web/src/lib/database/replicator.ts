@@ -1,9 +1,9 @@
 import { Replicator, type ReplicatorConfig, type ReplicatorCollectionConfig, type ReplicatorStatus } from "@couchbaselabs/couchbase-lite";
 import type { RetailDatabase } from "./types";
 
-// AppServices / Sync Gateway configuration
-// Update these values with your actual Sync Gateway endpoint
-export const SYNC_GATEWAY_URL = "ws://localhost:4984/retail-inventory/_blipsync";
+// App Services configuration
+// Update this value with your actual App Services endpoint
+export const APP_SERVICES_URL = "ws://localhost:4984/retail-inventory/_blipsync";
 
 export interface ReplicatorOptions {
   continuous?: boolean;
@@ -25,7 +25,7 @@ export function createReplicator(
 
   const config: ReplicatorConfig = {
     database: db,
-    url: SYNC_GATEWAY_URL,
+    url: APP_SERVICES_URL,
     collections: {
       inventory: collectionConfig,
       orders: collectionConfig,
