@@ -110,6 +110,7 @@ web/
 ### Adding the SDK to Your Project
 
 If you're setting up this project from scratch or need to add the SDK:
+Below steps are  just for dev testing. Otherwise, we will have to use npm package whenever it is live. 
 
 1. **Create the vendor directory structure:**
    ```bash
