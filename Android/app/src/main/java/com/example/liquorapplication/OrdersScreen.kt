@@ -1,8 +1,10 @@
 package com.example.liquorapplication
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -26,33 +28,108 @@ fun OrdersScreen(
 ) {
     var orders by remember { mutableStateOf<List<Order>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    val scope = rememberCoroutineScope()
+    var selectedFilter by remember { mutableStateOf("All") }  // "All", "In Review", "Approved"
     
-    fun loadOrders() {
-        scope.launch {
-            orders = databaseManager.getAllOrders()
+    // Use Reactive API (Flow) for automatic updates
+    LaunchedEffect(Unit) {
+        android.util.Log.d("OrdersScreen", "🔄 [Reactive API] Setting up Flow collection...")
+        
+        databaseManager.getOrdersFlow().collect { ordersList ->
+            orders = ordersList
             isLoading = false
+            android.util.Log.d("OrdersScreen", "✅ [Reactive API] Flow emitted: ${ordersList.size} orders")
         }
     }
     
-    LaunchedEffect(Unit) {
-        loadOrders()
+    // Filter orders based on selected filter
+    val filteredOrders = when (selectedFilter) {
+        "In Review" -> orders.filter { it.orderStatus == "In Review" }
+        "Approved" -> orders.filter { it.orderStatus == "Approved" }
+        else -> orders
     }
     
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF2F2F7))  // iOS light gray background
+    ) {
         TopAppBar(
-            title = { Text("Orders") },
+            title = { Text("Orders", fontWeight = FontWeight.SemiBold) },
             navigationIcon = {
                 IconButton(onClick = onBackPressed) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(
+                        Icons.Default.ArrowBack, 
+                        contentDescription = "Back",
+                        tint = Color(0xFF007AFF)  // iOS blue
+                    )
                 }
             },
             actions = {
-                IconButton(onClick = { loadOrders() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                IconButton(onClick = { 
+                    // Reactive Flow handles updates automatically
+                    android.util.Log.d("OrdersScreen", "ℹ️ Refresh requested - Flow handles updates automatically")
+                }) {
+                    Icon(
+                        Icons.Default.Refresh, 
+                        contentDescription = "Refresh",
+                        tint = Color(0xFF007AFF)  // iOS blue
+                    )
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White,
+                titleContentColor = Color.Black
+            )
         )
+        
+        // Filter Tabs
+        TabRow(
+            selectedTabIndex = when (selectedFilter) {
+                "All" -> 0
+                "In Review" -> 1
+                "Approved" -> 2
+                else -> 0
+            },
+            containerColor = Color.White,
+            contentColor = Color(0xFF007AFF)
+        ) {
+            Tab(
+                selected = selectedFilter == "All",
+                onClick = { selectedFilter = "All" },
+                text = { 
+                    Text(
+                        "All",
+                        fontWeight = if (selectedFilter == "All") FontWeight.SemiBold else FontWeight.Normal
+                    ) 
+                },
+                selectedContentColor = Color(0xFF007AFF),
+                unselectedContentColor = Color(0xFF8E8E93)
+            )
+            Tab(
+                selected = selectedFilter == "In Review",
+                onClick = { selectedFilter = "In Review" },
+                text = { 
+                    Text(
+                        "In Review",
+                        fontWeight = if (selectedFilter == "In Review") FontWeight.SemiBold else FontWeight.Normal
+                    ) 
+                },
+                selectedContentColor = Color(0xFF007AFF),
+                unselectedContentColor = Color(0xFF8E8E93)
+            )
+            Tab(
+                selected = selectedFilter == "Approved",
+                onClick = { selectedFilter = "Approved" },
+                text = { 
+                    Text(
+                        "Approved",
+                        fontWeight = if (selectedFilter == "Approved") FontWeight.SemiBold else FontWeight.Normal
+                    ) 
+                },
+                selectedContentColor = Color(0xFF007AFF),
+                unselectedContentColor = Color(0xFF8E8E93)
+            )
+        }
         
         if (isLoading) {
             Box(
@@ -64,7 +141,7 @@ fun OrdersScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
-        } else if (orders.isEmpty()) {
+        } else if (filteredOrders.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -93,10 +170,10 @@ fun OrdersScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(orders) { order ->
+                items(filteredOrders) { order ->
                     OrderCard(order = order)
                 }
             }
@@ -108,11 +185,13 @@ fun OrdersScreen(
 fun OrderCard(order: Order) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow like iOS
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)  // Rounded corners like iOS
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header Row
             Row(
@@ -123,35 +202,36 @@ fun OrderCard(order: Order) {
                 Text(
                     text = "Order #${order.orderId}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF000000)
                 )
                 
-                // Status Badge
+                // Status Badge - More subtle iOS-like design
                 Surface(
-                    shape = MaterialTheme.shapes.small,
+                    shape = RoundedCornerShape(8.dp),
                     color = when (order.orderStatus) {
-                        "Received" -> Color(0xFF4CAF50)
-                        "Submitted" -> Color(0xFFF2C219)
-                        else -> Color.Gray
-                    }.copy(alpha = 0.2f)
+                        "Approved" -> Color(0xFF34C759)  // iOS green
+                        "In Review" -> Color(0xFF007AFF)  // iOS blue
+                        "Submitted" -> Color(0xFFFFCC00)  // iOS yellow (legacy)
+                        else -> Color(0xFF8E8E93)  // iOS gray
+                    }.copy(alpha = 0.15f)  // More subtle background
                 ) {
                     Text(
                         text = order.orderStatus,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = when (order.orderStatus) {
-                            "Received" -> Color(0xFF4CAF50)
-                            "Submitted" -> Color(0xFFF2C219)
-                            else -> Color.Gray
+                            "Approved" -> Color(0xFF34C759)  // iOS green
+                            "In Review" -> Color(0xFF007AFF)  // iOS blue
+                            "Submitted" -> Color(0xFFFF9500)  // Darker orange for readability
+                            else -> Color(0xFF8E8E93)  // iOS gray
                         }
                     )
                 }
             }
             
-            Divider()
-            
-            // Order Details
+            // Order Details - Clean layout
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -160,12 +240,14 @@ fun OrderCard(order: Order) {
                     Text(
                         text = "SKU",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF8E8E93)  // iOS gray
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = order.sku,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF000000)
                     )
                 }
                 
@@ -173,12 +255,14 @@ fun OrderCard(order: Order) {
                     Text(
                         text = "Quantity",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF8E8E93)  // iOS gray
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${order.orderQty} ${order.unit}",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF000000)
                     )
                 }
             }
@@ -188,17 +272,23 @@ fun OrderCard(order: Order) {
                 Text(
                     text = "Product ID: ",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color(0xFF8E8E93)  // iOS gray
                 )
                 Text(
                     text = order.productId.toString(),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF000000),
+                    fontWeight = FontWeight.Medium
                 )
             }
             
-            Divider()
+            // Subtle divider
+            Divider(
+                color = Color(0xFFE5E5EA),  // iOS separator color
+                thickness = 0.5.dp
+            )
             
-            // Date
+            // Date and Order ID - Clean footer
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -207,13 +297,14 @@ fun OrderCard(order: Order) {
                 Text(
                     text = formatDate(order.orderDate),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color(0xFF8E8E93)  // iOS gray
                 )
                 
                 Text(
                     text = order.id,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color(0xFFC7C7CC),  // Lighter iOS gray for secondary info
+                    maxLines = 1
                 )
             }
         }

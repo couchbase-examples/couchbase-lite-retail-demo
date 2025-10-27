@@ -43,25 +43,36 @@ fun LandingScreen(
         NavigationItem("orders", Icons.Default.ShoppingCart, "Orders")
     )
     
-    // Scaffold with bottom navigation
+    // Scaffold with bottom navigation - Clean iOS-like design
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF8E24AA),
-                contentColor = Color.White
+                containerColor = Color(0xFFF8F8F8),  // Light gray background like iOS
+                contentColor = Color(0xFF007AFF)     // iOS blue for active items
             ) {
                 navigationItems.forEach { item ->
                     NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.label, tint = Color.White) },
-                        label = { Text(item.label, color = Color.White) },
+                        icon = { 
+                            Icon(
+                                item.icon, 
+                                contentDescription = item.label,
+                                tint = if (currentScreen == item.route) Color(0xFF007AFF) else Color(0xFF8E8E93)
+                            ) 
+                        },
+                        label = { 
+                            Text(
+                                item.label, 
+                                color = if (currentScreen == item.route) Color(0xFF007AFF) else Color(0xFF8E8E93)
+                            ) 
+                        },
                         selected = currentScreen == item.route,
                         onClick = { currentScreen = item.route },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            indicatorColor = Color(0xFF6A1B9A),
-                            unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                            unselectedTextColor = Color.White.copy(alpha = 0.6f)
+                            selectedIconColor = Color(0xFF007AFF),        // iOS blue
+                            selectedTextColor = Color(0xFF007AFF),        // iOS blue
+                            indicatorColor = Color(0xFFE5E5EA),           // Very subtle indicator
+                            unselectedIconColor = Color(0xFF8E8E93),      // iOS gray
+                            unselectedTextColor = Color(0xFF8E8E93)       // iOS gray
                         )
                     )
                 }

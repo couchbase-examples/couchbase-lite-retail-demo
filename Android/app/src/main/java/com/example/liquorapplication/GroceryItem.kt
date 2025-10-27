@@ -6,6 +6,9 @@ data class GroceryItem(
     val type: String,
     val price: Double,
     val imageURL: String,
-    var quantity: Int = 0
+    var quantity: Int = 0,
+    val productId: Int? = null,
+    val sku: String? = null,
+    val unit: String? = null
 )
 

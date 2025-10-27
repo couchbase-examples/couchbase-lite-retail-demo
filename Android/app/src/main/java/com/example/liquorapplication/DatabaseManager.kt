@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
@@ -150,8 +151,11 @@ class DatabaseManager(private val context: Context) {
                             val price = it.getDouble("price")
                             val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
                                 ?: it.getInt("quantity")
+                            val productId = it.getInt("productId")
+                            val sku = it.getString("sku")
+                            val unit = it.getString("unit")
                             
-                            val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                            val item = GroceryItem(id, name, type, price, imageURL, quantity, productId, sku, unit)
                             items.add(item)
                         }
                     }
@@ -375,12 +379,84 @@ class DatabaseManager(private val context: Context) {
     }
     
     // MARK: - Orders Operations
+    
+    /**
+     * Creates a Flow of Orders that automatically emits updates when data changes
+     * Uses Kotlin Flow for reactive programming (modern approach)
+     * Uses official Couchbase Lite 3.3+ Kotlin Extensions API
+     * This replaces manual polling/refresh - UI updates automatically!
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun getOrdersFlow(): Flow<List<Order>> {
+        val db = database
+        if (db == null) {
+            Log.e("DatabaseManager", "❌ Database not initialized")
+            return flow { emit(emptyList()) }
+        }
+        
+        val collection = db.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+        if (collection == null) {
+            Log.e("DatabaseManager", "❌ Orders collection not found")
+            return flow { emit(emptyList()) }
+        }
+        
+        // Create query using QueryBuilder
+        val query = QueryBuilder
+            .select(SelectResult.all())
+            .from(DataSource.collection(collection))
+            .where(Expression.property("storeId").equalTo(Expression.string(AppConfig.storeId)))
+            .orderBy(Ordering.expression(Expression.property("orderDate")).descending())
+        
+        Log.d("DatabaseManager", "🔄 [Reactive API - Orders] Setting up queryChangeFlow()...")
+        
+        // Use official Kotlin Extension: queryChangeFlow()
+        return query.queryChangeFlow()
+            .mapNotNull { change ->
+                val err = change.error
+                if (err != null) {
+                    Log.e("DatabaseManager", "❌ [Reactive API - Orders] Query error: $err")
+                    return@mapNotNull emptyList()
+                }
+                
+                // Get results from query change
+                val results = change.results?.allResults() ?: emptyList()
+                val orders = mutableListOf<Order>()
+                
+                results.forEach { result ->
+                    val dict = result.getDictionary(AppConfig.ORDERS_COLLECTION_NAME)
+                    dict?.let {
+                        // Generate a temporary ID since we can't easily get document ID from query result
+                        // The document will sync with proper ID to Capella
+                        val tempId = "order-${it.getInt("orderId")}-${it.getString("storeId")}"
+                        
+                        val order = Order(
+                            id = tempId,
+                            docType = it.getString("docType") ?: "Order",
+                            orderId = it.getInt("orderId"),
+                            storeId = it.getString("storeId") ?: "",
+                            orderDate = it.getLong("orderDate"),
+                            orderStatus = it.getString("orderStatus") ?: "Submitted",
+                            productId = it.getInt("productId"),
+                            sku = it.getString("sku") ?: "",
+                            unit = it.getString("unit") ?: "",
+                            orderQty = it.getInt("orderQty")
+                        )
+                        orders.add(order)
+                    }
+                }
+                
+                Log.d("DatabaseManager", "✅ [Reactive API - Orders] Query changed: ${orders.size} orders")
+                orders
+            }
+    }
+    
     suspend fun getAllOrders(): List<Order> = withContext(Dispatchers.IO) {
         database?.let { db ->
             try {
                 val collection = db.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName) 
                     ?: return@withContext emptyList()
                     
+                // Query all orders for this store
                 val query = QueryBuilder
                     .select(SelectResult.all())
                     .from(DataSource.collection(collection))
@@ -393,8 +469,11 @@ class DatabaseManager(private val context: Context) {
                 results.forEach { result ->
                     val dict = result.getDictionary(AppConfig.ORDERS_COLLECTION_NAME)
                     dict?.let {
+                        // Generate a temporary ID for display purposes
+                        val tempId = "order-${it.getInt("orderId")}-${it.getString("storeId")}"
+                        
                         val order = Order(
-                            id = it.getString("id") ?: return@let,
+                            id = tempId,
                             docType = it.getString("docType") ?: "Order",
                             orderId = it.getInt("orderId"),
                             storeId = it.getString("storeId") ?: "",
@@ -418,34 +497,47 @@ class DatabaseManager(private val context: Context) {
         } ?: emptyList()
     }
     
+    /**
+     * Generates a NanoID-style unique identifier
+     * Format: 21 characters using URL-safe alphabet
+     */
+    private fun generateNanoId(): String {
+        val alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-"
+        val random = java.security.SecureRandom()
+        return (1..21)
+            .map { alphabet[random.nextInt(alphabet.length)] }
+            .joinToString("")
+    }
+    
     suspend fun createOrder(item: GroceryItem, quantity: Int = 100): Order? = withContext(Dispatchers.IO) {
         database?.let { db ->
             try {
                 val collection = db.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName) 
                     ?: db.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
                 
-                // Get next order ID
+                // Generate NanoID-style document ID
+                val nanoId = generateNanoId()
+                val documentId = "order-${AppConfig.storeId}-$nanoId"
+                
+                // Get next sequential order ID
                 val existingOrders = getAllOrders()
                 val nextOrderId = (existingOrders.maxOfOrNull { it.orderId } ?: 0) + 1
                 
-                val orderId = "Order_${AppConfig.storeId.uppercase()}_$nextOrderId"
                 val order = Order(
-                    id = orderId,
+                    id = documentId,
                     docType = "Order",
                     orderId = nextOrderId,
                     storeId = AppConfig.storeId,
                     orderDate = System.currentTimeMillis(),
-                    orderStatus = "Submitted",
-                    productId = item.id.hashCode(), // Simple productId generation
-                    sku = item.id,
-                    unit = "bag", // Default unit
+                    orderStatus = "In Review",  // New status for upcoming orders
+                    productId = item.productId ?: 0,
+                    sku = item.sku ?: "UNKNOWN",
+                    unit = item.unit ?: "unit",
                     orderQty = quantity
                 )
                 
-                val document = MutableDocument(orderId)
-                document.setString("id", order.id)
+                val document = MutableDocument(documentId)
                 document.setString("docType", order.docType)
-                document.setInt("orderId", order.orderId)
                 document.setString("storeId", order.storeId)
                 document.setLong("orderDate", order.orderDate)
                 document.setString("orderStatus", order.orderStatus)
@@ -453,18 +545,19 @@ class DatabaseManager(private val context: Context) {
                 document.setString("sku", order.sku)
                 document.setString("unit", order.unit)
                 document.setInt("orderQty", order.orderQty)
+                document.setInt("orderId", order.orderId)
                 
                 collection.save(document)
-                Log.d("DatabaseManager", "Created order: $orderId")
+                Log.d("DatabaseManager", "✅ Created order: $documentId (productId: ${order.productId}, qty: $quantity)")
                 
                 // Trigger sync if App Services is enabled
                 if (isAppServicesEnabled) {
-                    appServicesSyncManager?.pushDocumentImmediately(orderId)
+                    appServicesSyncManager?.pushDocumentImmediately(documentId)
                 }
                 
                 return@withContext order
             } catch (e: Exception) {
-                Log.e("DatabaseManager", "Error creating order", e)
+                Log.e("DatabaseManager", "❌ Error creating order", e)
                 return@withContext null
             }
         } ?: null

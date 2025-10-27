@@ -224,6 +224,7 @@ fun InventoryScreen(
                 items(filteredItems) { item ->
                     GroceryItemCard(
                         item = item,
+                        storeId = AppConfig.storeId,
                         onQuantityChanged = { newQuantity ->
                             scope.launch {
                                 // Use App Services-aware update method
@@ -236,9 +237,9 @@ fun InventoryScreen(
                                 }
                             }
                         },
-                        onReorder = { groceryItem ->
+                        onReorder = { groceryItem, quantity ->
                             scope.launch {
-                                databaseManager.createOrder(groceryItem, quantity = 100)
+                                databaseManager.createOrder(groceryItem, quantity = quantity)
                             }
                         }
                     )

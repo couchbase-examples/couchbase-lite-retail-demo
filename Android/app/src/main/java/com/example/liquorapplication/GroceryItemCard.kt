@@ -25,10 +25,12 @@ import kotlinx.coroutines.delay
 fun GroceryItemCard(
     item: GroceryItem,
     onQuantityChanged: (Int) -> Unit,
-    onReorder: (GroceryItem) -> Unit = {}
+    onReorder: (GroceryItem, Int) -> Unit = { _, _ -> },
+    storeId: String = ""
 ) {
     var currentQuantity by remember { mutableStateOf(item.quantity) }
     var showOrderPlaced by remember { mutableStateOf(false) }
+    var showOrderForm by remember { mutableStateOf(false) }
     
     LaunchedEffect(item.quantity) {
         currentQuantity = item.quantity
@@ -164,8 +166,7 @@ fun GroceryItemCard(
                 // Re-order button
                 Button(
                     onClick = { 
-                        onReorder(item)
-                        showOrderPlaced = true
+                        showOrderForm = true
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -219,6 +220,20 @@ fun GroceryItemCard(
             }
         }
     }
+    }
+    
+    // Order Form Dialog
+    if (showOrderForm) {
+        OrderFormDialog(
+            item = item,
+            storeId = storeId,
+            onDismiss = { showOrderForm = false },
+            onCreateOrder = { quantity ->
+                onReorder(item, quantity)
+                showOrderForm = false
+                showOrderPlaced = true
+            }
+        )
     }
 }
 

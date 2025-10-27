@@ -1,13 +1,16 @@
 package com.example.liquorapplication
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -28,14 +31,26 @@ fun ProfileScreen(
         isLoading = false
     }
     
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF2F2F7))  // iOS light gray background
+    ) {
         TopAppBar(
-            title = { Text("Store Profile") },
+            title = { Text("Store Profile", fontWeight = FontWeight.SemiBold) },
             navigationIcon = {
                 IconButton(onClick = onBackPressed) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(
+                        Icons.Default.ArrowBack, 
+                        contentDescription = "Back",
+                        tint = Color(0xFF007AFF)  // iOS blue
+                    )
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White,
+                titleContentColor = Color.Black
+            )
         )
         
         if (isLoading) {
@@ -74,7 +89,9 @@ fun ProfileScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)  // iOS-style rounded corners
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -101,7 +118,9 @@ fun ProfileScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)  // iOS-style rounded corners
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -135,7 +154,9 @@ fun ProfileScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)  // iOS-style rounded corners
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
@@ -159,7 +180,9 @@ fun ProfileScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)  // iOS-style rounded corners
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
