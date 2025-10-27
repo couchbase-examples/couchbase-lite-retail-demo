@@ -23,24 +23,17 @@ export function extractStoreIdFromEmail(email: string): string {
 }
 
 /**
- * Get App Endpoint URL based on store ID
- * Mapping is straightforward: each store connects to its corresponding endpoint
- * - nyc-store-01 → supermarket-nyc endpoint
- * - aa-store-01 → supermarket-aa endpoint
+ * Get App Services URL from environment variable
+ * Returns the URL exactly as configured in .env without any modifications
  */
-export function getAppEndpointUrl(storeId: string): string {
-  // Extract the store prefix (e.g., "nyc" from "nyc-store-01")
-  const prefix = storeId.split('-')[0].toLowerCase();
+export function getAppServicesUrl(): string {
+  const url = import.meta.env.VITE_APP_SERVICES_URL;
   
-  // Get base URL from environment variable
-  const baseUrl = import.meta.env.VITE_APP_SERVICES_URL;
-  
-  if (!baseUrl) {
+  if (!url) {
     throw new Error('VITE_APP_SERVICES_URL is not configured. Please check your .env file.');
   }
   
-  // Map store to its corresponding endpoint
-  return `${baseUrl}/supermarket-${prefix}`;
+  return url;
 }
 
 /**

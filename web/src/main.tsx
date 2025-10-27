@@ -5,7 +5,7 @@ import "./index.css";
 import { initializeDatabase } from "./lib/database/initDatabase";
 import { DatabaseProvider } from "./lib/database/DatabaseProvider";
 import { setupSync } from "./lib/database/sync";
-import { getStoredCredentials, getAppEndpointUrl } from "./lib/auth";
+import { getStoredCredentials, getAppServicesUrl } from "./lib/auth";
 import type { RetailDatabase } from "./lib/database/types";
 
 /**
@@ -23,8 +23,8 @@ export async function startContinuousSync(db: RetailDatabase) {
   console.log('🔄 Starting continuous sync for inventory and orders...');
   console.log('🏪 Store ID:', credentials.storeId);
   
-  const syncUrl = getAppEndpointUrl(credentials.storeId);
-  console.log('📡 Sync URL:', syncUrl);
+  const syncUrl = getAppServicesUrl();
+  console.log('📡 App Services URL:', syncUrl);
   
   try {
     const replicator = setupSync(db, {

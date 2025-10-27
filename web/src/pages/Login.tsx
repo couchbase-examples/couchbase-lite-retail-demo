@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Package, AlertCircle, Loader2 } from "lucide-react";
 import { useDatabase } from "@/lib/database/DatabaseProvider";
 import { setupOneShotSync } from "@/lib/database/sync";
-import { storeCredentials, extractStoreIdFromEmail, getAppEndpointUrl } from "@/lib/auth";
+import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl } from "@/lib/auth";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -28,9 +28,9 @@ const Login = () => {
       const storeId = extractStoreIdFromEmail(email);
       console.log('📧 Extracted store ID:', storeId);
       
-      // Get App Endpoint URL for this store
-      const syncUrl = getAppEndpointUrl(storeId);
-      console.log('🌐 Sync URL:', syncUrl);
+      // Get App Services URL from environment
+      const syncUrl = getAppServicesUrl();
+      console.log('🌐 App Services URL:', syncUrl);
 
       // Set up one-shot profile sync
       console.log('🔄 Starting one-shot profile sync...');
