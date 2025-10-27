@@ -185,6 +185,54 @@ class DatabaseManager: ObservableObject {
         }
     }
     
+    // MARK: - Reactive API Methods (SQL++ Queries)
+    
+    /// Creates a SQL++ query for inventory items (Reactive API)
+    /// Use with .changePublisher() for automatic UI updates
+    func createInventoryQuery() -> Query? {
+        guard let database = database else {
+            print("❌ Database not initialized")
+            return nil
+        }
+        
+        do {
+            // SQL++ Query (modern approach, replaces QueryBuilder)
+            // Note: Don't use AS aliases - let CodingKeys handle field mapping
+            // Select fields with their ACTUAL names from Capella
+            let sql = """
+                SELECT META().id AS id,
+                       name,
+                       category,
+                       price,
+                       imageURL,
+                       stockQty,
+                       productId,
+                       sku,
+                       brand,
+                       unit,
+                       location,
+                       attributes,
+                       expirationDate,
+                       lastUpdated,
+                       storeId,
+                       docType
+                FROM `\(AppConfig.scopeName)`.`\(AppConfig.collectionName)`
+                ORDER BY name
+            """
+            
+            print("🔍 SQL++ Query: \(sql)")
+            let query = try database.createQuery(sql)
+            print("✅ Created SQL++ query for inventory with ACTUAL field names")
+            return query
+        } catch {
+            print("❌ Error creating SQL++ query: \(error)")
+            print("   Scope: \(AppConfig.scopeName), Collection: \(AppConfig.collectionName)")
+            return nil
+        }
+    }
+    
+    // MARK: - Legacy Methods (Keep for other screens until migrated)
+    
     func getAllLiquorItems() -> [LiquorItem] {
         guard let database = database else { 
             print("Database not available for getting items")
@@ -597,6 +645,42 @@ class DatabaseManager: ObservableObject {
     
     // MARK: - Orders Operations
     
+    /// Creates a SQL++ query for orders with reactive change notifications
+    /// This enables automatic UI updates when orders change
+    func createOrdersQuery() -> Query? {
+        guard let database = database else {
+            print("❌ Database not initialized")
+            return nil
+        }
+        
+        do {
+            let sql = """
+                SELECT META().id AS id,
+                       docType,
+                       orderId,
+                       storeId,
+                       orderDate,
+                       orderStatus,
+                       productId,
+                       sku,
+                       unit,
+                       orderQty
+                FROM `\(AppConfig.scopeName)`.`\(AppConfig.ordersCollectionName)`
+                WHERE storeId = '\(AppConfig.storeId)'
+                ORDER BY orderDate DESC
+            """
+            
+            print("🔍 SQL++ Query (Orders): \(sql)")
+            let query = try database.createQuery(sql)
+            print("✅ Created SQL++ query for orders")
+            return query
+        } catch {
+            print("❌ Error creating SQL++ query for orders: \(error)")
+            print("   Scope: \(AppConfig.scopeName), Collection: \(AppConfig.ordersCollectionName)")
+            return nil
+        }
+    }
+    
     func getAllOrders() -> [Order] {
         guard let database = database else { return [] }
         
@@ -639,6 +723,13 @@ class DatabaseManager: ObservableObject {
         }
     }
     
+    /// Generates a NanoID-style unique identifier
+    /// Format: 21 characters using URL-safe alphabet
+    private func generateNanoId() -> String {
+        let alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-"
+        return String((0..<21).map { _ in alphabet.randomElement()! })
+    }
+    
     func createOrder(item: LiquorItem, quantity: Int = 100) -> Order? {
         guard let database = database else { return nil }
         
@@ -646,28 +737,29 @@ class DatabaseManager: ObservableObject {
             let collection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
                 ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
             
-            // Get next order ID
+            // Generate NanoID-style document ID
+            let nanoId = generateNanoId()
+            let documentId = "order-\(AppConfig.storeId)-\(nanoId)"
+            
+            // Get next sequential order ID
             let existingOrders = getAllOrders()
             let nextOrderId = (existingOrders.map { $0.orderId }.max() ?? 0) + 1
             
-            let orderId = "Order_\(AppConfig.storeId.uppercased())_\(nextOrderId)"
             let order = Order(
-                id: orderId,
+                id: documentId,
                 docType: "Order",
                 orderId: nextOrderId,
                 storeId: AppConfig.storeId,
                 orderDate: Int64(Date().timeIntervalSince1970 * 1000),
-                orderStatus: "Submitted",
-                productId: item.productId ?? item.id.hashValue,
-                sku: item.sku ?? item.id,
-                unit: item.unit ?? "bag",
+                orderStatus: "In Review",  // New status for upcoming orders
+                productId: item.productId ?? 0,
+                sku: item.sku ?? "UNKNOWN",
+                unit: item.unit ?? "unit",
                 orderQty: quantity
             )
             
-            let document = MutableDocument(id: orderId)
-            document.setString(order.id, forKey: "id")
+            let document = MutableDocument(id: documentId)
             document.setString(order.docType, forKey: "docType")
-            document.setInt(order.orderId, forKey: "orderId")
             document.setString(order.storeId, forKey: "storeId")
             document.setInt64(order.orderDate, forKey: "orderDate")
             document.setString(order.orderStatus, forKey: "orderStatus")
@@ -675,9 +767,10 @@ class DatabaseManager: ObservableObject {
             document.setString(order.sku, forKey: "sku")
             document.setString(order.unit, forKey: "unit")
             document.setInt(order.orderQty, forKey: "orderQty")
+            document.setInt(order.orderId, forKey: "orderId")
             
             try collection.save(document: document)
-            print("✅ Created order: \(orderId)")
+            print("✅ Created order: \(documentId) (productId: \(order.productId), qty: \(quantity))")
             
             return order
         } catch {

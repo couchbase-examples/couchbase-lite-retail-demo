@@ -1,5 +1,6 @@
 import SwiftUI
 import CouchbaseLiteSwift
+import Combine
 
 struct InventoryView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
@@ -11,6 +12,7 @@ struct InventoryView: View {
     @StateObject private var debugInfo = P2PDebugInfo()
     @State private var profileName: String?
     @State private var isRefreshing = false
+    @State private var cancellables = Set<AnyCancellable>()  // For Combine publishers
     @Environment(\.dismiss) private var dismiss
     
     // Fixed 2-column layout to match Android
@@ -84,17 +86,21 @@ struct InventoryView: View {
                         ForEach(filteredItems) { item in
                             LiquorItemCard(
                                 item: item,
+                                storeId: AppConfig.storeId,
                                 onQuantityChanged: { newQuantity in
-                                    databaseManager.updateQuantity(for: item.id, newQuantity: newQuantity)
-                                    loadLiquorItems()
+                                    // Safely unwrap optional id
+                                    guard let itemId = item.id else { return }
+                                    databaseManager.updateQuantity(for: itemId, newQuantity: newQuantity)
+                                    // Reactive query will update UI automatically - no manual reload needed
                                 },
-                                onReorder: { item in
-                                    // Create order in database
-                                    if let order = databaseManager.createOrder(item: item, quantity: 100) {
-                                        print("✅ Order created: \(order.id)")
+                                onReorder: { item, quantity in
+                                    // Create order in database with specified quantity
+                                    if let order = databaseManager.createOrder(item: item, quantity: quantity) {
+                                        print("✅ Order created: \(order.id) with quantity: \(quantity)")
                                     }
                                 }
                             )
+                            .id("\(item.id ?? "")_\(item.quantity)")  // Force SwiftUI to detect quantity changes
                         }
                     }
                     .padding(.horizontal, 16)
@@ -158,44 +164,135 @@ struct InventoryView: View {
             }
         }
         .onAppear {
-            loadLiquorItems()
+            setupReactiveQuery()  // Setup Reactive API publisher
             // Load profile name from Capella
             profileName = databaseManager.getStoreProfile()?.name
             // Initialize P2P debug info
             debugInfo.multipeerSyncManager = p2pSyncManagerWrapper
             debugInfo.refreshData()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .liquorInventoryChanged)) { _ in
-            // Immediate refresh when database changes from sync
-            print("🔄 [InventoryView] Database change notification received - refreshing inventory")
-            loadLiquorItems()
+        .onDisappear {
+            // Cancel all subscriptions when view disappears
+            cancellables.forEach { $0.cancel() }
+            cancellables.removeAll()
         }
     }
     
-    private func loadLiquorItems() {
-        // ⚠️ CRITICAL: Ensure UI updates happen on main thread
+    // MARK: - Reactive API Setup
+    
+    /// Setup Reactive Query Publisher (Combine Framework)
+    /// This automatically updates UI when data changes - no manual refresh needed!
+    private func setupReactiveQuery() {
+        guard let query = databaseManager.createInventoryQuery() else {
+            print("❌ Failed to create inventory query")
+            loadLiquorItemsFallback()  // Fallback to old method
+            return
+        }
+        
+        print("🔄 [Reactive API] Setting up changePublisher for automatic updates...")
+        
+        // Subscribe to query changes using Reactive API
+        query.changePublisher()
+            .map { queryChange -> [LiquorItem] in
+                // Manually extract results to ensure proper field mapping
+                // This is more reliable than Codable decoding with CodingKeys
+                do {
+                    let results = try queryChange.results?.allResults() ?? []
+                    var items: [LiquorItem] = []
+                    
+                    for result in results {
+                        // Extract fields directly (same as Orders screen)
+                        let id = result.string(forKey: "id")
+                        let name = result.string(forKey: "name") ?? ""
+                        let category = result.string(forKey: "category") ?? "Unknown"  // Actual field name
+                        let price = result.double(forKey: "price")
+                        let imageURL = result.string(forKey: "imageURL") ?? ""
+                        let stockQty = result.int(forKey: "stockQty")  // Actual field name
+                        
+                        let productId = result.int(forKey: "productId")
+                        let sku = result.string(forKey: "sku")
+                        let brand = result.string(forKey: "brand")
+                        let unit = result.string(forKey: "unit")
+                        let storeId = result.string(forKey: "storeId")
+                        let docType = result.string(forKey: "docType")
+                        let expirationDate = result.int64(forKey: "expirationDate")
+                        let lastUpdated = result.int64(forKey: "lastUpdated")
+                        
+                        // Parse nested location and attributes if needed
+                        // For now, set to nil to keep it simple
+                        
+                        let item = LiquorItem(
+                            id: id,
+                            name: name,
+                            type: category,  // Map category to type
+                            price: price,
+                            imageURL: imageURL,
+                            quantity: stockQty,  // Map stockQty to quantity
+                            productId: productId,
+                            sku: sku,
+                            brand: brand,
+                            unit: unit,
+                            location: nil,
+                            attributes: nil,
+                            expirationDate: expirationDate,
+                            lastUpdated: lastUpdated,
+                            storeId: storeId,
+                            docType: docType
+                        )
+                        items.append(item)
+                    }
+                    
+                    print("✅ [Reactive API] Query changed: \(items.count) items")
+                    return items
+                } catch {
+                    print("❌ [Reactive API] Error processing results: \(error)")
+                    return []
+                }
+            }
+            .receive(on: DispatchQueue.main)  // Ensure UI updates on main thread
+            .sink { items in
+                // Note: Can't use [weak self] with struct - structs are value types
+                liquorItems = items
+                print("🔄 [Reactive API] UI updated with \(items.count) items")
+            }
+            .store(in: &cancellables)
+        
+        // CRITICAL: Execute query initially to establish change listener
+        // The changePublisher needs an initial execution to start listening for changes
+        do {
+            _ = try query.execute()
+            print("✅ [Reactive API] Initial query executed - change listener now active")
+        } catch {
+            print("❌ [Reactive API] Error executing initial query: \(error)")
+        }
+        
+        print("✅ [Reactive API] Automatic updates enabled - listening for changes from sync!")
+    }
+    
+    // MARK: - Fallback Methods
+    
+    /// Fallback method using old API (if Reactive API setup fails)
+    private func loadLiquorItemsFallback() {
         DispatchQueue.main.async {
-            self.liquorItems = databaseManager.getAllLiquorItems()
-            print("🔄 [InventoryView] UI refreshed with \(self.liquorItems.count) items")
+            self.liquorItems = self.databaseManager.getAllLiquorItems()
+            print("⚠️ [Fallback] Using old API - loaded \(self.liquorItems.count) items")
         }
     }
     
+    /// Manual refresh now just reloads from local DB (sync is continuous)
     private func refreshData() async {
         isRefreshing = true
-        print("🔄 [InventoryView] Manual refresh started...")
-        print("📖 [InventoryView] Reading latest data from local database...")
+        print("🔄 [Manual Refresh] Started...")
         
-        loadLiquorItems()
+        // Reactive query will automatically update when data changes
+        // This manual refresh just gives visual feedback to user
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        
+        // Reload profile name
         profileName = databaseManager.getStoreProfile()?.name
         
-        // Force a notification to trigger UI update
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .liquorInventoryChanged, object: nil)
-            print("📡 [InventoryView] Posted manual refresh notification")
-        }
-        
         isRefreshing = false
-        print("✅ [InventoryView] Manual refresh completed - items: \(liquorItems.count)")
+        print("✅ [Manual Refresh] Completed - Reactive query handles data updates")
     }
 }
 

@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		D1E467EC2E8C693900588E29 /* CouchbaseLiteVectorSearch in Frameworks */ = {isa = PBXBuildFile; productRef = D1E467EB2E8C693900588E29 /* CouchbaseLiteVectorSearch */; };
-		D1E468852EA220E500588E29 /* CouchbaseLiteSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D1E468842EA220E500588E29 /* CouchbaseLiteSwift */; };
+		D1E468922EAA673000588E29 /* CouchbaseLiteSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D1E468912EAA673000588E29 /* CouchbaseLiteSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,7 +83,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D1E468852EA220E500588E29 /* CouchbaseLiteSwift in Frameworks */,
+				D1E468922EAA673000588E29 /* CouchbaseLiteSwift in Frameworks */,
 				D1E467EC2E8C693900588E29 /* CouchbaseLiteVectorSearch in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -155,7 +155,7 @@
 			name = LiquorApp;
 			packageProductDependencies = (
 				D1E467EB2E8C693900588E29 /* CouchbaseLiteVectorSearch */,
-				D1E468842EA220E500588E29 /* CouchbaseLiteSwift */,
+				D1E468912EAA673000588E29 /* CouchbaseLiteSwift */,
 			);
 			productName = LiquorApp;
 			productReference = D1903E052E30D614003C066C /* LiquorApp.app */;
@@ -240,8 +240,8 @@
 			mainGroup = D1903DFC2E30D614003C066C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D19370742E8C08BD00728295 /* XCLocalSwiftPackageReference "../../../Downloads/3.3new/couchbase-lite-swift_xc_enterprise_3.3.0-88" */,
 				D1E467EA2E8C693900588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-vector-search-spm" */,
+				D1E468902EAA673000588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-swift-ee" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D1903E062E30D614003C066C /* Products */;
@@ -613,13 +613,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		D19370742E8C08BD00728295 /* XCLocalSwiftPackageReference "../../../Downloads/3.3new/couchbase-lite-swift_xc_enterprise_3.3.0-88" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../Downloads/3.3new/couchbase-lite-swift_xc_enterprise_3.3.0-88";
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		D1E467EA2E8C693900588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-vector-search-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -627,6 +620,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.0;
+			};
+		};
+		D1E468902EAA673000588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-swift-ee" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/couchbase/couchbase-lite-swift-ee.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.3.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -637,9 +638,9 @@
 			package = D1E467EA2E8C693900588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-vector-search-spm" */;
 			productName = CouchbaseLiteVectorSearch;
 		};
-		D1E468842EA220E500588E29 /* CouchbaseLiteSwift */ = {
+		D1E468912EAA673000588E29 /* CouchbaseLiteSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D19370742E8C08BD00728295 /* XCLocalSwiftPackageReference "../../../Downloads/3.3new/couchbase-lite-swift_xc_enterprise_3.3.0-88" */;
+			package = D1E468902EAA673000588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-swift-ee" */;
 			productName = CouchbaseLiteSwift;
 		};
 /* End XCSwiftPackageProductDependency section */

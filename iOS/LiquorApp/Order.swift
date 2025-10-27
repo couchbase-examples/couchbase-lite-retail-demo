@@ -6,7 +6,7 @@ struct Order: Identifiable, Codable {
     let orderId: Int
     let storeId: String
     let orderDate: Int64
-    let orderStatus: String // "Submitted", "Received"
+    let orderStatus: String // "In Review", "Approved", "Submitted" (legacy)
     let productId: Int
     let sku: String
     let unit: String

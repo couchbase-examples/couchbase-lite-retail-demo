@@ -1,34 +1,68 @@
 import SwiftUI
+import Combine
 
 struct OrdersView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
     @State private var orders: [Order] = []
     @State private var isLoading = true
+    @State private var cancellables = Set<AnyCancellable>()
+    @State private var selectedFilter = "All"  // "All", "In Review", "Approved"
     @Environment(\.dismiss) private var dismiss
+    
+    // Filter orders based on selected filter
+    var filteredOrders: [Order] {
+        switch selectedFilter {
+        case "In Review":
+            return orders.filter { $0.orderStatus == "In Review" }
+        case "Approved":
+            return orders.filter { $0.orderStatus == "Approved" }
+        default:
+            return orders
+        }
+    }
     
     var body: some View {
         NavigationView {
-            Group {
-                if isLoading {
-                    ProgressView("Loading orders...")
-                } else if orders.isEmpty {
-                    VStack(spacing: 16) {
-                        Text("📦")
-                            .font(.system(size: 64))
-                        
-                        Text("No orders yet")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                        
-                        Text("Orders will appear here when you tap 'Re-order now' on products")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+            VStack(spacing: 0) {
+                // Filter Tabs
+                if !isLoading {
+                    Picker("Filter", selection: $selectedFilter) {
+                        Text("All").tag("All")
+                        Text("In Review").tag("In Review")
+                        Text("Approved").tag("Approved")
                     }
-                } else {
-                    List(orders) { order in
-                        OrderRow(order: order)
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(UIColor.systemBackground))
+                }
+                
+                // Content
+                Group {
+                    if isLoading {
+                        ProgressView("Loading orders...")
+                    } else if filteredOrders.isEmpty {
+                        VStack(spacing: 16) {
+                            Text("📦")
+                                .font(.system(size: 64))
+                            
+                            Text(selectedFilter == "All" ? "No orders yet" : "No \(selectedFilter.lowercased()) orders")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            
+                            Text(selectedFilter == "All" ? 
+                                "Orders will appear here when you tap 'Re-order now' on products" :
+                                "No orders with '\(selectedFilter)' status found")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        List(filteredOrders) { order in
+                            OrderRow(order: order)
+                        }
                     }
                 }
             }
@@ -36,7 +70,10 @@ struct OrdersView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: loadOrders) {
+                    Button(action: {
+                        // Reactive query handles updates automatically
+                        print("ℹ️ Refresh requested - Reactive query handles updates automatically")
+                    }) {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
@@ -49,14 +86,79 @@ struct OrdersView: View {
             }
         }
         .onAppear {
-            loadOrders()
+            setupReactiveQuery()
+        }
+        .onDisappear {
+            cancellables.removeAll()
         }
     }
     
-    private func loadOrders() {
-        isLoading = true
-        orders = databaseManager.getAllOrders()
-        isLoading = false
+    private func setupReactiveQuery() {
+        guard let query = databaseManager.createOrdersQuery() else {
+            print("❌ Failed to create orders query")
+            isLoading = false
+            return
+        }
+        
+        print("🔄 [Reactive API - Orders] Setting up changePublisher for automatic updates...")
+        
+        query.changePublisher()
+            .map { queryChange -> [Order] in
+                do {
+                    let results = try queryChange.results?.allResults() ?? []
+                    var ordersList: [Order] = []
+                    
+                    for result in results {
+                        let id = result.string(forKey: "id") ?? ""
+                        let docType = result.string(forKey: "docType") ?? "Order"
+                        let orderId = result.int(forKey: "orderId")
+                        let storeId = result.string(forKey: "storeId") ?? ""
+                        let orderDate = result.int64(forKey: "orderDate")
+                        let orderStatus = result.string(forKey: "orderStatus") ?? "Submitted"
+                        let productId = result.int(forKey: "productId")
+                        let sku = result.string(forKey: "sku") ?? ""
+                        let unit = result.string(forKey: "unit") ?? ""
+                        let orderQty = result.int(forKey: "orderQty")
+                        
+                        let order = Order(
+                            id: id,
+                            docType: docType,
+                            orderId: orderId,
+                            storeId: storeId,
+                            orderDate: orderDate,
+                            orderStatus: orderStatus,
+                            productId: productId,
+                            sku: sku,
+                            unit: unit,
+                            orderQty: orderQty
+                        )
+                        ordersList.append(order)
+                    }
+                    
+                    print("✅ [Reactive API - Orders] Query changed: \(ordersList.count) orders")
+                    return ordersList
+                } catch {
+                    print("❌ [Reactive API - Orders] Error processing results: \(error)")
+                    return []
+                }
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { ordersList in
+                orders = ordersList
+                isLoading = false
+                print("🔄 [Reactive API - Orders] UI updated with \(ordersList.count) orders")
+            }
+            .store(in: &cancellables)
+        
+        // Execute query initially to establish change listener
+        do {
+            _ = try query.execute()
+            print("✅ [Reactive API - Orders] Initial query executed - change listener now active")
+        } catch {
+            print("❌ [Reactive API - Orders] Error executing initial query: \(error)")
+        }
+        
+        print("✅ [Reactive API - Orders] Automatic updates enabled - listening for changes!")
     }
 }
 
@@ -138,10 +240,12 @@ struct OrderRow: View {
     
     private var statusColor: Color {
         switch order.orderStatus {
-        case "Received":
+        case "Approved":
             return Color.green
+        case "In Review":
+            return Color.blue
         case "Submitted":
-            return Color.orange
+            return Color(red: 1.0, green: 0.58, blue: 0.0)  // Darker orange for better readability
         default:
             return Color.gray
         }

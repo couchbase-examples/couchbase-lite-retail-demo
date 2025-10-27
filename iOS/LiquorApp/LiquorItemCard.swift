@@ -3,12 +3,15 @@ import SwiftUI
 struct LiquorItemCard: View {
     let item: LiquorItem
     let onQuantityChanged: (Int) -> Void
-    let onReorder: (LiquorItem) -> Void
+    let onReorder: (LiquorItem, Int) -> Void
+    let storeId: String
     @State private var currentQuantity: Int
     @State private var showOrderPlaced = false
+    @State private var showOrderForm = false
     
-    init(item: LiquorItem, onQuantityChanged: @escaping (Int) -> Void, onReorder: @escaping (LiquorItem) -> Void = { _ in }) {
+    init(item: LiquorItem, storeId: String = "", onQuantityChanged: @escaping (Int) -> Void, onReorder: @escaping (LiquorItem, Int) -> Void = { _, _ in }) {
         self.item = item
+        self.storeId = storeId
         self.onQuantityChanged = onQuantityChanged
         self.onReorder = onReorder
         self._currentQuantity = State(initialValue: item.quantity)
@@ -107,19 +110,8 @@ struct LiquorItemCard: View {
                 
                 // Re-order button
                 Button(action: {
-                    print("Re-order \(item.name)")
-                    // Call the reorder callback
-                    onReorder(item)
-                    
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        showOrderPlaced = true
-                    }
-                    // Auto-hide after 2 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            showOrderPlaced = false
-                        }
-                    }
+                    print("Opening order form for \(item.name)")
+                    showOrderForm = true
                 }) {
                     Text("Re-order now")
                         .font(.system(size: 14, weight: .semibold))
@@ -168,6 +160,24 @@ struct LiquorItemCard: View {
                 )
                 .transition(.opacity)
         }
+        }
+        .sheet(isPresented: $showOrderForm) {
+            OrderFormView(
+                item: item,
+                storeId: storeId,
+                onCreateOrder: { quantity in
+                    onReorder(item, quantity)
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showOrderPlaced = true
+                    }
+                    // Auto-hide after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showOrderPlaced = false
+                        }
+                    }
+                }
+            )
         }
     }
     

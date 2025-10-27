@@ -270,15 +270,16 @@ struct P2PSyncDebugView: View {
         showTestResult = false
         
         let items = databaseManager.getAllLiquorItems()
-        guard let randomItem = items.randomElement() else {
-            print("❌ No items to test with")
+        guard let randomItem = items.randomElement(),
+              let itemId = randomItem.id else {
+            print("❌ No items to test with or item has no ID")
             return
         }
         
-        testItemId = randomItem.id
+        testItemId = itemId
         P2PSyncDebugHelper.shared.testLiveSync(
             database: databaseManager.database,
-            itemId: randomItem.id
+            itemId: itemId
         )
         
         showTestResult = true
