@@ -107,16 +107,37 @@ web/
 
 ## Couchbase Lite
 
-This project uses **Couchbase Lite for JavaScript**, which is bundled in the `vendor/couchbase-lite/` directory.
+### Adding the SDK to Your Project
 
-### Updating Couchbase Lite
+If you're setting up this project from scratch or need to add the SDK:
 
-To update to the latest version of Couchbase Lite:
+1. **Create the vendor directory structure:**
+   ```bash
+   mkdir -p vendor/couchbase-lite
+   ```
 
-1. Visit the [Couchbase Lite JavaScript releases](https://github.com/couchbaselabs/couchbase-lite-js)
-2. Download the latest release files
-3. Replace the files in `vendor/couchbase-lite/` with the new version
-4. Test thoroughly to ensure compatibility
+2. **Copy the SDK files** to `vendor/couchbase-lite/`:
+   - `couchbase-lite.es.js` - Main ES module
+   - `couchbase-lite.d.ts` - TypeScript definitions
+   - `database/` - Database classes and types
+   - `replicator/` - Replication functionality
+   - `query/` - Query APIs
+   - `blob/` - Blob handling
+   - `blip/` - BLIP protocol for sync
+   - `util/` - Utility functions
+
+3. **Verify the vite.config.ts alias** is pointing to the correct file:
+   ```typescript
+   "@couchbaselabs/couchbase-lite": path.resolve(__dirname, "./vendor/couchbase-lite/couchbase-lite.es.js")
+   ```
+
+4. **Install dependencies and test:**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+### SDK Capabilities
 
 The bundled version provides:
 - Offline-first local database
