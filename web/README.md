@@ -1,73 +1,178 @@
-# Welcome to your Lovable project
+# Couchbase Lite Retail Demo
 
-## Project info
+A modern retail inventory management application built with Couchbase Lite for web, featuring real-time sync capabilities with Couchbase Capella App Services.
 
-**URL**: https://lovable.dev/projects/8d5659f7-90ba-462e-95da-560e60ae5857
+## Features
 
-## How can I edit this code?
+- 📱 **Offline-First**: Full functionality without internet connection using Couchbase Lite
+- 🔄 **Real-Time Sync**: Automatic bidirectional sync with Couchbase Capella App Services
+- 🏪 **Multi-Store Support**: Manage inventory across multiple retail locations
+- 📦 **Inventory Management**: Track products, stock levels, and orders
+- 🎨 **Modern UI**: Built with React, TypeScript, and shadcn/ui components
+- 🔐 **Secure**: Store-based authentication and data isolation
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Framework**: shadcn/ui + Tailwind CSS
+- **Database**: Couchbase Lite for JavaScript
+- **Sync**: Couchbase Capella App Services
+- **Icons**: Lucide React
+- **State Management**: TanStack Query
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8d5659f7-90ba-462e-95da-560e60ae5857) and start prompting.
+## Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Node.js**: Version 18 or higher ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- **npm**: Comes with Node.js
+- **Couchbase Capella Account**: For App Services sync functionality
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Clone the Repository
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+git clone https://github.com/couchbase-examples/couchbase-lite-retail-demo.git
+cd couchbase-lite-retail-demo/web
+```
 
-Follow these steps:
+### 2. Install Dependencies
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 3. Configure Environment
 
-# Step 3: Install the necessary dependencies.
-npm i
+Copy the example environment file and configure it with your Couchbase Capella settings:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set your Couchbase App Services WebSocket URL:
+
+```env
+# Get this from your Capella App Services dashboard
+# Format: wss://your-endpoint.apps.cloud.couchbase.com:4984
+VITE_APP_SERVICES_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
+```
+
+**Where to find your WebSocket URL:**
+1. Log into [Couchbase Capella](https://cloud.couchbase.com/)
+2. Navigate to App Services
+3. Select your App Services endpoint
+4. Copy the WebSocket URL (it should look like: `wss://xxxxx.apps.cloud.couchbase.com:4984`)
+
+### 4. Start Development Server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173` (or another port if 5173 is in use).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Building for Production
 
-**Use GitHub Codespaces**
+Build the optimized production bundle:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+npm run build
+```
 
-## What technologies are used for this project?
+The built files will be in the `dist/` directory.
 
-This project is built with:
+Preview the production build locally:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+npm run preview
+```
 
-## How can I deploy this project?
+## Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/8d5659f7-90ba-462e-95da-560e60ae5857) and click on Share -> Publish.
+```
+web/
+├── src/
+│   ├── components/        # React components
+│   ├── lib/
+│   │   ├── database/      # Couchbase Lite database setup and types
+│   │   └── auth.ts        # Authentication helpers
+│   ├── pages/             # Page components
+│   └── App.tsx            # Main app component
+├── vendor/
+│   └── couchbase-lite/    # Couchbase Lite JavaScript SDK
+├── public/                # Static assets
+├── .env.example           # Environment variables template
+└── package.json           # Dependencies and scripts
+```
 
-## Can I connect a custom domain to my Lovable project?
+## Couchbase Lite
 
-Yes, you can!
+This project uses **Couchbase Lite for JavaScript**, which is bundled in the `vendor/couchbase-lite/` directory.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Updating Couchbase Lite
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+To update to the latest version of Couchbase Lite:
+
+1. Visit the [Couchbase Lite JavaScript releases](https://github.com/couchbaselabs/couchbase-lite-js)
+2. Download the latest release files
+3. Replace the files in `vendor/couchbase-lite/` with the new version
+4. Test thoroughly to ensure compatibility
+
+The bundled version provides:
+- Offline-first local database
+- Document-based NoSQL storage
+- Full-text search capabilities
+- Live queries with automatic updates
+- Efficient data sync with Capella App Services
+
+## Authentication
+
+The app uses email-based authentication with the following format:
+- **Email**: `{store-id}@supermarket.com` (e.g., `nyc-store-01@supermarket.com`)
+- **Password**: As configured in your Capella App Services
+
+The store ID is extracted from the email and determines:
+- Which App Services endpoint to connect to
+- Which data scope the user has access to
+- Store-specific inventory and orders
+
+## Configuration
+
+### Required Configuration
+
+- **`VITE_APP_SERVICES_URL`**: WebSocket URL for your Capella App Services endpoint
+
+### Application Settings (Fixed)
+
+The following are defined in the application code and don't need to be configured:
+- **Database Name**: `retail-inventory` (defined in `src/lib/database/types.ts`)
+- **Database Version**: `4` (defined in `src/lib/database/types.ts`)
+- **Collections**: `inventory`, `orders`, `profile`
+- **Scopes**: `AA-Store`, `NYC-Store` (automatically selected based on login)
+
+## Available Scripts
+
+- **`npm run dev`**: Start development server with hot reload
+- **`npm run build`**: Build for production
+- **`npm run preview`**: Preview production build locally
+- **`npm run lint`**: Run ESLint to check code quality
+
+## Troubleshooting
+
+### Sync Not Working
+
+- Verify your `VITE_APP_SERVICES_URL` is correct
+- Check that your App Services endpoint is running
+- Ensure your credentials are valid in Capella
+- Check browser console for error messages
+
+### Build Errors
+
+- Clear node_modules: `rm -rf node_modules && npm install`
+- Clear cache: `rm -rf dist .vite`
+- Ensure Node.js version is 18 or higher: `node --version`
+
+### TypeScript Errors
+
+- Run: `npm run build` to see all type errors
+- Ensure all dependencies are installed: `npm install`

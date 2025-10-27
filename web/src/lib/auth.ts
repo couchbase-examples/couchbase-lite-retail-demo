@@ -32,8 +32,12 @@ export function getAppEndpointUrl(storeId: string): string {
   // Extract the store prefix (e.g., "nyc" from "nyc-store-01")
   const prefix = storeId.split('-')[0].toLowerCase();
   
-  // Default base URL with port 4984 for Sync Gateway
-  const baseUrl = 'wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984';
+  // Get base URL from environment variable
+  const baseUrl = import.meta.env.VITE_APP_SERVICES_URL;
+  
+  if (!baseUrl) {
+    throw new Error('VITE_APP_SERVICES_URL is not configured. Please check your .env file.');
+  }
   
   // Map store to its corresponding endpoint
   return `${baseUrl}/supermarket-${prefix}`;

@@ -38,7 +38,7 @@ export function SyncStatus() {
     window.addEventListener("offline", handleOffline);
 
     // Check if sync is configured
-    const syncUrl = import.meta.env.VITE_SYNC_GATEWAY_URL;
+    const syncUrl = import.meta.env.VITE_APP_SERVICES_URL;
     if (!syncUrl || !isOnline) {
       setSyncState('offline');
     }
