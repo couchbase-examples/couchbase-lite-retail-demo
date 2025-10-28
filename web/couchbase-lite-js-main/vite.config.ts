@@ -4,9 +4,11 @@ import { defineConfig } from "vite";
 import { resolve } from "path";
 import tsconfigPaths from "vite-tsconfig-paths";
 import dts from "vite-plugin-dts";
+import pkg from "./package.json";
 
 export default defineConfig({
     plugins: [tsconfigPaths(), dts({ include: "src/**/*.ts" })],
+    publicDir: false,
     build: {
         lib: {
             entry: resolve(__dirname, "src/couchbase-lite.ts"),
@@ -39,4 +41,7 @@ export default defineConfig({
             provider: "playwright"
         }
     },
+    define: {
+        __APP_VERSION__: JSON.stringify(pkg.version),
+    }
 });

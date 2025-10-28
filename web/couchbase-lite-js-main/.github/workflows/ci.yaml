@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3.9.1
+      with:
+        node-version: 23.x
+
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.2.19
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Build
+      run: bun run build
+
+    - name: Lint
+      run: bun run lint
+
+    - name: Test (non-browser)
+      run: bun run test
+
+    - name: Build API docs
+      run: bun run doc
+      
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+    - name: Upload API docs
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'docs'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+
+  # TODO: These don't work -- something about the way the tests are hosted in the browser breaks
+  # the way Dexie handles promises, causing transactions to complete early. --Jens, 6 Aug 2025
+  #
+  # - name: Install Playwright browsers
+  #   run: bunx playwright install
+
+  # - name: Test in browser
+  #   run: bun run test:browser

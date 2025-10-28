@@ -1,12 +1,12 @@
 {
-  "name": "@couchbaselabs/couchbase-lite",
+  "name": "@couchbase/lite-js",
   "repository": {
     "type": "git",
     "url": "https://github.com/couchbaselabs/couchbase-lite-js.git"
   },
   "displayName": "Couchbase Lite for JavaScript",
   "type": "module",
-  "version": "0.3.3",
+  "version": "1.0.0-2",
   "browser": "./dist/couchbase-lite.js",
   "main": "./dist/couchbase-lite.cjs.js",
   "module": "./dist/couchbase-lite.es.js",
@@ -16,7 +16,7 @@
     "test": "vitest --run",
     "test:browser": "vitest --run --browser",
     "test:watch": "vitest --watch",
-    "lint": "eslint src; eslint examples; eslint test",
+    "lint": "eslint src; eslint examples",
     "lint:fix": "eslint --fix src",
     "doc": "typedoc --excludeInternal src/couchbase-lite.ts",
     "build-grammar": "ohm generateBundles --esm --withTypes src/query/N1QL.ohm"

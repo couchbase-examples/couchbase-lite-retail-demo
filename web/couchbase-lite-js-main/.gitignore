@@ -1,0 +1,11 @@
+/docs
+/remotedb-doc
+/src/query/N1QL.ohm-bundle.*
+/static/*.js
+
+/node_modules
+/dist
+
+.idea/
+.vscode/
+/public/travel-sample
