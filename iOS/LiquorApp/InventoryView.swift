@@ -4,12 +4,10 @@ import Combine
 
 struct InventoryView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
-    @EnvironmentObject var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper
+    @EnvironmentObject var p2pSyncManager: GroceryMultipeerSyncManager
     @EnvironmentObject var authManager: AuthenticationManager
     @State private var searchText = ""
     @State private var liquorItems: [LiquorItem] = []
-    @State private var showDebugInfo = false
-    @StateObject private var debugInfo = P2PDebugInfo()
     @State private var profileName: String?
     @State private var isRefreshing = false
     @State private var cancellables = Set<AnyCancellable>()  // For Combine publishers
@@ -44,46 +42,29 @@ struct InventoryView: View {
                         // App Services sync indicator
                         AppServicesSyncIndicator()
                         
-                        // P2P sync indicator (now clickable)
-                        Button(action: {
-                            showDebugInfo.toggle()
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "wifi")
-                                    .foregroundColor(.blue)
-                                    .opacity(0.8)
-                                
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text("P2P")
-                                        .font(.caption2)
-                                        .foregroundColor(.blue)
-                                        .fontWeight(.semibold)
-                                
-                                Text("DEBUG")
+                        // P2P sync indicator
+                        HStack(spacing: 4) {
+                            Image(systemName: "wifi")
+                                .foregroundColor(.blue)
+                                .opacity(0.8)
+                            
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("P2P: \(p2pSyncManager.connectedPeers.count)")
                                     .font(.caption2)
                                     .foregroundColor(.blue)
-                                    .opacity(0.7)
+                                    .fontWeight(.semibold)
                             }
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .help("Tap to show P2P debug info - Real-time inventory sync between devices")
                     }
                 }
                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                
-                // P2P Debug Section (collapsible)
-                if showDebugInfo {
-                    InventoryP2PDebugView(debugInfo: debugInfo)
-                        .transition(.opacity.combined(with: .slide))
-                }
                 
                 // Inventory grid with pull-to-refresh
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(filteredItems) { item in
+                        ForEach(filteredItems, id: \.self) { item in
                             LiquorItemCard(
                                 item: item,
                                 storeId: AppConfig.storeId,
@@ -100,7 +81,7 @@ struct InventoryView: View {
                                     }
                                 }
                             )
-                            .id("\(item.id ?? "")_\(item.quantity)")  // Force SwiftUI to detect quantity changes
+                            // Equatable compares id + quantity, so SwiftUI detects changes without forcing recreation
                         }
                     }
                     .padding(.horizontal, 16)
@@ -167,9 +148,6 @@ struct InventoryView: View {
             setupReactiveQuery()  // Setup Reactive API publisher
             // Load profile name from Capella
             profileName = databaseManager.getStoreProfile()?.name
-            // Initialize P2P debug info
-            debugInfo.multipeerSyncManager = p2pSyncManagerWrapper
-            debugInfo.refreshData()
         }
         .onDisappear {
             // Cancel all subscriptions when view disappears
@@ -189,63 +167,85 @@ struct InventoryView: View {
             return
         }
         
-        print("🔄 [Reactive API] Setting up changePublisher for automatic updates...")
+        print("🔄 [Reactive API] Setting up changePublisher with automatic Codable decoding...")
         
-        // Subscribe to query changes using Reactive API
+        // ✨ REACTIVE API: Manual field extraction (automatic Codable doesn't work with nested objects)
+        // Extract fields manually because Couchbase returns nested objects as DictionaryObject
         query.changePublisher()
             .map { queryChange -> [LiquorItem] in
-                // Manually extract results to ensure proper field mapping
-                // This is more reliable than Codable decoding with CodingKeys
+                guard let results = queryChange.results else {
+                    print("⚠️ [Reactive API] No results in query change")
+                    return []
+                }
+                
+                var items: [LiquorItem] = []
+                
                 do {
-                    let results = try queryChange.results?.allResults() ?? []
-                    var items: [LiquorItem] = []
-                    
-                    for result in results {
-                        // Extract fields directly (same as Orders screen)
-                        let id = result.string(forKey: "id")
-                        let name = result.string(forKey: "name") ?? ""
-                        let category = result.string(forKey: "category") ?? "Unknown"  // Actual field name
-                        let price = result.double(forKey: "price")
-                        let imageURL = result.string(forKey: "imageURL") ?? ""
-                        let stockQty = result.int(forKey: "stockQty")  // Actual field name
+                    for result in results.allResults() {
+                        // Extract basic fields
+                        guard let id = result.string(at: 0),
+                              let name = result.string(forKey: "name"),
+                              let category = result.string(forKey: "category"),
+                              let price = result.number(forKey: "price")?.doubleValue,
+                              let imageURL = result.string(forKey: "imageURL"),
+                              let stockQty = result.number(forKey: "stockQty")?.intValue else {
+                            continue
+                        }
                         
-                        let productId = result.int(forKey: "productId")
+                        // Extract optional fields
+                        let productId = result.number(forKey: "productId")?.intValue
                         let sku = result.string(forKey: "sku")
                         let brand = result.string(forKey: "brand")
                         let unit = result.string(forKey: "unit")
                         let storeId = result.string(forKey: "storeId")
                         let docType = result.string(forKey: "docType")
-                        let expirationDate = result.int64(forKey: "expirationDate")
-                        let lastUpdated = result.int64(forKey: "lastUpdated")
+                        let expirationDate = result.number(forKey: "expirationDate")?.int64Value
+                        let lastUpdated = result.number(forKey: "lastUpdated")?.int64Value
                         
-                        // Parse nested location and attributes if needed
-                        // For now, set to nil to keep it simple
+                        // Extract nested location
+                        var location: LiquorItem.Location?
+                        if let locationDict = result.dictionary(forKey: "location") {
+                            let aisle = locationDict.int(forKey: "aisle")
+                            let bin = locationDict.int(forKey: "bin")
+                            location = LiquorItem.Location(aisle: aisle, bin: bin)
+                        }
                         
+                        // Extract nested attributes
+                        var attributes: LiquorItem.Attributes?
+                        if let attrDict = result.dictionary(forKey: "attributes") {
+                            let organic = attrDict.boolean(forKey: "organic")
+                            let size = attrDict.string(forKey: "size") ?? ""
+                            let perishable = attrDict.boolean(forKey: "perishable")
+                            attributes = LiquorItem.Attributes(organic: organic, size: size, perishable: perishable)
+                        }
+                        
+                        // Create LiquorItem
                         let item = LiquorItem(
                             id: id,
                             name: name,
-                            type: category,  // Map category to type
+                            type: category,  // Map category → type
                             price: price,
                             imageURL: imageURL,
-                            quantity: stockQty,  // Map stockQty to quantity
+                            quantity: stockQty,  // Map stockQty → quantity
                             productId: productId,
                             sku: sku,
                             brand: brand,
                             unit: unit,
-                            location: nil,
-                            attributes: nil,
+                            location: location,
+                            attributes: attributes,
                             expirationDate: expirationDate,
                             lastUpdated: lastUpdated,
                             storeId: storeId,
                             docType: docType
                         )
+                        
                         items.append(item)
                     }
                     
-                    print("✅ [Reactive API] Query changed: \(items.count) items")
+                    print("✅ [Reactive API] Query changed: \(items.count) items (manual extraction)")
                     return items
                 } catch {
-                    print("❌ [Reactive API] Error processing results: \(error)")
+                    print("❌ [Reactive API] Error extracting results: \(error)")
                     return []
                 }
             }
@@ -261,13 +261,14 @@ struct InventoryView: View {
         // The changePublisher needs an initial execution to start listening for changes
         do {
             _ = try query.execute()
-            print("✅ [Reactive API] Initial query executed - change listener now active")
+            print("✅ [Reactive API] Initial query executed with .data() auto-decoding - change listener active")
         } catch {
             print("❌ [Reactive API] Error executing initial query: \(error)")
         }
         
-        print("✅ [Reactive API] Automatic updates enabled - listening for changes from sync!")
+        print("✅ [Reactive API] Automatic Codable decoding enabled - listening for changes!")
     }
+
     
     // MARK: - Fallback Methods
     
@@ -293,216 +294,6 @@ struct InventoryView: View {
         
         isRefreshing = false
         print("✅ [Manual Refresh] Completed - Reactive query handles data updates")
-    }
-}
-
-// MARK: - Inventory P2P Debug View (Compact Version)
-
-struct InventoryP2PDebugView: View {
-    @ObservedObject var debugInfo: P2PDebugInfo
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            // Header with current device info
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("P2P Debug Info")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                    
-                    Text("Current Device: \(getCurrentDeviceName())")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
-                Spacer()
-                
-                // Status indicators
-                HStack(spacing: 8) {
-                    StatusBadge(
-                        title: "Server",
-                        isActive: debugInfo.isPassivePeerRunning,
-                        port: debugInfo.listenerPort
-                    )
-                    
-                    StatusBadge(
-                        title: "Client",
-                        isActive: debugInfo.isActivePeerRunning,
-                        port: nil
-                    )
-                }
-            }
-            
-            // Network permission status
-            HStack {
-                Image(systemName: debugInfo.hasNetworkPermission ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
-                    .foregroundColor(debugInfo.hasNetworkPermission ? .green : .orange)
-                
-                Text(debugInfo.networkPermissionDetails)
-                    .font(.caption)
-                    .foregroundColor(debugInfo.hasNetworkPermission ? .green : .orange)
-                
-                Spacer()
-            }
-            
-            // Devices section
-            if !debugInfo.discoveredDevices.isEmpty || !debugInfo.connectedDevices.isEmpty {
-                VStack(spacing: 8) {
-                    // Connected devices
-                    if !debugInfo.connectedDevices.isEmpty {
-                        ForEach(debugInfo.connectedDevices, id: \.deviceId) { device in
-                            CompactDeviceRow(device: device, isConnected: true)
-                        }
-                    }
-                    
-                    // Discovered but not connected devices
-                    ForEach(debugInfo.discoveredDevices.filter { device in
-                        !debugInfo.connectedDevices.contains { $0.deviceId == device.deviceId }
-                    }, id: \.deviceId) { device in
-                        CompactDeviceRow(device: device, isConnected: false)
-                    }
-                }
-            } else {
-                HStack {
-                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
-                        .foregroundColor(.gray)
-                    Text("No devices discovered")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Spacer()
-                }
-                .padding(.vertical, 8)
-            }
-            
-            // Auth credentials
-            HStack {
-                Text("Auth: \(debugInfo.username) • \(String(repeating: "•", count: debugInfo.password.count))")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .font(.monospaced(.caption2)())
-                
-                Spacer()
-                
-                Text(debugInfo.serviceType)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .font(.monospaced(.caption2)())
-            }
-        }
-        .padding()
-        .background(Color.blue.opacity(0.05))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
-        .animation(.easeInOut(duration: 0.3), value: debugInfo.connectedDevices.count)
-        .animation(.easeInOut(duration: 0.3), value: debugInfo.discoveredDevices.count)
-    }
-    
-    private func getCurrentDeviceName() -> String {
-        #if targetEnvironment(macCatalyst)
-        return "\(ProcessInfo.processInfo.hostName) (Mac)"
-        #else
-        return "\(UIDevice.current.name) (iOS)"
-        #endif
-    }
-}
-
-struct StatusBadge: View {
-    let title: String
-    let isActive: Bool
-    let port: Int?
-    
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundColor(isActive ? .green : .gray)
-            
-            if let port = port {
-                Text(":\(port)")
-                    .font(.caption2)
-                    .foregroundColor(isActive ? .green : .gray)
-                    .font(.monospaced(.caption2)())
-            } else {
-                Text(isActive ? "ON" : "OFF")
-                    .font(.caption2)
-                    .foregroundColor(isActive ? .green : .gray)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(isActive ? Color.green.opacity(0.1) : Color.gray.opacity(0.1))
-        .cornerRadius(6)
-    }
-}
-
-struct CompactDeviceRow: View {
-    let device: DebugDevice
-    let isConnected: Bool
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            // Status indicator
-            Circle()
-                .fill(isConnected ? Color.green : device.connectionStatus.color)
-                .frame(width: 8, height: 8)
-            
-            // Device info
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(device.name)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    
-                    Text(device.connectionStatus.rawValue)
-                        .font(.caption2)
-                        .foregroundColor(device.connectionStatus.color)
-                }
-                
-                if let endpoint = device.endpoint {
-                    Text(endpoint)
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .font(.monospaced(.caption2)())
-                }
-                
-                if let error = device.errorMessage {
-                    Text("Error: \(error)")
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                        .lineLimit(1)
-                }
-            }
-            
-            Spacer()
-            
-            // Time indicator
-            if let lastSeen = device.lastSeen {
-                Text(timeAgo(from: lastSeen))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(isConnected ? Color.green.opacity(0.05) : Color.gray.opacity(0.05))
-        .cornerRadius(8)
-    }
-    
-    private func timeAgo(from date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
-        if interval < 60 {
-            return "now"
-        } else if interval < 3600 {
-            return "\(Int(interval/60))m"
-        } else {
-            return "\(Int(interval/3600))h"
-        }
     }
 }
 

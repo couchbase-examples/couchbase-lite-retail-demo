@@ -2,7 +2,7 @@ import Foundation
 import CouchbaseLiteSwift
 
 // Changed from struct to class to support @DocumentID (required for Reactive APIs)
-class LiquorItem: Identifiable, Codable {
+class LiquorItem: Identifiable, Codable, Hashable, Equatable {
     @DocumentID var id: String?  // Reactive API: Links to Couchbase document ID
     var name: String
     var type: String // Maps to "category" in JSON
@@ -125,6 +125,19 @@ class LiquorItem: Identifiable, Codable {
         case quantity = "stockQty"  // Map 'stockQty' from Capella to 'quantity' in app
         case productId, sku, brand, unit, location, attributes
         case expirationDate, lastUpdated, storeId, docType
+    }
+    
+    // MARK: - Hashable & Equatable Conformance
+    
+    /// Hash based on document ID - stable and unique per document
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    /// Equality based on document ID AND quantity - items are different if quantity changes
+    /// This allows SwiftUI to detect changes without forcing card recreation
+    static func == (lhs: LiquorItem, rhs: LiquorItem) -> Bool {
+        return lhs.id == rhs.id && lhs.quantity == rhs.quantity
     }
     
 } 

@@ -4,8 +4,9 @@
 <dict>
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_liquor-sync._tcp</string>
-		<string>_liquor-sync._udp</string>
+		<string>_couchbaseP2P._tcp</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Grocery Mart uses local network to discover and sync data with nearby devices for peer-to-peer synchronization.</string>
 </dict>
 </plist>

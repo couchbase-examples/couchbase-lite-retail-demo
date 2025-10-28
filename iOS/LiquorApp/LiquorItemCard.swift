@@ -133,6 +133,13 @@ struct LiquorItemCard: View {
         .onAppear {
             currentQuantity = item.quantity
         }
+        .onChange(of: item.quantity) { oldValue, newValue in
+            // Update local state when quantity changes from sync
+            // This allows smooth updates without recreating the entire card
+            if currentQuantity != newValue {
+                currentQuantity = newValue
+            }
+        }
         
         // Order Placed Overlay
         if showOrderPlaced {

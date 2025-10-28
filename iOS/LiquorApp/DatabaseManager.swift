@@ -120,6 +120,8 @@ class DatabaseManager: ObservableObject {
     // 2. Launch the app - sync will start automatically
     // 3. Data will be pulled from Capella endpoint
     
+    /// ✨ REACTIVE API: Save a LiquorItem using collection.save(from:)
+    /// Codable conformance handles all field mapping automatically via CodingKeys
     func saveLiquorItem(_ item: LiquorItem) {
         guard let database = database else { 
             print("Database not available for saving item: \(item.name)")
@@ -129,59 +131,18 @@ class DatabaseManager: ObservableObject {
         do {
             let collection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
                 ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
-            let document = MutableDocument(id: item.id)
             
-            // Save using Capella field names for consistency
-            document.setString(item.id, forKey: "id")
-            document.setString(item.name, forKey: "name")
-            document.setString(item.type, forKey: "category")  // Map 'type' to 'category' for Capella
-            document.setDouble(item.price, forKey: "price")
-            document.setString(item.imageURL, forKey: "imageURL")
-            document.setInt(item.quantity, forKey: "stockQty")  // Map 'quantity' to 'stockQty' for Capella
+            // ✨ REACTIVE API: One-line save with automatic Codable encoding!
+            // CodingKeys in LiquorItem automatically map fields:
+            //   - type → category (Capella field name)
+            //   - quantity → stockQty (Capella field name)
+            // Nested objects (location, attributes) encoded automatically!
+            // No manual field setting needed - Codable handles everything!
+            try collection.save(from: item)
             
-            // Save additional fields
-            if let productId = item.productId {
-                document.setInt(productId, forKey: "productId")
-            }
-            if let sku = item.sku {
-                document.setString(sku, forKey: "sku")
-            }
-            if let brand = item.brand {
-                document.setString(brand, forKey: "brand")
-            }
-            if let unit = item.unit {
-                document.setString(unit, forKey: "unit")
-            }
-            if let location = item.location {
-                let locationDict = MutableDictionaryObject()
-                locationDict.setInt(location.aisle, forKey: "aisle")
-                locationDict.setInt(location.bin, forKey: "bin")
-                document.setDictionary(locationDict, forKey: "location")
-            }
-            if let attributes = item.attributes {
-                let attributesDict = MutableDictionaryObject()
-                attributesDict.setBoolean(attributes.organic, forKey: "organic")
-                attributesDict.setString(attributes.size, forKey: "size")
-                attributesDict.setBoolean(attributes.perishable, forKey: "perishable")
-                document.setDictionary(attributesDict, forKey: "attributes")
-            }
-            if let expirationDate = item.expirationDate {
-                document.setInt64(expirationDate, forKey: "expirationDate")
-            }
-            if let lastUpdated = item.lastUpdated {
-                document.setInt64(lastUpdated, forKey: "lastUpdated")
-            }
-            if let storeId = item.storeId {
-                document.setString(storeId, forKey: "storeId")
-            }
-            if let docType = item.docType {
-                document.setString(docType, forKey: "docType")
-            }
-            
-            try collection.save(document: document)
-            print("Saved liquor item: \(item.name)")
+            print("✅ [Reactive API] Saved liquor item: \(item.name) (auto-encoded via Codable)")
         } catch {
-            print("Error saving liquor item \(item.name): \(error)")
+            print("❌ [Reactive API] Error saving liquor item \(item.name): \(error)")
         }
     }
     

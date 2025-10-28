@@ -100,45 +100,20 @@ struct OrdersView: View {
             return
         }
         
-        print("🔄 [Reactive API - Orders] Setting up changePublisher for automatic updates...")
+        print("🔄 [Reactive API - Orders] Setting up changePublisher with automatic Codable decoding...")
         
+        // ✨ REACTIVE API: Use .data(as: Order.self) for automatic Codable decoding
+        // Eliminates manual field extraction for cleaner, more maintainable code
         query.changePublisher()
             .map { queryChange -> [Order] in
                 do {
-                    let results = try queryChange.results?.allResults() ?? []
-                    var ordersList: [Order] = []
-                    
-                    for result in results {
-                        let id = result.string(forKey: "id") ?? ""
-                        let docType = result.string(forKey: "docType") ?? "Order"
-                        let orderId = result.int(forKey: "orderId")
-                        let storeId = result.string(forKey: "storeId") ?? ""
-                        let orderDate = result.int64(forKey: "orderDate")
-                        let orderStatus = result.string(forKey: "orderStatus") ?? "Submitted"
-                        let productId = result.int(forKey: "productId")
-                        let sku = result.string(forKey: "sku") ?? ""
-                        let unit = result.string(forKey: "unit") ?? ""
-                        let orderQty = result.int(forKey: "orderQty")
-                        
-                        let order = Order(
-                            id: id,
-                            docType: docType,
-                            orderId: orderId,
-                            storeId: storeId,
-                            orderDate: orderDate,
-                            orderStatus: orderStatus,
-                            productId: productId,
-                            sku: sku,
-                            unit: unit,
-                            orderQty: orderQty
-                        )
-                        ordersList.append(order)
-                    }
-                    
-                    print("✅ [Reactive API - Orders] Query changed: \(ordersList.count) orders")
+                    // Automatic Codable decoding - no manual field extraction needed!
+                    let ordersList = try queryChange.results?.data(as: Order.self) ?? []
+                    print("✅ [Reactive API - Orders] Query changed: \(ordersList.count) orders (auto-decoded via Codable)")
                     return ordersList
                 } catch {
-                    print("❌ [Reactive API - Orders] Error processing results: \(error)")
+                    print("❌ [Reactive API - Orders] Error decoding results: \(error)")
+                    print("   Falling back to empty array")
                     return []
                 }
             }
@@ -153,12 +128,12 @@ struct OrdersView: View {
         // Execute query initially to establish change listener
         do {
             _ = try query.execute()
-            print("✅ [Reactive API - Orders] Initial query executed - change listener now active")
+            print("✅ [Reactive API - Orders] Initial query executed with .data() auto-decoding - change listener active")
         } catch {
             print("❌ [Reactive API - Orders] Error executing initial query: \(error)")
         }
         
-        print("✅ [Reactive API - Orders] Automatic updates enabled - listening for changes!")
+        print("✅ [Reactive API - Orders] Automatic Codable decoding enabled - listening for changes!")
     }
 }
 

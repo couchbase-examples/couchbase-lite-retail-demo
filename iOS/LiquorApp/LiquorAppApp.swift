@@ -3,25 +3,25 @@
 //  LiquorApp
 //
 //  Created by Pulkit Midha on 23/07/25.
+//  Migrated to MultipeerReplicator API (CBL 3.3+)
 //
 
 import SwiftUI
 import CouchbaseLiteSwift
 import Network
 
-// Note: Using MultipeerP2PSyncManagerWrapper for better iOS P2P compatibility
+// Note: Now using official MultipeerReplicator API (CBL 3.3+)
+// This replaces the old MultipeerConnectivity + MessageEndpoint approach
 
 @main
 struct LiquorAppApp: App {
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var authManager = AuthenticationManager()
-    @State private var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper?
+    @State private var p2pSyncManager: GroceryMultipeerSyncManager?
     
     init() {
-        print("🚀 [MultipeerP2P] Initializing MultipeerConnectivity-based P2P sync functionality")
-        
-        // Note: MultipeerConnectivity handles network permissions automatically
-        // No need for aggressive network permission triggers
+        print("🚀 [MultipeerReplicator] Initializing new MultipeerReplicator-based P2P sync")
+        print("🚀 [MultipeerReplicator] Using official Couchbase Lite 3.3+ API")
         
         // 🚀 Initialize PlantPal-style embedding optimization
         Task {
@@ -35,17 +35,19 @@ struct LiquorAppApp: App {
             Group {
                 if authManager.isAuthenticated {
                     // Show main app after login
-                    AuthenticatedContentView()
-                        .environmentObject(databaseManager)
-                        .environmentObject(p2pSyncManagerWrapper ?? MultipeerP2PSyncManagerWrapper(database: databaseManager.database!))
-                        .environmentObject(authManager)
-                        .onAppear {
-                            // Initialize MultipeerConnectivity P2P sync when authenticated
-                            initializeMultipeerP2PSync()
-                            
-                            // Note: App Services sync is now auto-enabled in DatabaseManager
-                            // based on AppConfig.enableAppServicesSync flag
-                        }
+                    if let p2pManager = p2pSyncManager {
+                        AuthenticatedContentView()
+                            .environmentObject(databaseManager)
+                            .environmentObject(p2pManager)
+                            .environmentObject(authManager)
+                    } else {
+                        // Show loading while P2P initializes
+                        ProgressView("Initializing P2P Sync...")
+                            .task {
+                                // Initialize MultipeerReplicator P2P sync when authenticated
+                                await initializeMultipeerReplicatorSync()
+                            }
+                    }
                 } else {
                     // Show login screen
                     LoginView()
@@ -56,25 +58,45 @@ struct LiquorAppApp: App {
         }
     }
     
-    private func initializeMultipeerP2PSync() {
-        DispatchQueue.main.async {
-            // Get the database from DatabaseManager
-            if let database = self.databaseManager.database {
-                
-                // Initialize MultipeerConnectivity P2P sync manager
-                if self.p2pSyncManagerWrapper == nil {
-                    self.p2pSyncManagerWrapper = MultipeerP2PSyncManagerWrapper(database: database)
-                }
-                
-                // Start MultipeerConnectivity sync (handles both advertising and browsing automatically)
-                self.p2pSyncManagerWrapper?.start()
-                
-                print("🚀 [MultipeerP2P] MultipeerConnectivity P2P sync initialized")
-                print("🚀 [MultipeerP2P] Device advertising as: \(UIDevice.current.name)-Liquor")
-                print("🚀 [MultipeerP2P] Service type: _liquor-sync._tcp")
-                print("🚀 [MultipeerP2P] Using UUID-based role assignment for conflict-free connections")
-                print("🚀 [MultipeerP2P] No manual network permission triggers needed - MultipeerConnectivity handles this!")
-            }
+    @MainActor
+    private func initializeMultipeerReplicatorSync() async {
+        // Get the database and collections from DatabaseManager
+        guard let database = databaseManager.database else {
+            print("⚠️ [MultipeerReplicator] Database not ready yet")
+            return
+        }
+        
+        do {
+            // Get all collections: inventory, orders, profile
+            let inventoryCollection = try database.collection(name: AppConfig.collectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.collectionName, scope: AppConfig.scopeName)
+            
+            let ordersCollection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
+            
+            let profileCollection = try database.collection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
+            
+            // Reinitialize P2P manager with ALL collections (inventory, orders, profile)
+            let newP2PManager = GroceryMultipeerSyncManager(
+                database: database,
+                collections: [inventoryCollection, ordersCollection, profileCollection]
+            )
+            
+            // Start MultipeerReplicator sync
+            try await newP2PManager.start()
+            
+            // Update state
+            p2pSyncManager = newP2PManager
+            
+            print("✅ [MultipeerReplicator] P2P sync started successfully")
+            print("✅ [MultipeerReplicator] Peer ID: \(newP2PManager.myPeerID)")
+            print("✅ [MultipeerReplicator] Service: _couchbaseP2P._tcp")
+            print("✅ [MultipeerReplicator] Collections syncing: inventory, orders, profile")
+            print("✅ [MultipeerReplicator] No idle channel issues!")
+            
+        } catch {
+            print("❌ [MultipeerReplicator] Failed to start P2P sync: \(error)")
         }
     }
     

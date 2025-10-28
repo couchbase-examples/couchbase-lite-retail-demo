@@ -5,7 +5,7 @@ import CouchbaseLiteSwift
 /// This view is shown after successful login and contains the main app content
 struct AuthenticatedContentView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
-    @EnvironmentObject var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper
+    @EnvironmentObject var p2pSyncManager: GroceryMultipeerSyncManager
     @EnvironmentObject var authManager: AuthenticationManager
     
     var body: some View {
@@ -53,7 +53,7 @@ struct AuthenticatedContentView: View {
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var databaseManager: DatabaseManager
-    @EnvironmentObject var p2pSyncManagerWrapper: MultipeerP2PSyncManagerWrapper
+    @EnvironmentObject var p2pSyncManager: GroceryMultipeerSyncManager
     
     var body: some View {
         NavigationView {
@@ -105,15 +105,15 @@ struct SettingsView: View {
                         Image(systemName: "wifi")
                         Text("P2P Sync")
                         Spacer()
-                        Text(p2pSyncManagerWrapper.isRunning ? "Active" : "Inactive")
-                            .foregroundColor(p2pSyncManagerWrapper.isRunning ? .green : .orange)
+                        Text(p2pSyncManager.isRunning ? "Active" : "Inactive")
+                            .foregroundColor(p2pSyncManager.isRunning ? .green : .orange)
                     }
                     
                     HStack {
                         Image(systemName: "person.2")
                         Text("Connected Peers")
                         Spacer()
-                        Text("\(p2pSyncManagerWrapper.connectedPeers.count)")
+                        Text("\(p2pSyncManager.connectedPeers.count)")
                             .foregroundColor(.blue)
                     }
                 }
@@ -146,6 +146,8 @@ struct SettingsView: View {
                 }
                 
                 // Debug Section (visible to Admin and Supervisor only)
+                // Temporarily disabled - old debug views removed during P2P migration
+                /*
                 if let user = authManager.currentUser,
                    user.role == "Admin" || user.role == "Supervisor" {
                     Section(header: Text("Debug Tools")) {
@@ -165,6 +167,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                */
                 
                 // Logout Section
                 Section {
@@ -187,9 +190,12 @@ struct SettingsView: View {
 
 // MARK: - Preview
 #Preview {
-    AuthenticatedContentView()
+    let db = try! Database(name: "preview")
+    let collection = try! db.defaultCollection()
+    
+    return AuthenticatedContentView()
         .environmentObject(DatabaseManager())
-        .environmentObject(MultipeerP2PSyncManagerWrapper(database: try! Database(name: "preview")))
+        .environmentObject(GroceryMultipeerSyncManager(database: db, collections: [collection]))
         .environmentObject({
             let auth = AuthenticationManager()
             auth.isAuthenticated = true
