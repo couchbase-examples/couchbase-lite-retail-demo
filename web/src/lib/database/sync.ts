@@ -1,5 +1,6 @@
 import { Replicator } from "@couchbaselabs/couchbase-lite";
 import type { RetailDatabase } from "./types";
+import { getScopeNameFromStoreId } from "../auth";
 
 export interface SyncConfig {
   url: string;
@@ -13,23 +14,25 @@ export interface SyncConfig {
  * This is used during login to fetch the store profile document
  */
 export function setupOneShotSync(db: RetailDatabase, config: SyncConfig): Replicator {
+  const scopeName = getScopeNameFromStoreId(config.storeId);
+  const profileCollection = `${scopeName}.profile`;
+  
   console.log("🔧 Setting up ONE-SHOT sync for profile with config:", {
     url: config.url,
     username: config.username,
     storeId: config.storeId,
-    collections: ["profile"]
+    collection: profileCollection
   });
 
   const replicatorConfig: any = {
     database: db,
     url: config.url,
-    authenticator: {
-      type: "basic",
+    credentials: {
       username: config.username,
       password: config.password,
     },
     collections: {
-      profile: {
+      [profileCollection]: {
         pull: { continuous: false }, // One-shot pull
         push: { continuous: false }, // No push for profile
       },
@@ -73,28 +76,31 @@ export function setupOneShotSync(db: RetailDatabase, config: SyncConfig): Replic
 }
 
 export function setupSync(db: RetailDatabase, config: SyncConfig) {
+  const scopeName = getScopeNameFromStoreId(config.storeId);
+  const inventoryCollection = `${scopeName}.inventory`;
+  const ordersCollection = `${scopeName}.orders`;
+  
   console.log("🔄 Setting up sync with config:", {
     url: config.url,
     username: config.username,
     storeId: config.storeId,
-    collections: Object.keys(db.collections)
+    collections: [inventoryCollection, ordersCollection]
   });
 
   // Create replicator configuration
   const replicatorConfig: any = {
     database: db,
     url: config.url,
-    authenticator: {
-      type: "basic",
+    credentials: {
       username: config.username,
       password: config.password,
     },
     collections: {
-      inventory: {
+      [inventoryCollection]: {
         pull: { continuous: true },
         push: { continuous: true },
       },
-      orders: {
+      [ordersCollection]: {
         pull: { continuous: true },
         push: { continuous: true },
       },
@@ -104,7 +110,7 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
   console.log("📡 Sync configuration:", {
     storeId: config.storeId,
     url: config.url,
-    collections: ["inventory", "orders"]
+    collections: [inventoryCollection, ordersCollection]
   });
 
   console.log("🔧 Creating replicator...");

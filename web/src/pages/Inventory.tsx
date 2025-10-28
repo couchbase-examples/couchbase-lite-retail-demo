@@ -10,6 +10,7 @@ import InventoryItem from "@/components/InventoryItem";
 import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
 import { DocID } from "@couchbaselabs/couchbase-lite";
+import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -58,17 +59,28 @@ const Inventory = () => {
         setLoading(true);
         console.log('Loading inventory from database...');
         
+        // Get collection name from stored credentials
+        const credentials = getStoredCredentials();
+        if (!credentials) {
+          console.error('No credentials found');
+          return;
+        }
+        const scopeName = getScopeNameFromStoreId(credentials.storeId);
+        const inventoryCollectionName = `${scopeName}.inventory` as any;
+        
         // Check collection count first
-        const count = await db.collections.inventory.count();
+        const count = await db.collections[inventoryCollectionName].count();
         console.log(`Inventory collection has ${count} documents`);
         
-        const query = db.createQuery('SELECT * FROM inventory');
+        const query = db.createQuery(`SELECT * FROM \`${inventoryCollectionName}\``);
         const inventoryItems: InventoryItemType[] = [];
         
         await query.execute((row) => {
           console.log('Query row:', row);
-          if (row.inventory) {
-            inventoryItems.push(row.inventory);
+          // Extract collection data from row
+          const data = row[inventoryCollectionName];
+          if (data) {
+            inventoryItems.push(data);
           }
         });
         
@@ -86,15 +98,21 @@ const Inventory = () => {
 
   const handleCountChange = async (id: string, newCount: number) => {
     try {
+      // Get collection name from stored credentials
+      const credentials = getStoredCredentials();
+      if (!credentials) return;
+      const scopeName = getScopeNameFromStoreId(credentials.storeId);
+      const inventoryCollectionName = `${scopeName}.inventory` as any;
+      
       // Update in database
-      const doc = await db.collections.inventory.getDocument(DocID(id));
+      const doc = await db.collections[inventoryCollectionName].getDocument(DocID(id));
       if (doc) {
         // Update document properties
         doc.stockQty = newCount;
         doc.lastUpdated = Date.now();
         
         // Save the document to trigger sync
-        await db.collections.inventory.save(doc);
+        await db.collections[inventoryCollectionName].save(doc);
         
         console.log(`Updated item ${id} stockQty to ${newCount} - this should trigger sync`);
         

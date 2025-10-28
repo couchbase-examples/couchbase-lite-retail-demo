@@ -73,41 +73,24 @@ export interface DBSchema {
   profile: StoreProfile;
 }
 
-// Get scope name based on store ID from session storage
-function getScopeName(): string {
-  const stored = sessionStorage.getItem('retail_auth_credentials');
-  if (stored) {
-    try {
-      const credentials = JSON.parse(stored);
-      const storeId = credentials.storeId;
-      // Map store ID to scope name: "aa-store-01" → "AA-Store", "nyc-store-01" → "NYC-Store"
-      if (storeId.startsWith('aa-')) {
-        return 'AA-Store';
-      } else if (storeId.startsWith('nyc-')) {
-        return 'NYC-Store';
-      }
-    } catch (e) {
-      console.error('Failed to parse credentials:', e);
-    }
-  }
-  // Default to AA-Store if can't determine
-  return 'AA-Store';
+/**
+ * Create database configuration for a specific store
+ * Collections are specified in {scope}.{collection} format
+ */
+export function createRetailConfig(storeId: string): DatabaseConfig<DBSchema> {
+  // Convert storeId to scope name: "nyc-store-01" → "NYC-Store"
+  const prefix = storeId.split('-')[0].toUpperCase();
+  const scopeName = `${prefix}-Store`;
+  
+  return {
+    name: "retail-inventory",
+    version: 4,
+    collections: {
+      [`${scopeName}.inventory`]: {},
+      [`${scopeName}.orders`]: {},
+      [`${scopeName}.profile`]: {},
+    },
+  };
 }
-
-export const RetailConfig: DatabaseConfig<DBSchema> = {
-  name: "retail-inventory",
-  version: 4, // Incremented to use 'id' instead of '_id'
-  collections: {
-    inventory: {
-      scope: getScopeName(),
-    },
-    orders: {
-      scope: getScopeName(),
-    },
-    profile: {
-      scope: getScopeName(),
-    },
-  },
-};
 
 export type RetailDatabase = Database<DBSchema>;

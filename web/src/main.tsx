@@ -50,13 +50,20 @@ async function bootstrap() {
   try {
     console.log('🚀 Bootstrapping application...');
     
-    // Initialize database
-    const db = await initializeDatabase();
-    console.log('✅ Database initialized');
+    // Check if user has stored credentials
+    const credentials = getStoredCredentials();
     
-    // Note: Continuous sync will be started AFTER successful login
-    // The Login page will perform one-shot profile sync, then Dashboard will start continuous sync
-    console.log('📝 Sync will start after user authentication');
+    let db: RetailDatabase | null = null;
+    
+    if (credentials) {
+      // User is logged in - initialize database with their storeId
+      console.log('🔑 Found stored credentials for store:', credentials.storeId);
+      db = await initializeDatabase(credentials.storeId);
+      console.log('✅ Database initialized for', credentials.storeId);
+    } else {
+      // No credentials - database will be initialized after login
+      console.log('📝 No stored credentials - database will initialize after login');
+    }
     
     // Render app
     const rootElement = document.getElementById("root");
@@ -64,9 +71,13 @@ async function bootstrap() {
       const root = createRoot(rootElement);
       root.render(
         <StrictMode>
-          <DatabaseProvider db={db}>
+          {db ? (
+            <DatabaseProvider db={db}>
+              <App />
+            </DatabaseProvider>
+          ) : (
             <App />
-          </DatabaseProvider>
+          )}
         </StrictMode>
       );
     }

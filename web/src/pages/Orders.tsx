@@ -10,6 +10,7 @@ import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, ClipboardList, Package, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DocID } from "@couchbaselabs/couchbase-lite";
+import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -24,16 +25,27 @@ const Orders = () => {
         setLoading(true);
         console.log('Loading orders from database...');
         
-        const count = await db.collections.orders.count();
+        // Get collection name from stored credentials
+        const credentials = getStoredCredentials();
+        if (!credentials) {
+          console.error('No credentials found');
+          return;
+        }
+        const scopeName = getScopeNameFromStoreId(credentials.storeId);
+        const ordersCollectionName = `${scopeName}.orders` as any;
+        
+        const count = await db.collections[ordersCollectionName].count();
         console.log(`Orders collection has ${count} documents`);
         
-        const query = db.createQuery('SELECT * FROM orders');
+        const query = db.createQuery(`SELECT * FROM \`${ordersCollectionName}\``);
         const orderItems: Order[] = [];
         
         await query.execute((row) => {
           console.log('Order row:', row);
-          if (row.orders) {
-            orderItems.push(row.orders);
+          // Extract collection data from row
+          const data = row[ordersCollectionName];
+          if (data) {
+            orderItems.push(data);
           }
         });
         
@@ -54,14 +66,20 @@ const Orders = () => {
 
   const handleOrderReceived = async (orderId: string) => {
     try {
+      // Get collection name from stored credentials
+      const credentials = getStoredCredentials();
+      if (!credentials) return;
+      const scopeName = getScopeNameFromStoreId(credentials.storeId);
+      const ordersCollectionName = `${scopeName}.orders` as any;
+      
       // Update in database
-      const doc = await db.collections.orders.getDocument(DocID(orderId));
+      const doc = await db.collections[ordersCollectionName].getDocument(DocID(orderId));
       if (doc) {
         const updatedDate = Date.now();
         // Modify the document directly (it's a plain JavaScript object)
         doc.orderStatus = "Received";
         doc.orderDate = updatedDate;
-        await db.collections.orders.save(doc);
+        await db.collections[ordersCollectionName].save(doc);
         
         console.log(`Updated order ${orderId} status to Received`);
         

@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
-import { useDatabase } from "@/lib/database/DatabaseProvider";
+import { initializeDatabase } from "@/lib/database/initDatabase";
 import { setupOneShotSync } from "@/lib/database/sync";
-import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl } from "@/lib/auth";
+import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl, getScopeNameFromStoreId } from "@/lib/auth";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -17,7 +17,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const db = useDatabase();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +27,11 @@ const Login = () => {
       // Extract store ID from email
       const storeId = extractStoreIdFromEmail(email);
       console.log('📧 Extracted store ID:', storeId);
+      
+      // Initialize database for this store
+      console.log('💾 Initializing database...');
+      const db = await initializeDatabase(storeId);
+      console.log('✅ Database initialized');
       
       // Get App Services URL from environment
       const syncUrl = getAppServicesUrl();
@@ -73,7 +77,9 @@ const Login = () => {
       });
 
       // Check if profile was actually downloaded
-      const profileCount = await db.collections.profile.count();
+      const scopeName = getScopeNameFromStoreId(storeId);
+      const profileCollectionName = `${scopeName}.profile` as any;
+      const profileCount = await db.collections[profileCollectionName].count();
       console.log(`📊 Profile collection has ${profileCount} documents`);
       
       if (profileCount === 0) {
@@ -89,8 +95,8 @@ const Login = () => {
         description: `Welcome to ${storeId}`,
       });
 
-      // Navigate to dashboard
-      navigate("/dashboard");
+      // Reload page to reinitialize app with database context
+      window.location.href = '/dashboard';
       
     } catch (err: any) {
       console.error('❌ Login failed:', err);

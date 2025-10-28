@@ -23,6 +23,15 @@ export function extractStoreIdFromEmail(email: string): string {
 }
 
 /**
+ * Get scope name from store ID
+ * e.g., "nyc-store-01" → "NYC-Store", "aa-store-01" → "AA-Store"
+ */
+export function getScopeNameFromStoreId(storeId: string): string {
+  const prefix = storeId.split('-')[0].toUpperCase();
+  return `${prefix}-Store`;
+}
+
+/**
  * Get App Services URL from environment variable
  * Returns the URL exactly as configured in .env without any modifications
  */
