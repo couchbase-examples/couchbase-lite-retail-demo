@@ -112,9 +112,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <div className="absolute inset-0 bg-gradient-warm opacity-50"></div>
+      <div className="absolute inset-0 bg-gradient-warm opacity-50 pointer-events-none"></div>
       
-      <Card className="w-full max-w-md shadow-strong border-0 bg-card/95 backdrop-blur-sm">
+      <Card className="w-full max-w-md shadow-strong border-0 bg-card/95 backdrop-blur-sm relative z-10">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-3 rounded-full bg-primary/10">
@@ -142,7 +142,9 @@ const Login = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="store-id@supermarket.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -157,10 +159,12 @@ const Login = () => {
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
+              <div className="relative" style={{ isolation: 'isolate' }}>
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -171,7 +175,8 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground pointer-events-auto"
+                  tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
