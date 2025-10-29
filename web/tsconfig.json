@@ -4,7 +4,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@couchbaselabs/couchbase-lite": ["./vendor/couchbase-lite/couchbase-lite.d.ts"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,

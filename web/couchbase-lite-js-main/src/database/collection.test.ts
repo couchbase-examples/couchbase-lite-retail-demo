@@ -10,11 +10,11 @@
 //
 
 import { indexedDB, IDBKeyRange } from "fake-indexeddb";
-import type { Collection, CollectionChange, ConflictHandlerResult, DocumentChange} from "./collection.js";
-import { ConflictError, type ConflictHandler, DefaultCollectionName, MultipleConflictsError } from "./collection.js";
-import { Database, ReadOnly, ReadWrite } from "./database.js";
-import type { CBLDictionary} from "./types.js";
-import { DocID } from "./types.js";
+import type { Collection, CollectionChange, ConflictHandlerResult, DocumentChange} from "./collection";
+import { ConflictError, type ConflictHandler, DefaultCollectionName, MultipleConflictsError } from "./collection";
+import { Database, ReadOnly, ReadWrite } from "./database";
+import type { CBLDictionary} from "./types";
+import { DocID } from "./types";
 import * as logtape from "@logtape/logtape";
 import { meta } from "./document.js";
 import { canonicalJSONDict } from "./internals.js";

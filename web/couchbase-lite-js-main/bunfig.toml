@@ -1,3 +1,0 @@
-[define]
-# Set a value for __APP_VERSION__ so we don't get an error in couchbase-lite.ts
-"__APP_VERSION__" = "'DEVELOPMENT'"

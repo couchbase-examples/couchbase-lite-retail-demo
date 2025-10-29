@@ -13,10 +13,11 @@
 /** WebSocket-based BLIP protocol implementation.
  *  @module */
 
+import { basicAuthHeader } from "@/util/base64";
 import {BLIPLogger, Connection, type ErrorMode, GlobalParams} from "./connection";
 import * as msg from "./message";
 import {assert} from "@/util/assert";
-import WebSocket from "isomorphic-ws";
+import IsoWebSocket from "isomorphic-ws";
 
 // Re-exports:
 export {type ErrorMode, GlobalParams} from "./connection";
@@ -161,6 +162,17 @@ export abstract class SocketAPI {
 }
 
 
+/** Options that can be passed to the constructor for use in *non-web-browser* environments
+ *  such as node/Bun/Deno. In a browser, these will be ignored. */
+export interface NonBrowserOptions {
+    credentials?: {username: string, password: string},
+}
+
+
+interface NodeHttpOptions {
+    headers?: Record<string,string>,
+}
+
 
 /** A WebSocket-based BLIP connection. */
 export class Socket extends SocketAPI {
@@ -168,19 +180,27 @@ export class Socket extends SocketAPI {
     /** Creates and (asynchronously) opens a BLIP connection via a WebSocket.
      * @param url  The `ws:` or `wss:` URL to connect to.
      * @param protocol  The subprotocol of BLIP, to be appended to the WebSocket protocol requested.
-     */
-    constructor(url: URL | string, protocol = "") {
+     * @param options  Additional for use in node/Bun/Deno. Ignored in a browser. */
+    constructor(url: URL | string, protocol = "", options?: NonBrowserOptions) {
         super();
         if (protocol !== "")
             protocol = kBLIPProtocol + "+" + protocol;
+
         this.logger = this.logger.with({url});
         this.#connection!.logger = this.logger;
-        this.#ws = new WebSocket(url, protocol);
+
+        let wsOptions : NodeHttpOptions | undefined;
+        if (options?.credentials !== undefined) {
+            const auth = basicAuthHeader(options.credentials.username, options.credentials.password);
+            wsOptions = {headers: {Authorization: auth}};
+        }
+        this.#ws = new IsoWebSocket(url, protocol, wsOptions);
+
         this.#ws.binaryType = "arraybuffer";
-        this.#ws.onopen     = ()      => {this.handleWSOpen();};
-        this.#ws.onmessage  = (event) => {this.handleWSMessage(event);};
-        this.#ws.onclose    = (event) => {this.handleWSClose(event);};
-        this.#ws.onerror    = (event) => {this.handleWSError(event);};
+        this.#ws.onopen     = this.handleWSOpen.bind(this);
+        this.#ws.onmessage  = this.handleWSMessage.bind(this);
+        this.#ws.onclose    = this.handleWSClose.bind(this);
+        this.#ws.onerror    = this.handleWSError.bind(this);
     }
 
 
@@ -244,7 +264,7 @@ export class Socket extends SocketAPI {
         this.dispatchEvent("close", ok ? undefined : err);
     }
 
-    private handleWSClose(event: WebSocket.CloseEvent) {
+    private handleWSClose(event: IsoWebSocket.CloseEvent) {
         if (this.#connection) {
             const err = new WebSocketError(event.code, event.reason);
             const ok = (event.code === 1000 && event.wasClean);
@@ -252,7 +272,7 @@ export class Socket extends SocketAPI {
         }
     }
 
-    private handleWSError(event: WebSocket.ErrorEvent) {
+    private handleWSError(event: IsoWebSocket.ErrorEvent) {
         // In a browser there is, unfortunately, no useful information in the ErrorEvent.
         let message = this.#open ? "Socket disconnected" : "WebSocket connection failed";
         if (event.message)
@@ -263,7 +283,7 @@ export class Socket extends SocketAPI {
         this.closed(err, false);
     }
 
-    private handleWSMessage(event: WebSocket.MessageEvent) {
+    private handleWSMessage(event: IsoWebSocket.MessageEvent) {
         const now = globalThis.performance.now();
         if (this.#lastRcvTime > 0) {
             this.timeWaiting += now - this.#lastRcvTime;
@@ -335,7 +355,7 @@ export class Socket extends SocketAPI {
         return this.#connection;
     }
 
-    #ws         : WebSocket;
+    #ws         : IsoWebSocket.WebSocket;
     #connection : Connection | undefined = new Connection();
     #open       = false;
     #sendPaused = false;

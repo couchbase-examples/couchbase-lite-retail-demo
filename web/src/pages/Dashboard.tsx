@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Package2, ShoppingCart, ClipboardList, LogOut } from "lucide-react";
 import { useDatabase } from "@/lib/database/DatabaseProvider";
-import { getStoredCredentials, clearCredentials } from "@/lib/auth";
+import { getStoredCredentials, clearCredentials, getScopeNameFromStoreId } from "@/lib/auth";
+import { DocID } from "@couchbaselabs/couchbase-lite";
 import { startContinuousSync } from "@/main";
 import type { StoreProfile } from "@/lib/database/types";
 
@@ -26,24 +27,27 @@ const Dashboard = () => {
       return;
     }
 
-    // Load store profile from database
+    // Load store profile from database using direct KV read
     const loadStoreProfile = async () => {
       try {
         setLoading(true);
         console.log('📊 Loading store profile...');
         
-        const query = db.createQuery('SELECT * FROM profile LIMIT 1');
-        let profile: StoreProfile | null = null;
+        // Get fully qualified collection name
+        const scopeName = getScopeNameFromStoreId(credentials.storeId);
+        const profileCollectionName = `${scopeName}.profile` as any;
         
-        await query.execute((row) => {
-          if (row.profile) {
-            profile = row.profile;
-          }
-        });
+        // Construct profile document ID (e.g., "NYC-Store::profile::nyc-store-01")
+        const profileDocId = `${scopeName}::profile::${credentials.storeId}`;
+        
+        console.log(`🗒️ Reading profile document: ${profileDocId}`);
+        
+        // Direct KV read - much more efficient than query for single document
+        const profile = await db.collections[profileCollectionName].getDocument(DocID(profileDocId));
         
         if (profile) {
           console.log('✅ Store profile loaded:', profile);
-          setStoreProfile(profile);
+          setStoreProfile(profile as StoreProfile);
         } else {
           console.log('⚠️ No store profile found in database');
         }

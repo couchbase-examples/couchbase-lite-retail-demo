@@ -28,3 +28,8 @@ export function decodeBase64(b64: string): Uint8Array | undefined {
         return undefined;
     }
 }
+
+
+export function basicAuthHeader(username: string, password: string): string {
+    return "Basic " + btoa(username + ":" + password);
+}

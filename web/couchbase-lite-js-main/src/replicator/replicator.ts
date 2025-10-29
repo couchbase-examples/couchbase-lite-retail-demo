@@ -21,6 +21,7 @@ import type { Endpoint, EndpointParams, WorkerParams } from "./endpoint";
 import { Puller, type PullerConfig, type PullerDelegate } from "./puller";
 import { Pusher, type PusherConfig, type PusherDelegate } from "./pusher";
 import type * as logtape from "@logtape/logtape";
+import { basicAuthHeader } from "@/util/base64";
 
 export { type CheckpointerConfig, type CheckpointerDelegate } from "./checkpointer";
 export { type PullConflictResolver, type PullerConfig, type PullerDelegate } from "./puller";
@@ -96,8 +97,13 @@ export class Replicator {
         check(syncURL.protocol === "wss:" || syncURL.protocol === "ws:",
               "Replicator URL must have scheme wss: or ws:");
 
-        if (this.config.credentials)
-            await this.authenticate(this.config.credentials);
+        let options: blip.NonBrowserOptions | undefined;
+        if (this.config.credentials) {
+            if (typeof window !== 'undefined')
+                await this.authenticate(this.config.credentials);               // in browser
+            else
+                options = {credentials: this.config.credentials};               // in node.js
+        }
 
         return new Promise((resolveFn, rejectFn) => {
             this.#resolveFn = resolveFn;
@@ -107,7 +113,7 @@ export class Replicator {
 
             // Create the BLIP socket:
             this.logger.info `Connecting to <${this.config.url}>...`;
-            this.#socket = new blip.Socket(syncURL, kReplicatorSubProtocol);
+            this.#socket = new blip.Socket(syncURL, kReplicatorSubProtocol, options);
             this.#socket.addEventListener("open", () => {
                 this.logger.info `Connected!`;
                 this.maybeNotifyStatus();
@@ -124,6 +130,7 @@ export class Replicator {
                     this.finish(Error("BLIP connection closed unexpectedly"));
                 }
             });
+            this.maybeNotifyStatus();
             void this.start();
         });
     }
@@ -152,17 +159,36 @@ export class Replicator {
             if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")
                 this.logger.warn `Sending credentials INSECURELY over a non-TLS connection!`;
         }
-        this.logger.info `Authenticating to ${url} as user ${auth.username}`;
-        const basicAuth = "Basic " + btoa(auth.username + ":" + auth.password);
-        const r = await fetch(url, {
-            method:      'POST',
-            headers:     {'Authorization': basicAuth},
-            credentials: "include",
-            mode:        "cors",
-        });
-        if (r.status !== 200) {
-            this.logger.error `Authentication failed: ${r.status} ${r.statusText}`;
-            throw Error(`Authentication failed: ${r.status} ${r.statusText}`);
+        this.logger.info `Authenticating to ${url.toString()} as user ${auth.username}`;
+
+        try {
+            this.#abortAuth = new AbortController();
+            this.maybeNotifyStatus();   // status changes to Connecting
+
+            const r = await fetch(url, {
+                method:      'POST',
+                headers:     {'Authorization': basicAuthHeader(auth.username, auth.password)},
+                credentials: "include",
+                mode:        "cors",
+                signal:      this.#abortAuth.signal
+            });
+            if (r.status >= 300) {
+                this.logger.error `Authentication failed: ${r.status} ${r.statusText}`;
+                if (r.status === 401)
+                    throw Error(`Authentication failed; username or password not valid.`);
+                else
+                    throw Error(`Authentication failed. [${r.status} ${r.statusText}]`);
+            }
+        } catch (x) {
+            if (x instanceof Error && x.name === "AbortError") {
+                this.logger.error `Authentication request was canceled`;
+                throw Error(`Authentication request was canceled`);
+            } else {
+                this.logger.error `Authentication failed; fetch threw ${x}`;
+                throw Error(`Authentication failed; this may be due to an invalid URL, a network problem, or the server's CORS settings. [${x}]`);
+            }
+        } finally {
+            this.#abortAuth = undefined;
         }
         this.logger.info `Successfully authenticated`;
     }
@@ -239,12 +265,17 @@ export class Replicator {
     stop() {
         if (this.running) {
             this.logger.info `Replicator.stop called!`;
+            this.#abortAuth?.abort();
             this.finish();
         }
     }
 
 
     get status() : Status {
+        if (this.#abortAuth !== undefined) {
+            return {status: 'connecting'};
+        }
+
         let s: Status = {status: 'busy'};
         if (this.#allEndpoints.length > 0) {
             s.status = 'idle';
@@ -263,6 +294,7 @@ export class Replicator {
                 s.status = 'connecting';
                 break;
             case WebSocket.CLOSED:
+            case undefined:
                 s.status = 'stopped';
                 break;
         }
@@ -273,7 +305,7 @@ export class Replicator {
     onStatusChange? : (status: Status) => void;
 
 
-    get running() : boolean {return this.#resolveFn !== undefined;}
+    get running() : boolean {return this.#resolveFn !== undefined || this.#abortAuth !== undefined;}
 
 
     statusChanged_() {
@@ -339,6 +371,7 @@ export class Replicator {
     #collectionIDs  : CollectionID[];           // Indexes of this array are collection indexes
     #resolveFn?     : () => void;               // Resolves `run()` Promise
     #rejectFn?      : (e:Error) => void;        // Rejects `run()` Promise
+    #abortAuth?     : AbortController;          // Allows auth fetch to be canceled
     #socket?        : blip.Socket;              // BLIP socket
     #expectingClose = false;                    // True once a BLIP close is OK
     #checkpointers  : Checkpointer[] = [];      // Checkpointers, by collection index

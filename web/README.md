@@ -112,7 +112,7 @@ web/
 
 If you're setting up this project from scratch or need to add the SDK:
 
-Below steps are  just for dev testing. Otherwise, we will have to use npm package whenever it is live.
+Below steps are just for dev testing. Otherwise, we will have to use npm package whenever it is live.
 
 1. **Create the vendor directory structure:**
    ```bash
@@ -120,7 +120,8 @@ Below steps are  just for dev testing. Otherwise, we will have to use npm packag
    ```
 
 2. **Copy the SDK files** to `vendor/couchbase-lite/`:
-   - `couchbase-lite.es.js` - Main ES module
+   - `couchbase-lite.es.js` - Main ES module (primary entry point)
+   - `couchbase-lite.cjs.js` - CommonJS module
    - `couchbase-lite.d.ts` - TypeScript definitions
    - `database/` - Database classes and types
    - `replicator/` - Replication functionality
