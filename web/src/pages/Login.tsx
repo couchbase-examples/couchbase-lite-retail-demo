@@ -51,7 +51,8 @@ const Login = () => {
         let hasError = false;
 
         profileReplicator.onStatusChange = (status: any) => {
-          console.log('🔄 Profile sync status:', status.activity);
+          const activity = status.activity || status.status;
+          console.log('🔄 Profile sync status:', activity, status);
           
           if (status.error) {
             hasError = true;
@@ -66,7 +67,7 @@ const Login = () => {
             }
           }
           
-          if (status.activity === 'stopped' && !hasError) {
+          if ((activity === 'stopped' || activity === 'idle') && !hasError) { 
             console.log('✅ Profile sync complete');
             resolve(true);
           }

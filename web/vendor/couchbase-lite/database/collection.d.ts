@@ -5,7 +5,7 @@ import { DocID, RevID, Sequence, CBLDictionary } from './types';
 import { DocumentMeta, CBLDictLike, CBLDocument } from './document';
 import { CryptoCodec } from './cryptoCodec';
 import { ListenerToken } from '../couchbase-lite';
-import * as repl from "@/replicator/types";
+import * as repl from "../replicator/types";
 import type * as logtape from "@logtape/logtape";
 import * as dexie from "dexie";
 export declare const DefaultCollectionName = "_default";
