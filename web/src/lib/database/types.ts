@@ -33,7 +33,7 @@ export interface Order {
   orderId: number;
   storeId: string;
   orderDate: number;
-  orderStatus: "Submitted" | "Received";
+  orderStatus: "Submitted" | "Received" | "In Review";
   productId: number;
   sku: string;
   unit: string;
