@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import { Minus, Plus, Package } from "lucide-react";
 import { toast } from "sonner";
+import { ReorderDialog } from "@/components/ReorderDialog";
+import { useDatabase } from "@/lib/database/DatabaseProvider";
+import { createOrder } from "@/lib/database/orders";
+import { getStoredCredentials } from "@/lib/auth";
 
 interface InventoryItemProps {
   item: InventoryItemType;
@@ -14,18 +18,40 @@ interface InventoryItemProps {
 const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
   const [showAlert, setShowAlert] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
+  const db = useDatabase();
 
   const handleCountChange = (increment: boolean) => {
     const newCount = increment ? item.stockQty + 1 : Math.max(0, item.stockQty - 1);
     onCountChange(item.id, newCount);
   };
 
-  const handleReorder = () => {
-    setShowAlert(true);
-    toast.success("Item replenishment order has been made", {
-      description: `Order placed for ${item.name}`,
-    });
-    setTimeout(() => setShowAlert(false), 3000);
+  const handleReorderClick = () => {
+    setShowReorderDialog(true);
+  };
+
+  const handleReorderConfirm = async (quantity: number) => {
+    const credentials = getStoredCredentials();
+    if (!credentials) {
+      toast.error("Authentication required", {
+        description: "Please log in to place orders",
+      });
+      return;
+    }
+
+    const order = await createOrder(db, item, quantity, credentials.storeId);
+    
+    if (order) {
+      setShowAlert(true);
+      toast.success("Order placed successfully!", {
+        description: `Order #${order.orderId} for ${quantity} ${item.unit} of ${item.name}`,
+      });
+      setTimeout(() => setShowAlert(false), 2000);
+    } else {
+      toast.error("Failed to create order", {
+        description: "Please try again",
+      });
+    }
   };
 
   const getCountColor = (count: number) => {
@@ -124,7 +150,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
             {/* Reorder Button */}
             <Button 
-              onClick={handleReorder}
+              onClick={handleReorderClick}
               className="w-full"
               size="sm"
             >
@@ -133,6 +159,14 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
           </div>
         </div>
       </CardContent>
+      
+      {/* Reorder Dialog */}
+      <ReorderDialog
+        open={showReorderDialog}
+        onOpenChange={setShowReorderDialog}
+        item={item}
+        onConfirm={handleReorderConfirm}
+      />
     </Card>
   );
 };

@@ -53,6 +53,7 @@ export interface TravelSchema {
     airlines: Airline;
     routes: Route;
     people: Person;
+    _default: JSONObject;
 }
 export declare const Airlines: LocalRevision[];
 export declare const Routes: LocalRevision[];

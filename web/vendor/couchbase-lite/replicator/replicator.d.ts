@@ -13,8 +13,13 @@ export type CollectionID = string & {
 /** Configuration parameters. */
 export interface ReplicatorConfig {
     url: string;
-    scope?: string;
+    credentials?: Credentials;
     collections: Record<CollectionID, CollectionConfig>;
+}
+/** Authentication credentials for the replicator. */
+export interface Credentials {
+    username: string;
+    password: string;
 }
 /** Configuration for replicating a collection. */
 export interface CollectionConfig {
@@ -47,6 +52,7 @@ export declare class Replicator {
     readonly logger: logtape.Logger;
     /** Starts the replicator. Completes when the replicator finishes (never if continuous.) */
     run(): Promise<void>;
+    private authenticate;
     private start;
     /** Stops the replicator, if it's running. */
     stop(): void;

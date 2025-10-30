@@ -4,19 +4,18 @@ import { Collection } from './collection';
 import { Checkpoint } from '../replicator/types';
 import * as repl from "@/replicator/replicator";
 import type * as logtape from "@logtape/logtape";
-export { type CheckpointerDelegate, type PusherConfig, type PullerConfig, type PullConflictResolver, type RemoteRevisionInfo, type Status } from '../replicator/replicator';
+export { type Credentials, type CheckpointerDelegate, type PusherConfig, type PullerConfig, type PullConflictResolver, type RemoteRevisionInfo, type Status } from '../replicator/replicator';
 /** Configuration for {@link Replicator}.
  *  @interface
  *  @property database  The Database to sync.
- *  @property url  Server URL to connect to, including database name as first path component,
- *                 and ending with `/_blipsync`.
+ *  @property url  Server URL to connect to, with scheme "wss:" or "ws:", and database name
+ *                 as first path component.
  *  @property collections  Keys are names of collections to sync;
- *                         values are per-collection configuration.
- *  @property scope  Server-side "scope" the collections are in, if not the default. */
+ *                         values are per-collection configuration. */
 export interface ReplicatorConfig {
     database: Database;
     url: string;
-    scope?: string;
+    credentials?: repl.Credentials;
     collections: Record<string, ReplicatorCollectionConfig>;
 }
 /** Per-collection Replicator configuration. At least one of `push` and `pull` must be defined. */
@@ -36,6 +35,8 @@ export declare class Replicator implements repl.CheckpointerDelegate {
     #private;
     private config;
     constructor(config: ReplicatorConfig);
+    /** The local database being replicated. */
+    readonly database: Database;
     /** Callback that notifies when {@link status} changes. */
     onStatusChange?: (status: repl.Status) => void;
     /** Callback that notifies when documents have been pushed or pulled. */

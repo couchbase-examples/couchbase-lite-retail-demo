@@ -33,8 +33,7 @@ export function setupOneShotSync(db: RetailDatabase, config: SyncConfig): Replic
     },
     collections: {
       [profileCollection]: {
-        pull: { continuous: false }, // One-shot pull
-        push: { continuous: false }, // No push for profile
+        pull: { continuous: false } // One-shot pull only
       },
     },
   };
@@ -43,13 +42,15 @@ export function setupOneShotSync(db: RetailDatabase, config: SyncConfig): Replic
 
   // Status change listener
   replicator.onStatusChange = (status: any) => {
-    console.log("🔄 Profile Replicator Status:", status.activity, status);
+    console.log("🔄 Profile Replicator Status:", status.status, status); 
     
     if (status.error) {
       console.error("❌ Profile Replication error:", status.error);
     }
+
+    const activity = status.activity || status.status;
     
-    if (status.activity === "stopped") {
+    if (activity === "stopped" || activity === "idle") { 
       if (status.error) {
         console.error("❌ Profile sync failed");
       } else {
@@ -142,7 +143,7 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
     
     const activity = status.activity || status.status;
     
-    if (activity === "stopped") {
+    if (activity === "stopped" || activity === "idle") { 
       if (status.error) {
         console.error("❌ Replication stopped with error");
       } else {

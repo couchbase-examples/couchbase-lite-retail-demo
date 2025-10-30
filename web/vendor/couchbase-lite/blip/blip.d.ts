@@ -54,14 +54,22 @@ export declare abstract class SocketAPI {
     protected msgEvents: msg.MessageEventsImpl;
     private dispatching;
 }
+/** Options that can be passed to the constructor for use in *non-web-browser* environments
+ *  such as node/Bun/Deno. In a browser, these will be ignored. */
+export interface NonBrowserOptions {
+    credentials?: {
+        username: string;
+        password: string;
+    };
+}
 /** A WebSocket-based BLIP connection. */
 export declare class Socket extends SocketAPI {
     #private;
     /** Creates and (asynchronously) opens a BLIP connection via a WebSocket.
      * @param url  The `ws:` or `wss:` URL to connect to.
      * @param protocol  The subprotocol of BLIP, to be appended to the WebSocket protocol requested.
-     */
-    constructor(url: string, protocol?: string);
+     * @param options  Additional for use in node/Bun/Deno. Ignored in a browser. */
+    constructor(url: URL | string, protocol?: string, options?: NonBrowserOptions);
     /** Returns the WebSocket's ready-state. */
     get readyState(): ReadyState;
     /** Closes the connection.

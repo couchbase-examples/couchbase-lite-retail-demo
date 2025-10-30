@@ -3,7 +3,7 @@ import type { RetailDatabase } from "./types";
 
 // App Services configuration
 // Update this value with your actual App Services endpoint
-export const APP_SERVICES_URL = "ws://localhost:4984/retail-inventory/_blipsync";
+//export const APP_SERVICES_URL = "ws://localhost:4984/retail-inventory/_blipsync";
 
 export interface ReplicatorOptions {
   continuous?: boolean;
@@ -23,9 +23,12 @@ export function createReplicator(
     push: { continuous },
   };
 
+  const syncUrl = getAppServicesUrl();
+  console.log('📡 App Services URL:', syncUrl);
+
   const config: ReplicatorConfig = {
     database: db,
-    url: APP_SERVICES_URL,
+    url: syncUrl,
     collections: {
       inventory: collectionConfig,
       orders: collectionConfig,

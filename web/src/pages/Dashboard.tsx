@@ -37,8 +37,9 @@ const Dashboard = () => {
         const scopeName = getScopeNameFromStoreId(credentials.storeId);
         const profileCollectionName = `${scopeName}.profile` as any;
         
-        // Construct profile document ID (e.g., "NYC-Store::profile::nyc-store-01")
-        const profileDocId = `${scopeName}::profile::${credentials.storeId}`;
+        // Construct profile document ID (e.g., "nyc-store-01-profile")
+       // const profileDocId = `${scopeName}::profile::${credentials.storeId}`;
+        const profileDocId = `${credentials.storeId}-profile`;
         
         console.log(`🗒️ Reading profile document: ${profileDocId}`);
         
