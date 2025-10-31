@@ -155,7 +155,6 @@ const Inventory = () => {
   };
 
   const totalItems = filteredItems.length;
-  const lowStockItems = filteredItems.filter(item => item.stockQty <= 10).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/5">
@@ -175,7 +174,7 @@ const Inventory = () => {
                 <div>
                   <h1 className="text-xl font-bold">Inventory Management</h1>
                   <p className="text-sm text-muted-foreground">
-                    {totalItems} items • {lowStockItems} low stock
+                    {totalItems} items
                   </p>
                   <p className="text-xs text-muted-foreground">Store Number: #2847</p>
                 </div>
@@ -207,11 +206,6 @@ const Inventory = () => {
               <Badge variant="secondary" className="text-sm px-3 py-1">
                 {totalItems} Items
               </Badge>
-              {lowStockItems > 0 && (
-                <Badge variant="destructive" className="text-sm px-3 py-1">
-                  {lowStockItems} Low Stock
-                </Badge>
-              )}
             </div>
           </div>
         </div>

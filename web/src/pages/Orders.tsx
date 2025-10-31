@@ -10,6 +10,7 @@ import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, ClipboardList, Package, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DocID } from "@couchbaselabs/couchbase-lite";
+import type { ListenerToken } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 
 const Orders = () => {
@@ -19,46 +20,73 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
 
   // Load orders from database
-  useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading orders from database...');
-        
-        // Get collection name from stored credentials
-        const credentials = getStoredCredentials();
-        if (!credentials) {
-          console.error('No credentials found');
-          return;
-        }
-        const scopeName = getScopeNameFromStoreId(credentials.storeId);
-        const ordersCollectionName = `${scopeName}.orders` as any;
-        
-        const count = await db.collections[ordersCollectionName].count();
-        console.log(`Orders collection has ${count} documents`);
-        
-        const query = db.createQuery(`SELECT * FROM \`${ordersCollectionName}\``);
-        const orderItems: Order[] = [];
-        
-        await query.execute((row) => {
-          console.log('Order row:', row);
-          // Extract collection data from row
-          const data = row[ordersCollectionName];
-          if (data) {
-            orderItems.push(data);
-          }
-        });
-        
-        console.log(`Loaded ${orderItems.length} orders`, orderItems);
-        setOrders(orderItems);
-      } catch (error) {
-        console.error('Error loading orders:', error);
-      } finally {
-        setLoading(false);
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading orders from database...');
+      
+      // Get collection name from stored credentials
+      const credentials = getStoredCredentials();
+      if (!credentials) {
+        console.error('No credentials found');
+        return;
       }
-    };
+      const scopeName = getScopeNameFromStoreId(credentials.storeId);
+      const ordersCollectionName = `${scopeName}.orders` as any;
+      
+      const count = await db.collections[ordersCollectionName].count();
+      console.log(`Orders collection has ${count} documents`);
+      
+      const query = db.createQuery(`SELECT * FROM \`${ordersCollectionName}\``);
+      const orderItems: Order[] = [];
+      
+      await query.execute((row) => {
+        console.log('Order row:', row);
+        // Extract collection data from row
+        const data = row[ordersCollectionName];
+        if (data) {
+          orderItems.push(data);
+        }
+      });
+      
+      console.log(`Loaded ${orderItems.length} orders`, orderItems);
+      setOrders(orderItems);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Load orders and set up change listener
+  useEffect(() => {
+    const credentials = getStoredCredentials();
+    if (!credentials) {
+      console.error('No credentials found');
+      return;
+    }
+    
+    const scopeName = getScopeNameFromStoreId(credentials.storeId);
+    const ordersCollectionName = `${scopeName}.orders` as any;
+    const ordersCollection = db.collections[ordersCollectionName];
+    
+    // Load orders initially
     void loadOrders();
+    
+    // Set up change listener to auto-refresh when orders change (from sync)
+    console.log('🔔 Setting up orders change listener...');
+    const changeToken: ListenerToken = ordersCollection.addChangeListener((changes) => {
+      console.log('📦 Orders collection changed:', changes);
+      console.log(`🔄 Reloading orders after ${changes.size} change(s)...`);
+      // Reload orders when changes are detected
+      void loadOrders();
+    });
+    
+    // Cleanup listener on unmount
+    return () => {
+      console.log('🔕 Removing orders change listener');
+      changeToken.remove();
+    };
   }, [db]);
 
   const submittedOrders = orders.filter(order => order.orderStatus === 'Submitted');

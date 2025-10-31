@@ -68,7 +68,7 @@ export async function createOrder(
       orderId: nextOrderId,
       storeId: storeId,
       orderDate: Date.now(),
-      orderStatus: "In Review",
+      orderStatus: "Submitted",
       productId: item.productId || 0,
       sku: item.sku,
       unit: item.unit,

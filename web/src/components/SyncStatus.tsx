@@ -76,8 +76,8 @@ export function SyncStatus() {
         return {
           icon: <Cloud className="h-3 w-3" />,
           label: 'Synced',
-          variant: 'default' as const,
-          color: 'text-green-600',
+          variant: 'secondary' as const,
+          color: 'text-muted-foreground',
         };
     }
   };

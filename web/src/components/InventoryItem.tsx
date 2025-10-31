@@ -120,11 +120,6 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
                   {item.stockQty}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{item.unit}</p>
-                {item.stockQty <= 10 && (
-                  <Badge variant="destructive" className="mt-1 text-xs">
-                    Low Stock
-                  </Badge>
-                )}
               </div>
 
               {/* Count Controls */}
