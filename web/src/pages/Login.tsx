@@ -1,14 +1,33 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Package, AlertCircle, Loader2, Eye, EyeOff, Info } from "lucide-react";
 import { initializeDatabase } from "@/lib/database/initDatabase";
 import { setupOneShotSync } from "@/lib/database/sync";
 import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl, getScopeNameFromStoreId } from "@/lib/auth";
 import { toast } from "sonner";
+
+interface DemoCredential {
+  email: string;
+  password: string;
+  appEndpoint: string;
+}
+
+const DEMO_CREDENTIALS: DemoCredential[] = [
+  {
+    email: "nyc-store-01@supermarket.com",
+    password: "P@ssword1",
+    appEndpoint: "supermarket-aa"
+  },
+  {
+    email: "aa-store-01@supermarket.com",
+    password: "P@ssword1",
+    appEndpoint: "supermarket-nyc"
+  }
+];
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,16 +35,16 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const [showDemoDialog, setShowDemoDialog] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performLogin = async (loginEmail: string, loginPassword: string) => {
     setError("");
     setLoading(true);
+    setShowDemoDialog(false);
 
     try {
       // Extract store ID from email
-      const storeId = extractStoreIdFromEmail(email);
+      const storeId = extractStoreIdFromEmail(loginEmail);
       console.log('📧 Extracted store ID:', storeId);
       
       // Initialize database for this store
@@ -41,8 +60,8 @@ const Login = () => {
       console.log('🔄 Starting one-shot profile sync...');
       const profileReplicator = setupOneShotSync(db, {
         url: syncUrl,
-        username: email,
-        password: password,
+        username: loginEmail,
+        password: loginPassword,
         storeId: storeId,
       });
 
@@ -88,7 +107,7 @@ const Login = () => {
       }
 
       // Store credentials for continuous sync
-      storeCredentials(email, password);
+      storeCredentials(loginEmail, loginPassword);
       console.log('✅ Credentials stored successfully');
 
       // Show success message
@@ -109,6 +128,15 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performLogin(email, password);
+  };
+
+  const handleDemoCredentialSelect = async (credential: DemoCredential) => {
+    await performLogin(credential.email, credential.password);
   };
 
   return (
@@ -200,6 +228,43 @@ const Login = () => {
                 'Sign In'
               )}
             </Button>
+
+            <Dialog open={showDemoDialog} onOpenChange={setShowDemoDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 text-base"
+                  disabled={loading}
+                >
+                  <Info className="h-4 w-4 mr-2" />
+                  View Demo Credentials
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Demo Credentials</DialogTitle>
+                  <DialogDescription>
+                    Click on a credential to sign in automatically
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 py-4">
+                  {DEMO_CREDENTIALS.map((credential, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleDemoCredentialSelect(credential)}
+                      disabled={loading}
+                      className="w-full text-left p-4 rounded-lg border border-border hover:bg-accent hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="font-medium text-sm">{credential.email}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        App Endpoint: {credential.appEndpoint}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
           </form>
         </CardContent>
       </Card>
