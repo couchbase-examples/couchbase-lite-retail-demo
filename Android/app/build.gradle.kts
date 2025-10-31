@@ -16,6 +16,20 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Inject configuration from Gradle properties or environment variables
+        // Use: export CBL_BASE_URL=... CBL_AA_DB=... CBL_NYC_DB=... CBL_AA_USER=... CBL_NYC_USER=... CBL_PASSWORD=...
+        val env = System.getenv()
+        fun prop(name: String): String = (project.findProperty(name)?.toString()
+            ?: env[name]
+            ?: "")
+
+        buildConfigField("String", "CBL_BASE_URL", "\"${prop("CBL_BASE_URL")}\"")
+        buildConfigField("String", "CBL_AA_DB", "\"${prop("CBL_AA_DB")}\"")
+        buildConfigField("String", "CBL_NYC_DB", "\"${prop("CBL_NYC_DB")}\"")
+        buildConfigField("String", "CBL_AA_USER", "\"${prop("CBL_AA_USER")}\"")
+        buildConfigField("String", "CBL_NYC_USER", "\"${prop("CBL_NYC_USER")}\"")
+        buildConfigField("String", "CBL_PASSWORD", "\"${prop("CBL_PASSWORD")}\"")
     }
 
     buildTypes {
@@ -36,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true  // Enable BuildConfig generation for environment variables
     }
 }
 

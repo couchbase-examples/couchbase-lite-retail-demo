@@ -1,6 +1,7 @@
 package com.example.liquorapplication
 
 import android.util.Log
+import com.example.liquorapplication.BuildConfig
 
 /**
  * Store Configuration
@@ -20,24 +21,29 @@ object AppConfig {
     // Change this value to switch between stores
     val currentStore: StoreLocation = StoreLocation.AA
     
-    // MARK: - Capella App Services Configuration
-    
-    private const val BASE_URL = "wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984"
+    // MARK: - Capella App Services Configuration (ENV-DRIVEN)
+    // Values are injected via BuildConfig (from Gradle properties or env vars)
+    private val BASE_URL: String = BuildConfig.CBL_BASE_URL
+    private val AA_DB: String = BuildConfig.CBL_AA_DB
+    private val NYC_DB: String = BuildConfig.CBL_NYC_DB
+    private val AA_USER: String = BuildConfig.CBL_AA_USER
+    private val NYC_USER: String = BuildConfig.CBL_NYC_USER
+    private val PASSWORD: String = BuildConfig.CBL_PASSWORD
     
     val syncGatewayURL: String
         get() = when (currentStore) {
-            StoreLocation.AA -> "$BASE_URL/supermarket-aa"
-            StoreLocation.NYC -> "$BASE_URL/supermarket-nyc"
+            StoreLocation.AA -> "$BASE_URL/$AA_DB"
+            StoreLocation.NYC -> "$BASE_URL/$NYC_DB"
         }
     
     val username: String
         get() = when (currentStore) {
-            StoreLocation.AA -> "aa-store-01@supermarket.com"
-            StoreLocation.NYC -> "nyc-store-01@supermarket.com"
+            StoreLocation.AA -> AA_USER
+            StoreLocation.NYC -> NYC_USER
         }
     
     val password: String
-        get() = "P@ssword1" // Same password for both stores
+        get() = PASSWORD
     
     val storeId: String
         get() = when (currentStore) {
@@ -74,6 +80,13 @@ object AppConfig {
     const val ENABLE_APP_SERVICES_SYNC = true
     const val ENABLE_P2P_SYNC = true
     const val ENABLE_AUTO_DATA_SEEDING = false // DISABLED: No more hard-coded data
+    
+    // MARK: - P2P (Peer-to-Peer) Configuration
+    // MultipeerReplicator settings for local device-to-device sync
+    // NOTE: This MUST match iOS peer group ID for cross-platform sync!
+    const val P2P_PEER_GROUP_ID = "com.example.groceryapp"  // Network identifier for discovering peers (matches iOS)
+    const val P2P_IDENTITY_LABEL = "com.example.liquorapp.p2p.identity"  // TLS identity label
+    const val P2P_AUTO_START = false  // Auto-start P2P sync on app launch
     
     // MARK: - Debug Configuration
     const val DEBUG_LOGGING = true

@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -85,8 +86,8 @@ fun LoginScreen(
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF8E24AA).copy(alpha = 0.9f),
-                        Color(0xFF3F51B5).copy(alpha = 0.7f)
+                        Color(0xFFFFCF95).copy(alpha = 0.9f),
+                        Color(0xFFFFCF95).copy(alpha = 0.7f)
                     )
                 )
             )
@@ -103,9 +104,11 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "🛒",
-                    fontSize = 80.sp
+                Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = "Shopping Cart",
+                    modifier = Modifier.size(80.dp),
+                    tint = Color.White
                 )
                 
                 Text(
@@ -258,6 +261,16 @@ fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // Powered by Couchbase
+            Text(
+                text = "Powered by Couchbase",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
             )
         }
     }

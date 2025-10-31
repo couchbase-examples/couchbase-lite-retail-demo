@@ -25,6 +25,12 @@ class DatabaseManager(private val context: Context) {
     var isAppServicesEnabled by mutableStateOf(false)
         private set
     
+    // P2P Sync Integration
+    var multipeerSyncManager: MultipeerSyncManager? = null
+        private set
+    var isP2PEnabled by mutableStateOf(false)
+        private set
+    
     init {
         // Print configuration on startup
         AppConfig.printConfiguration()
@@ -34,10 +40,16 @@ class DatabaseManager(private val context: Context) {
         // REMOVED: Hard-coded data seeding - data will come from App Services
         // seedSampleData()
         setupAppServicesIntegration()
+        setupP2PIntegration()
         
         // Auto-enable App Services if configured
         if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
             enableAppServices()
+        }
+        
+        // Auto-enable P2P if configured
+        if (AppConfig.P2P_AUTO_START && AppConfig.ENABLE_P2P_SYNC) {
+            enableP2P()
         }
     }
     
@@ -149,7 +161,10 @@ class DatabaseManager(private val context: Context) {
                             val imageURL = it.getString("imageURL") ?: return@let
                             val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                             val price = it.getDouble("price")
-                            val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                            // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
+                            // iOS reads from CRDT counter on "quantity" field
+                            val quantity = it.getDictionary("quantity")?.getInt("value")
+                                ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
                                 ?: it.getInt("quantity")
                             val productId = it.getInt("productId")
                             val sku = it.getString("sku")
@@ -208,11 +223,18 @@ class DatabaseManager(private val context: Context) {
                         val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                         val price = it.getDouble("price")
                         
-                        // Map 'stockQty' from Capella to 'quantity' in app
-                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                        // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
+                        // iOS reads from CRDT counter on "quantity" field
+                        val quantity = it.getDictionary("quantity")?.getInt("value")
+                            ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
                             ?: it.getInt("quantity")
                         
-                        val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                        // Read productId, sku, and unit fields (needed for order creation)
+                        val productId = it.getInt("productId")
+                        val sku = it.getString("sku")
+                        val unit = it.getString("unit")
+                        
+                        val item = GroceryItem(id, name, type, price, imageURL, quantity, productId, sku, unit)
                         groceryItems.add(item)
                     }
                 }
@@ -273,16 +295,23 @@ class DatabaseManager(private val context: Context) {
                         val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                         val price = it.getDouble("price")
                         
-                        // Map 'stockQty' from Capella to 'quantity' in app
-                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 } 
+                        // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
+                        // iOS reads from CRDT counter on "quantity" field
+                        val quantity = it.getDictionary("quantity")?.getInt("value")
+                            ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
                             ?: it.getInt("quantity")
+                        
+                        // Read productId, sku, and unit fields (needed for order creation)
+                        val productId = it.getInt("productId")
+                        val sku = it.getString("sku")
+                        val unit = it.getString("unit")
                         
                         // Filter in code to match search text (case insensitive)
                         val nameUpper = name.uppercase()
                         val typeUpper = type.uppercase()
                         
                         if ((nameUpper.contains(upperSearchText) || typeUpper.contains(upperSearchText)) && !seenIds.contains(id)) {
-                            val item = GroceryItem(id, name, type, price, imageURL, quantity)
+                            val item = GroceryItem(id, name, type, price, imageURL, quantity, productId, sku, unit)
                             groceryItems.add(item)
                             seenIds.add(id)
                             
@@ -615,6 +644,72 @@ class DatabaseManager(private val context: Context) {
         }
     }
     
+    fun updateQuantityWithP2P(itemId: String, newQuantity: Int) {
+        Log.d("DatabaseManager", "🔄 Updating quantity with P2P CRDT: $itemId -> $newQuantity")
+        
+        try {
+            // Get the document from inventory collection
+            val collection = database?.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
+            val document = collection?.getDocument(itemId)?.toMutable()
+            
+            if (document == null) {
+                Log.e("DatabaseManager", "❌ Document not found: $itemId")
+                return
+            }
+            
+            // Get device UUID as actor ID for CRDT
+            val actorId = database?.getDeviceUUID() ?: "unknown-device"
+            
+            // 🔧 P2P SYNC FIX: Use CRDT counter on "quantity" field (matches iOS exactly)
+            // iOS uses increment/decrement on CRDT "quantity" field
+            val quantityCounter = document.getMutableCRDTCounter("quantity", actorId)
+            val currentQuantity = quantityCounter.value
+            val difference = newQuantity - currentQuantity
+            
+            Log.d("DatabaseManager", "🔧 Current: $currentQuantity, New: $newQuantity, Diff: $difference")
+            
+            // Apply the difference using CRDT operations (like iOS)
+            if (difference > 0) {
+                Log.d("DatabaseManager", "🔧 Incrementing by $difference")
+                quantityCounter.increment(difference)
+            } else if (difference < 0) {
+                Log.d("DatabaseManager", "🔧 Decrementing by ${-difference}")
+                quantityCounter.decrement(-difference)
+            } else {
+                Log.d("DatabaseManager", "🔧 No change needed (difference = 0)")
+            }
+            
+            // 🔧 SYNC FIX: Also update stockQty as plain integer (matches iOS)
+            // This ensures both platforms write to both fields
+            val finalValue = quantityCounter.value
+            document.setInt("stockQty", finalValue)
+            
+            // Save the document - MultipeerReplicator will detect and push this change
+            collection.save(document)
+            
+            Log.d("DatabaseManager", "✅ Updated quantity for $itemId: $currentQuantity → $finalValue")
+            Log.d("DatabaseManager", "   🎭 Actor: $actorId")
+            Log.d("DatabaseManager", "   📊 CRDT field: quantity, Plain field: stockQty")
+            Log.d("DatabaseManager", "   📡 MultipeerReplicator will push this change to iOS")
+            
+            // Note: Reactive API will automatically detect the document change and update UI
+            
+        } catch (e: Exception) {
+            Log.e("DatabaseManager", "❌ Failed to update quantity with P2P CRDT", e)
+            // Fallback to regular update
+            updateQuantity(itemId, newQuantity)
+        }
+    }
+    
+    fun updateQuantityWithSync(itemId: String, newQuantity: Int) {
+        // Choose the appropriate update method based on sync type
+        when {
+            isP2PEnabled -> updateQuantityWithP2P(itemId, newQuantity)
+            isAppServicesEnabled -> updateQuantityWithAppServices(itemId, newQuantity)
+            else -> updateQuantity(itemId, newQuantity)
+        }
+    }
+    
     fun createGroceryItemWithSync(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
         // Create via App Services if enabled (will also save locally)
         if (isAppServicesEnabled) {
@@ -627,6 +722,52 @@ class DatabaseManager(private val context: Context) {
         val item = GroceryItem(name = name, type = type, price = price, imageURL = imageURL, quantity = quantity)
         saveGroceryItem(item)
         return item.id
+    }
+    
+    // MARK: - P2P Sync Integration
+    private fun setupP2PIntegration() {
+        database?.let { db ->
+            Log.d("DatabaseManager", "📡 Setting up P2P sync integration...")
+            multipeerSyncManager = MultipeerSyncManager(context, db)
+            Log.d("DatabaseManager", "✅ P2P sync integration ready")
+        } ?: run {
+            Log.e("DatabaseManager", "❌ Database not ready for P2P sync integration")
+        }
+    }
+    
+    fun enableP2P() {
+        if (!AppConfig.ENABLE_P2P_SYNC) {
+            Log.w("DatabaseManager", "⚠️ P2P sync is disabled in AppConfig")
+            return
+        }
+        
+        multipeerSyncManager?.let { syncManager ->
+            Log.d("DatabaseManager", "🚀 Enabling P2P sync...")
+            isP2PEnabled = true
+            syncManager.start()
+        } ?: run {
+            Log.e("DatabaseManager", "❌ P2P sync manager not available")
+        }
+    }
+    
+    fun disableP2P() {
+        multipeerSyncManager?.let { syncManager ->
+            Log.d("DatabaseManager", "🛑 Disabling P2P sync...")
+            isP2PEnabled = false
+            syncManager.stop()
+        }
+    }
+    
+    fun toggleP2P() {
+        if (isP2PEnabled) {
+            disableP2P()
+        } else {
+            enableP2P()
+        }
+    }
+    
+    fun getP2PSyncState(): MultipeerSyncManager.P2PSyncState? {
+        return multipeerSyncManager?.syncState?.value
     }
     
     // MARK: - Sync Status Information
@@ -642,8 +783,16 @@ class DatabaseManager(private val context: Context) {
             }
         }
         
-        // Add P2P status (you can add P2P integration later)
-        statusParts.add("📡 P2P available")
+        // Add P2P status
+        multipeerSyncManager?.let { p2pManager ->
+            val p2pState = p2pManager.syncState.value
+            if (isP2PEnabled && p2pState.isRunning) {
+                val peerCount = p2pState.connectedPeers.size
+                statusParts.add("📡 P2P: $peerCount peer${if (peerCount == 1) "" else "s"}")
+            } else {
+                statusParts.add("📡 P2P available")
+            }
+        }
         
         return statusParts.joinToString(" • ")
     }

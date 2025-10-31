@@ -139,6 +139,8 @@ fun InventoryScreen(
                         contentDescription = "Refresh"
                     )
                 }
+                // P2P sync indicator
+                P2PSyncIndicator(databaseManager = databaseManager)
                 // App Services sync indicator
                 AppServicesSyncIndicator(databaseManager = databaseManager)
             }
@@ -146,6 +148,9 @@ fun InventoryScreen(
         
         // App Services sync status bar
         AppServicesSyncStatusBar(databaseManager = databaseManager)
+        
+        // P2P sync status bar
+        P2PSyncStatusBar(databaseManager = databaseManager)
         
         // Search bar
         OutlinedTextField(
@@ -227,8 +232,8 @@ fun InventoryScreen(
                         storeId = AppConfig.storeId,
                         onQuantityChanged = { newQuantity ->
                             scope.launch {
-                                // Use App Services-aware update method
-                                databaseManager.updateQuantityWithAppServices(item.id, newQuantity)
+                                // Use sync-aware update method (P2P or App Services)
+                                databaseManager.updateQuantityWithSync(item.id, newQuantity)
                                 groceryItems = databaseManager.getAllGroceryItems()
                                 filteredItems = if (searchText.isEmpty()) {
                                     groceryItems
@@ -246,5 +251,57 @@ fun InventoryScreen(
                 }
             }
         }
+    }
+}
+
+// MARK: - P2P Sync UI Components
+
+/**
+ * P2P Sync Indicator - Shows in top app bar
+ */
+@Composable
+fun P2PSyncIndicator(databaseManager: DatabaseManager) {
+    var showDialog by remember { mutableStateOf(false) }
+    
+    // Collect P2P sync state
+    val p2pSyncState = databaseManager.multipeerSyncManager?.syncState?.collectAsState()?.value
+        ?: MultipeerSyncManager.P2PSyncState()
+    
+    // Show compact badge
+    CompactP2PStatusBadge(
+        syncState = p2pSyncState,
+        onClick = { showDialog = true }
+    )
+    
+    // Show dialog when clicked
+    if (showDialog) {
+        P2PSyncDialog(
+            syncState = p2pSyncState,
+            onDismiss = { showDialog = false },
+            onToggle = { databaseManager.toggleP2P() }
+        )
+    }
+}
+
+/**
+ * P2P Sync Status Bar - Shows below App Services status bar
+ */
+@Composable
+fun P2PSyncStatusBar(databaseManager: DatabaseManager) {
+    // Collect P2P sync state
+    val p2pSyncState = databaseManager.multipeerSyncManager?.syncState?.collectAsState()?.value
+        ?: MultipeerSyncManager.P2PSyncState()
+    
+    // Get permission status
+    val permissionStatus = databaseManager.multipeerSyncManager?.getPermissionStatus()
+    
+    // Only show if P2P is available
+    if (AppConfig.ENABLE_P2P_SYNC) {
+        P2PSyncStatusCard(
+            syncState = p2pSyncState,
+            onToggle = { databaseManager.toggleP2P() },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            permissionStatus = permissionStatus
+        )
     }
 } 

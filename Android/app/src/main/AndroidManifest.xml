@@ -7,13 +7,26 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     
     <!-- Background sync permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
-    <!-- DNS resolution permissions -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- P2P Sync permissions (DNS-SD/Bonjour service discovery) -->
+    <!-- Location is only needed for Android 12 and below for mDNS discovery -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="32" />
+    
+    <!-- For Android 13+ (API 33+): Nearby devices permission for P2P discovery -->
+    <!-- The neverForLocation flag means we don't need location permission -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    
+    <!-- For Android 12+ (API 31+): Bluetooth permissions for peer discovery -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
 
     <application
         android:name=".LiquorApplication"

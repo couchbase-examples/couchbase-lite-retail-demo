@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.RemoveCircle
 import androidx.compose.material3.*
@@ -68,15 +69,31 @@ fun GroceryItemCard(
             modifier = Modifier.fillMaxSize()
         ) {
             // Product Image - larger, no rounded corners on top
-            AsyncImage(
-                model = item.imageURL,
-                contentDescription = item.name,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .background(Color(0xFFF5F5F5)),
-                contentScale = ContentScale.Crop
-            )
+                    .background(Color(0xFFF5F5F5))
+            ) {
+                AsyncImage(
+                    model = item.imageURL,
+                    contentDescription = item.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                
+                // Fallback shopping cart icon when image fails to load
+                if (item.imageURL.isEmpty()) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = "Product Image",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        tint = Color.Gray
+                    )
+                }
+            }
             
             Column(
                 modifier = Modifier
@@ -172,7 +189,7 @@ fun GroceryItemCard(
                         .fillMaxWidth()
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF2574F)
+                        containerColor = Color(0xFFFD9B0B)
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
