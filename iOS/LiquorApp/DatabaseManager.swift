@@ -518,7 +518,22 @@ class DatabaseManager: ObservableObject {
                         quantity = dict.int(forKey: "stockQty")
                     }
                     
-                    let item = LiquorItem(id: id, name: name, type: type, price: price, imageURL: imageURL, quantity: quantity)
+                    // Read productId, sku, and unit fields (needed for order creation)
+                    let productId = dict.int(forKey: "productId")
+                    let sku = dict.string(forKey: "sku")
+                    let unit = dict.string(forKey: "unit")
+                    
+                    let item = LiquorItem(
+                        id: id,
+                        name: name,
+                        type: type,
+                        price: price,
+                        imageURL: imageURL,
+                        quantity: quantity,
+                        productId: productId,
+                        sku: sku,
+                        unit: unit
+                    )
                     liquorItems.append(item)
                 }
             }

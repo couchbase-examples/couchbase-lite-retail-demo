@@ -118,7 +118,7 @@ struct LiquorItemCard: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color(red: 0.95, green: 0.34, blue: 0.31))
+                        .background(Color(red: 0.99, green: 0.61, blue: 0.04))
                         .cornerRadius(8)
                 }
             }

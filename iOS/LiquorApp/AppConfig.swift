@@ -20,31 +20,36 @@ struct AppConfig {
     // Change this value to switch between stores
     static let currentStore: StoreLocation = .aa
     
-    // MARK: - Capella App Services Configuration
-    
-    private static let baseURL = "wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984"
+    // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
+    // Prefer Info.plist (via .xcconfig) or environment variables when running from Xcode
+    private static let env = ProcessInfo.processInfo.environment
+    private static let baseURL: String = env["CBL_BASE_URL"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_BASE_URL") as? String ?? "")
+    private static let aaDB: String = env["CBL_AA_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_DB") as? String ?? "")
+    private static let nycDB: String = env["CBL_NYC_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_DB") as? String ?? "")
+    private static let aaUser: String = env["CBL_AA_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_USER") as? String ?? "")
+    private static let nycUser: String = env["CBL_NYC_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_USER") as? String ?? "")
+    private static let passwordValue: String = env["CBL_PASSWORD"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_PASSWORD") as? String ?? "")
     
     static var syncGatewayURL: String {
         switch currentStore {
         case .aa:
-            return "\(baseURL)/supermarket-aa"
+            return "\(baseURL)/\(aaDB)"
         case .nyc:
-            return "\(baseURL)/supermarket-nyc"
+            return "\(baseURL)/\(nycDB)"
         }
     }
     
     static var username: String {
         switch currentStore {
         case .aa:
-            return "aa-store-01@supermarket.com"
+            return aaUser
         case .nyc:
-            return "nyc-store-01@supermarket.com"
+            return nycUser
         }
     }
     
     static var password: String {
-        // Same password for both stores
-        return "P@ssword1"
+        return passwordValue
     }
     
     static var storeId: String {
