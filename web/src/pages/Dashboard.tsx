@@ -61,8 +61,12 @@ const Dashboard = () => {
 
     // Start continuous sync for inventory and orders
     const initSync = async () => {
+      console.log('🔄 Dashboard: Checking if replicator exists...');
       if (!(window as any).__replicator) {
+        console.log('🚀 Dashboard: Starting continuous sync...');
         await startContinuousSync(db);
+      } else {
+        console.log('✅ Dashboard: Replicator already exists');
       }
     };
 

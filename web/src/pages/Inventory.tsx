@@ -9,7 +9,7 @@ import type { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import InventoryItem from "@/components/InventoryItem";
 import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
-import { DocID } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 
 const Inventory = () => {
@@ -80,7 +80,7 @@ const Inventory = () => {
           // Extract collection data from row
           const data = row[inventoryCollectionName];
           if (data) {
-            inventoryItems.push(data);
+            inventoryItems.push(data as unknown as InventoryItemType);
           }
         });
         
@@ -97,6 +97,7 @@ const Inventory = () => {
   }, [db]);
 
   const handleCountChange = async (id: string, newCount: number) => {
+    console.log(`🎯 handleCountChange called: id=${id}, newCount=${newCount}`);
     try {
       // Get collection name from stored credentials
       const credentials = getStoredCredentials();
@@ -104,24 +105,49 @@ const Inventory = () => {
       const scopeName = getScopeNameFromStoreId(credentials.storeId);
       const inventoryCollectionName = `${scopeName}.inventory` as any;
       
-      // Update in database
-      const doc = await db.collections[inventoryCollectionName].getDocument(DocID(id));
-      if (doc) {
-        // Update document properties
-        doc.stockQty = newCount;
-        doc.lastUpdated = Date.now();
+      // Update in database using conflict-safe pattern
+      const collection = db.collections[inventoryCollectionName];
+      const existingDoc = await collection.getDocument(DocID(id));
+      
+      if (existingDoc) {
+        // Create a new document with updated values
+        const updatedData = {
+          ...existingDoc,
+          stockQty: newCount,
+          lastUpdated: Date.now()
+        };
         
-        // Save the document to trigger sync
-        await db.collections[inventoryCollectionName].save(doc);
+        // Create new document instance and save with LastWriteWins conflict handler
+        const docToSave = collection.createDocument(DocID(id), updatedData as any);
+        await collection.save(docToSave, LastWriteWins);
         
-        console.log(`Updated item ${id} stockQty to ${newCount} - this should trigger sync`);
+        console.log(`✅ Updated item ${id} stockQty to ${newCount} - document saved with LastWriteWins`);
         
-            // Update local state
-            setItems(prevItems =>
-              prevItems.map(item =>
-                item.id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
-              )
-            );
+        // Trigger sync immediately by restarting replicator if idle
+        const replicator = (window as any).__replicator;
+        if (replicator) {
+          const status = replicator.currentStatus; // Use currentStatus stored by onStatusChange
+          console.log('🔍 Current replicator status:', status?.activity);
+          
+          if (status?.activity === 'idle' || status?.activity === 'stopped') {
+            console.log('🔄 Replicator is idle/stopped, restarting to push changes...');
+            // Stop and restart to trigger immediate sync
+            try {
+              await replicator.stop();
+              await replicator.run();
+              console.log('✅ Replicator restarted to push changes');
+            } catch (error) {
+              console.error('⚠️ Error restarting replicator:', error);
+            }
+          }
+        }
+        
+        // Update local state
+        setItems(prevItems =>
+          prevItems.map(item =>
+            item.id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
+          )
+        );
       }
     } catch (error) {
       console.error('Error updating count:', error);

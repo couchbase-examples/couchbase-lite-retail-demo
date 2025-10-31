@@ -23,6 +23,8 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
   const handleCountChange = (increment: boolean) => {
     const newCount = increment ? item.stockQty + 1 : Math.max(0, item.stockQty - 1);
+    console.log(`🔵 InventoryItem.handleCountChange: increment=${increment}, oldQty=${item.stockQty}, newQty=${newCount}, itemId=${item.id}`);
+    console.log(`🔵 Calling parent onCountChange...`);
     onCountChange(item.id, newCount);
   };
 

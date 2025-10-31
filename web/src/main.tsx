@@ -60,6 +60,11 @@ async function bootstrap() {
       console.log('🔑 Found stored credentials for store:', credentials.storeId);
       db = await initializeDatabase(credentials.storeId);
       console.log('✅ Database initialized for', credentials.storeId);
+      
+      // Start continuous sync immediately
+      console.log('🚀 Bootstrap: Starting continuous sync...');
+      await startContinuousSync(db);
+      console.log('✅ Bootstrap: Continuous sync started');
     } else {
       // No credentials - database will be initialized after login
       console.log('📝 No stored credentials - database will initialize after login');

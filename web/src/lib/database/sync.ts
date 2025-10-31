@@ -128,8 +128,11 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
 
   // Status change listener
   replicator.onStatusChange = (status: any) => {
+    // Store status on replicator object for external access
+    (replicator as any).currentStatus = status;
+    
     console.log("🔄 Replicator Status Change:", {
-      activity: status.activity || status.status,
+      activity: status.activity,
       progress: status.progress,
       pulledRevisions: status.pulledRevisions,
       pushedRevisions: status.pushedRevisions,
