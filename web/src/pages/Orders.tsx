@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,21 +9,24 @@ import type { Order } from "@/lib/database/types";
 import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, ClipboardList, Package, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { DocID } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
 import type { ListenerToken } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
+
+type FilterType = 'all' | 'In Review' | 'Approved';
 
 const Orders = () => {
   const navigate = useNavigate();
   const db = useDatabase();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // Load orders from database
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Loading orders from database...');
+      console.log('🔄 BREAKPOINT: Loading orders from database...', { filter });
       
       // Get collection name from stored credentials
       const credentials = getStoredCredentials();
@@ -35,28 +38,36 @@ const Orders = () => {
       const ordersCollectionName = `${scopeName}.orders` as any;
       
       const count = await db.collections[ordersCollectionName].count();
-      console.log(`Orders collection has ${count} documents`);
+      console.log(`📊 Orders collection has ${count} documents`);
       
-      const query = db.createQuery(`SELECT * FROM \`${ordersCollectionName}\``);
+      // Build query based on filter with sorting (latest first)
+      let queryString = `SELECT * FROM \`${ordersCollectionName}\``;
+      if (filter !== 'all') {
+        queryString += ` WHERE orderStatus = '${filter}'`;
+      }
+      queryString += ` ORDER BY orderDate DESC`;
+      
+      const query = db.createQuery(queryString);
       const orderItems: Order[] = [];
       
       await query.execute((row) => {
-        console.log('Order row:', row);
-        // Extract collection data from row
+        // BREAKPOINT: Document change detected in query
         const data = row[ordersCollectionName];
         if (data) {
           orderItems.push(data);
         }
       });
       
-      console.log(`Loaded ${orderItems.length} orders`, orderItems);
+      console.log(`✅ BREAKPOINT: Loaded ${orderItems.length} orders (filter: ${filter})`, orderItems);
+      debugger; // Breakpoint - orders loaded from database
       setOrders(orderItems);
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('❌ Error loading orders:', error);
+      debugger; // Breakpoint for errors
     } finally {
       setLoading(false);
     }
-  };
+  }, [db, filter]);
 
   // Load orders and set up change listener
   useEffect(() => {
@@ -73,11 +84,14 @@ const Orders = () => {
     // Load orders initially
     void loadOrders();
     
-    // Set up change listener to auto-refresh when orders change (from sync)
-    console.log('🔔 Setting up orders change listener...');
+    // BREAKPOINT: Setting up change listener
+    console.log('🔔 BREAKPOINT: Setting up orders change listener...');
     const changeToken: ListenerToken = ordersCollection.addChangeListener((changes) => {
-      console.log('📦 Orders collection changed:', changes);
+      // BREAKPOINT: Collection change detected - sync has updated documents
+      console.log('📦 BREAKPOINT: Orders collection changed!', changes);
       console.log(`🔄 Reloading orders after ${changes.size} change(s)...`);
+      debugger; // Breakpoint - document changes detected, triggering UI refresh
+      
       // Reload orders when changes are detected
       void loadOrders();
     });
@@ -87,9 +101,15 @@ const Orders = () => {
       console.log('🔕 Removing orders change listener');
       changeToken.remove();
     };
-  }, [db]);
+  }, [db, loadOrders]);
 
-  const submittedOrders = orders.filter(order => order.orderStatus === 'Submitted');
+  // Filter orders based on current filter
+  const filteredOrders = filter === 'all' 
+    ? orders 
+    : orders.filter(order => order.orderStatus === filter);
+  
+  const inReviewOrders = orders.filter(order => order.orderStatus === 'In Review');
+  const approvedOrders = orders.filter(order => order.orderStatus === 'Approved');
   const receivedOrders = orders.filter(order => order.orderStatus === 'Received');
 
   const handleOrderReceived = async (orderId: string) => {
@@ -100,14 +120,19 @@ const Orders = () => {
       const scopeName = getScopeNameFromStoreId(credentials.storeId);
       const ordersCollectionName = `${scopeName}.orders` as any;
       
-      // Update in database
-      const doc = await db.collections[ordersCollectionName].getDocument(DocID(orderId));
+      // Update in database with conflict resolution
+      const collection = db.collections[ordersCollectionName];
+      const doc = await collection.getDocument(DocID(orderId));
       if (doc) {
         const updatedDate = Date.now();
-        // Modify the document directly (it's a plain JavaScript object)
-        doc.orderStatus = "Received";
-        doc.orderDate = updatedDate;
-        await db.collections[ordersCollectionName].save(doc);
+        // Create updated document with conflict handler
+        const updatedDoc = collection.createDocument(DocID(orderId), {
+          ...doc,
+          orderStatus: "Received",
+          orderDate: updatedDate
+        } as any);
+        // Use LastWriteWins to automatically resolve conflicts
+        await collection.save(updatedDoc, LastWriteWins);
         
         console.log(`Updated order ${orderId} status to Received`);
         
@@ -194,7 +219,7 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {showReceiveButton && order.orderStatus === 'Submitted' && (
+                {showReceiveButton && (order.orderStatus === 'Approved' || order.orderStatus === 'In Review') && (
                   <div className="ml-6">
                     <Button 
                       onClick={() => handleOrderReceived(order.id)}
@@ -255,15 +280,15 @@ const Orders = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="shadow-medium border border-border/50">
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-warning mb-2">{submittedOrders.length}</div>
-              <p className="text-sm text-muted-foreground">Submitted Orders</p>
+              <div className="text-2xl font-bold text-warning mb-2">{inReviewOrders.length}</div>
+              <p className="text-sm text-muted-foreground">In Review</p>
             </CardContent>
           </Card>
           
           <Card className="shadow-medium border border-border/50">
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-success mb-2">{receivedOrders.length}</div>
-              <p className="text-sm text-muted-foreground">Received Orders</p>
+              <div className="text-2xl font-bold text-success mb-2">{approvedOrders.length}</div>
+              <p className="text-sm text-muted-foreground">Approved</p>
             </CardContent>
           </Card>
           
@@ -284,38 +309,29 @@ const Orders = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <Tabs defaultValue="submitted" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="submitted" className="gap-2">
-                  <Package className="h-4 w-4" />
-                  Submitted ({submittedOrders.length})
-
+            <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterType)} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="all">
+                  All ({orders.length})
                 </TabsTrigger>
-                <TabsTrigger value="received" className="gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Received ({receivedOrders.length})
+                <TabsTrigger value="In Review">
+                  In Review ({inReviewOrders.length})
+                </TabsTrigger>
+                <TabsTrigger value="Approved">
+                  Approved ({approvedOrders.length})
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="submitted" className="space-y-4">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold mb-2">Orders in Progress</h3>
-                  <p className="text-sm text-muted-foreground">
-                    These orders have been submitted and are awaiting delivery. 
-                    Click "Order Received" when items arrive.
-                  </p>
-                </div>
-                <OrderList orders={submittedOrders} showReceiveButton={true} />
+              <TabsContent value="all" className="space-y-4 mt-4">
+                <OrderList orders={filteredOrders} showReceiveButton={false} />
               </TabsContent>
               
-              <TabsContent value="received" className="space-y-4">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold mb-2">Completed Orders</h3>
-                  <p className="text-sm text-muted-foreground">
-                    These orders have been received and added to your inventory.
-                  </p>
-                </div>
-                <OrderList orders={receivedOrders} />
+              <TabsContent value="In Review" className="space-y-4 mt-4">
+                <OrderList orders={filteredOrders} showReceiveButton={false} />
+              </TabsContent>
+              
+              <TabsContent value="Approved" className="space-y-4 mt-4">
+                <OrderList orders={filteredOrders} showReceiveButton={false} />
               </TabsContent>
             </Tabs>
           </CardContent>

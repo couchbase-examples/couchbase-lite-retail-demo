@@ -20,12 +20,12 @@ const DEMO_CREDENTIALS: DemoCredential[] = [
   {
     email: "nyc-store-01@supermarket.com",
     password: "P@ssword1",
-    appEndpoint: "supermarket-aa"
+    appEndpoint: "supermarket-nyc"
   },
   {
     email: "aa-store-01@supermarket.com",
     password: "P@ssword1",
-    appEndpoint: "supermarket-nyc"
+    appEndpoint: "supermarket-aa"
   }
 ];
 

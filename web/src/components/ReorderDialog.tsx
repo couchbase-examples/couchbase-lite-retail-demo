@@ -65,7 +65,7 @@ export function ReorderDialog({ open, onOpenChange, item, onConfirm }: ReorderDi
             </div>
             <div className="grid grid-cols-3 items-center gap-4">
               <Label className="text-right">Status</Label>
-              <div className="col-span-2 text-sm font-medium text-blue-600">Submitted</div>
+              <div className="col-span-2 text-sm font-medium text-blue-600">In Review</div>
             </div>
           </div>
         </div>

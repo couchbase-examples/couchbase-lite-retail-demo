@@ -134,12 +134,6 @@ const Dashboard = () => {
               <h1 className="text-xl font-bold">
                 {loading ? 'Inventory Pro' : (storeProfile?.name || 'Inventory Pro')}
               </h1>
-              <p className="text-sm text-muted-foreground">
-                {loading ? 'Loading...' : storeProfile ? 
-                  `${storeProfile.location.locality}, ${storeProfile.location.region}` : 
-                  'Welcome back, Employee'
-                }
-              </p>
               <p className="text-xs text-muted-foreground">
                 {loading ? '' : storeProfile ? 
                   `Store ID: ${storeProfile.storeId}` : 

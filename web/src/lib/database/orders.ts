@@ -68,7 +68,7 @@ export async function createOrder(
       orderId: nextOrderId,
       storeId: storeId,
       orderDate: Date.now(),
-      orderStatus: "Submitted",
+      orderStatus: "In Review",
       productId: item.productId || 0,
       sku: item.sku,
       unit: item.unit,
@@ -85,18 +85,26 @@ export async function createOrder(
     
     console.log(`✅ Order created: ${documentId} (productId: ${order.productId}, qty: ${quantity})`);
     
-    // Trigger sync immediately by restarting replicator if idle
+    // Nudge the replicator to sync immediately if it's idle
     const replicator = (window as any).__replicator;
     if (replicator) {
-      const status = replicator.currentStatus; // Use currentStatus stored by onStatusChange
-      if (status?.activity === 'idle' || status?.activity === 'stopped') {
-        console.log('🔄 Restarting replicator to push new order...');
+      const status = replicator.currentStatus || replicator.status;
+      const activity = status?.activity || status?.status;
+      console.log('🔍 Replicator activity after order creation:', activity);
+      
+      if (activity === 'idle') {
+        console.log('🔄 Nudging idle replicator to sync new order...');
         try {
+          // Restart the replicator to force change detection
           await replicator.stop();
+          await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
           await replicator.run();
+          console.log('✅ Replicator restarted to push new order');
         } catch (error) {
           console.error('⚠️ Error restarting replicator:', error);
         }
+      } else {
+        console.log('📤 Replicator is active, will sync automatically');
       }
     }
     

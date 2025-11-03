@@ -131,24 +131,30 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
     // Store status on replicator object for external access
     (replicator as any).currentStatus = status;
     
+    // BREAKPOINT: Status change detected
+    const activity = status.activity || status.status;
+    const statusStatus = status.status || status.activity;
+    
     console.log("🔄 Replicator Status Change:", {
-      activity: status.activity,
+      status: statusStatus,
+      activity: activity,
       progress: status.progress,
       pulledRevisions: status.pulledRevisions,
       pushedRevisions: status.pushedRevisions,
       error: status.error
     });
     
+    // BREAKPOINT: Error detected in replication
     if (status.error) {
       console.error("❌ Replication error:", status.error);
       console.error("Error details:", JSON.stringify(status.error, null, 2));
+      debugger; // Breakpoint for debugging errors
     }
-    
-    const activity = status.activity || status.status;
     
     if (activity === "stopped" || activity === "idle") { 
       if (status.error) {
         console.error("❌ Replication stopped with error");
+        debugger; // Breakpoint for error stops
       } else {
         console.log("⏸️  Replicator stopped (no error)");
       }
@@ -169,16 +175,18 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
 
   // Document replication listener
   replicator.onDocuments = (collection: any, direction: string, documents: any[]) => {
+    // BREAKPOINT: Document sync detected - documents are being pushed/pulled
     const arrow = direction === "push" ? "⬆️" : "⬇️";
-    console.log(`${arrow} Synced ${documents.length} docs in ${collection.name}`, {
+    console.log(`${arrow} BREAKPOINT: Synced ${documents.length} docs in ${collection.name}`, {
       direction,
       collection: collection.name,
       documentIds: documents.map(d => d.id || d._id).slice(0, 5) // Show first 5 IDs
     });
     
-    // Log first document for debugging
+    // BREAKPOINT: First document being synced
     if (documents.length > 0) {
-      console.log("📄 Sample document:", documents[0]);
+      console.log("📄 BREAKPOINT: Sample document:", documents[0]);
+      debugger; // Breakpoint - document changes are triggering sync
     }
   };
 
@@ -204,8 +212,14 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
   
   // Check status after 2 seconds
   setTimeout(() => {
-    console.log("🔍 Replicator status after 2s:", replicator.status);
-    console.log("🔍 Is replicator running?", replicator.status?.activity);
+    const status = replicator.status;
+    console.log("🔍 Replicator status after 2s:", {
+      status: status?.status || status?.activity,
+      activity: status?.activity || status?.status,
+      pulledRevisions: status?.pulledRevisions,
+      pushedRevisions: status?.pushedRevisions
+    });
+    console.log("🔍 Is replicator running?", status?.activity || status?.status);
   }, 2000);
 
   return replicator;

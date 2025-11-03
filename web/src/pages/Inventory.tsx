@@ -123,22 +123,26 @@ const Inventory = () => {
         
         console.log(`✅ Updated item ${id} stockQty to ${newCount} - document saved with LastWriteWins`);
         
-        // Trigger sync immediately by restarting replicator if idle
+        // Nudge the replicator to sync immediately if it's idle
         const replicator = (window as any).__replicator;
         if (replicator) {
-          const status = replicator.currentStatus; // Use currentStatus stored by onStatusChange
-          console.log('🔍 Current replicator status:', status?.activity);
+          const status = replicator.currentStatus || replicator.status;
+          const activity = status?.activity || status?.status;
+          console.log('🔍 Replicator activity after save:', activity);
           
-          if (status?.activity === 'idle' || status?.activity === 'stopped') {
-            console.log('🔄 Replicator is idle/stopped, restarting to push changes...');
-            // Stop and restart to trigger immediate sync
+          if (activity === 'idle') {
+            console.log('🔄 Nudging idle replicator to sync changes...');
             try {
+              // Restart the replicator to force change detection
               await replicator.stop();
+              await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
               await replicator.run();
               console.log('✅ Replicator restarted to push changes');
             } catch (error) {
               console.error('⚠️ Error restarting replicator:', error);
             }
+          } else {
+            console.log('📤 Replicator is active, will sync automatically');
           }
         }
         
