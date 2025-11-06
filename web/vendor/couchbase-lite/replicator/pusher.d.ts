@@ -1,5 +1,5 @@
 import { Endpoint, EndpointConfig, EndpointParams } from './endpoint';
-import { LocalSequence, LocalRevision, RevisionInfo } from './types';
+import { LocalSequence, PushRevision, RevisionInfo } from './types';
 import type * as blip from "@/blip/blip";
 /** Configuration parameters for pushing changes to the remote collection.
  *  @property continuous    If true, stay connected indefinitely.
@@ -10,10 +10,10 @@ export interface PusherConfig extends EndpointConfig {
 }
 export interface PusherDelegate {
     /** Fetches revisions, ordered by sequence */
-    getChanges(since: LocalSequence | undefined, limit: number): Promise<LocalRevision[]>;
+    getChanges(since: LocalSequence | undefined, limit: number): Promise<PushRevision[]>;
     getBlob(digest: string): Promise<Uint8Array | undefined>;
-    /** Notification that a revision has been successfully pushed */
-    pushedRev?(rev: RevisionInfo): void;
+    /** Notification that a revision has been pushed, or failed to be pushed. */
+    pushedRev?(rev: PushRevision, error?: Error): void;
 }
 export declare class Pusher extends Endpoint {
     #private;
@@ -23,6 +23,7 @@ export declare class Pusher extends Endpoint {
     checkIdle(): boolean;
     private getMoreChanges;
     private sendMoreChanges;
+    /** Sends a 'rev' message with a single document revision. */
     private sendRev;
     onGetAttachment(msg: blip.Message): Promise<void>;
     toString(): string;

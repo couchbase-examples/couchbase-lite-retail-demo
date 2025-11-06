@@ -1,6 +1,7 @@
 import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
 import type { RetailDatabase, InventoryItem, Order } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
+import { getUILogger } from "../logging";
 
 /**
  * Generate a NanoID-style random string
@@ -18,6 +19,7 @@ function generateNanoId(length: number = 21): string {
  * Get the next order ID by finding the max orderId in existing orders
  */
 async function getNextOrderId(db: RetailDatabase, storeId: string): Promise<number> {
+  const logger = getUILogger();
   const scopeName = getScopeNameFromStoreId(storeId);
   const ordersCollectionName = `${scopeName}.orders` as any;
   
@@ -34,9 +36,10 @@ async function getNextOrderId(db: RetailDatabase, storeId: string): Promise<numb
       }
     });
     
+    logger.debug("Generated next order ID", { maxId, nextId: maxId + 1 });
     return maxId + 1;
   } catch (error) {
-    console.error('Error getting next order ID:', error);
+    logger.error("Error getting next order ID", { error });
     return 1;
   }
 }
@@ -50,6 +53,8 @@ export async function createOrder(
   quantity: number,
   storeId: string
 ): Promise<Order | null> {
+  const logger = getUILogger();
+  
   try {
     const scopeName = getScopeNameFromStoreId(storeId);
     const ordersCollectionName = `${scopeName}.orders` as any;
@@ -76,41 +81,29 @@ export async function createOrder(
       type: "order"
     };
     
-    console.log('Creating order:', order);
+    logger.info("Creating order", { 
+      documentId, 
+      orderId: nextOrderId,
+      productId: order.productId,
+      quantity 
+    });
     
     // Save to database using createDocument + save pattern with conflict handler
     const collection = db.collections[ordersCollectionName];
     const docToSave = collection.createDocument(DocID(documentId), order as any);
     await collection.save(docToSave, LastWriteWins);
     
-    console.log(`✅ Order created: ${documentId} (productId: ${order.productId}, qty: ${quantity})`);
+    logger.info("Order created and saved to collection", {
+      documentId,
+      orderId: nextOrderId
+    });
     
-    // Nudge the replicator to sync immediately if it's idle
-    const replicator = (window as any).__replicator;
-    if (replicator) {
-      const status = replicator.currentStatus || replicator.status;
-      const activity = status?.activity || status?.status;
-      console.log('🔍 Replicator activity after order creation:', activity);
-      
-      if (activity === 'idle') {
-        console.log('🔄 Nudging idle replicator to sync new order...');
-        try {
-          // Restart the replicator to force change detection
-          await replicator.stop();
-          await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-          await replicator.run();
-          console.log('✅ Replicator restarted to push new order');
-        } catch (error) {
-          console.error('⚠️ Error restarting replicator:', error);
-        }
-      } else {
-        console.log('📤 Replicator is active, will sync automatically');
-      }
-    }
+    // Continuous replication will automatically sync the new order
+    // No need to manually restart the replicator
     
     return order;
   } catch (error) {
-    console.error('❌ Error creating order:', error);
+    logger.error("Error creating order", { error });
     return null;
   }
 }

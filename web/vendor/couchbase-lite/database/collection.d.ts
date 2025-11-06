@@ -293,13 +293,13 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     indexOfProperty(property: DocProperty, type?: IndexType): Index | undefined;
     /** Returns the collection's UUID, used for saving the remote checkpoint on the server.
      *  @internal */
-    getClientID(): Promise<string>;
-    /** Returns the locally-stored Checkpoint for a given server URL.
+    getUUID(): Promise<string>;
+    /** Returns the locally-stored Checkpoint for a given checkpoint ID.
      *  @internal */
-    getCheckpoint(url: string): Promise<repl.Checkpoint | undefined>;
-    /** Saves the local Checkpoint for a given server URL.
+    getCheckpoint(id: string): Promise<repl.Checkpoint | undefined>;
+    /** Saves the local Checkpoint for a given checkpoint ID.
      *  @internal */
-    setCheckpoint(url: string, checkpoint: repl.Checkpoint): Promise<void>;
+    setCheckpoint(id: string, checkpoint: repl.Checkpoint): Promise<void>;
     /** The last/highest sequence number assigned to a document.
      *  @internal */
     lastSequence(): Promise<Sequence>;
@@ -323,9 +323,11 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     /** Returns an ordered list of revisions that were created since a given local Sequence.
      *  @param since  The sequence to start just past; use `undefined` for all changes.
      *  @param limit  The maximum number of revisions to return.
-     *  @returns  An array of `LocalRevision`, ordered by Sequence.
+     *  @returns  An array of `PushRevision`, ordered by Sequence.
      *  @internal */
-    getDocsSinceSequence(since: Sequence | undefined, limit: number): Promise<Array<repl.LocalRevision>>;
+    getDocsSinceSequence(since: Sequence | undefined, limit: number): Promise<Array<repl.PushRevision>>;
+    /** Updates documents' `serverRev` properties, after they've been pushed. @internal */
+    updateServerRevs(pushedRevs: Map<DocID, RevID>): Promise<void>;
     /** Resolves a replication conflict. Returns false if `revID` is out of date. @internal */
     resolveConflict(docID: DocID, revID: RevID, resolvedBody: CBLDictionary | null): Promise<boolean>;
     /** Creates a LocalRevision from a RemoteRevision. */

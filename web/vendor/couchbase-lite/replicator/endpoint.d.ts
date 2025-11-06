@@ -1,11 +1,14 @@
 import { Checkpointer } from './checkpointer';
 import { CollectionID, Replicator } from './replicator';
+import { DocID } from './types';
 import type * as blip from "@/blip/blip";
 /** Common configuration parameters for Pusher and Puller.
  *  @interface
- *  @property continuous   If true, stay connected indefinitely [default false] */
+ *  @property continuous   If true, stay connected indefinitely [default false]
+ *  @property documentIDs  If given, only these documents will be replicated. */
 export interface EndpointConfig {
     continuous?: boolean;
+    documentIDs?: readonly DocID[];
 }
 export interface WorkerParams {
     replicator: Replicator;

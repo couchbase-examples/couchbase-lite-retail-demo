@@ -9,6 +9,7 @@ import { ReorderDialog } from "@/components/ReorderDialog";
 import { useDatabase } from "@/lib/database/DatabaseProvider";
 import { createOrder } from "@/lib/database/orders";
 import { getStoredCredentials } from "@/lib/auth";
+import { getUILogger } from "@/lib/logging";
 
 interface InventoryItemProps {
   item: InventoryItemType;
@@ -16,6 +17,7 @@ interface InventoryItemProps {
 }
 
 const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
+  const logger = getUILogger();
   const [showAlert, setShowAlert] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
@@ -23,8 +25,12 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
   const handleCountChange = (increment: boolean) => {
     const newCount = increment ? item.stockQty + 1 : Math.max(0, item.stockQty - 1);
-    console.log(`🔵 InventoryItem.handleCountChange: increment=${increment}, oldQty=${item.stockQty}, newQty=${newCount}, itemId=${item.id}`);
-    console.log(`🔵 Calling parent onCountChange...`);
+    logger.debug("Inventory item count change", {
+      increment,
+      oldQty: item.stockQty,
+      newQty: newCount,
+      itemId: item.id
+    });
     onCountChange(item.id, newCount);
   };
 

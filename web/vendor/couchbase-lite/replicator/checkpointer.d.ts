@@ -9,7 +9,7 @@ export interface CheckpointerConfig {
 }
 /** @internal */
 export interface CheckpointerDelegate {
-    saveCheckpoint: (collection: CollectionID, checkpoint: Checkpoint) => Promise<void>;
+    saveCheckpoint: (collection: CollectionID, clientID: string, checkpoint: Checkpoint) => Promise<void>;
 }
 /** Manages a collection's replication checkpoint for both its pusher and puller.  @internal */
 export declare class Checkpointer {

@@ -12,12 +12,14 @@ import { toast } from "sonner";
 import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
 import type { ListenerToken } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
+import { getUILogger } from "@/lib/logging";
 
 type FilterType = 'all' | 'In Review' | 'Approved';
 
 const Orders = () => {
   const navigate = useNavigate();
   const db = useDatabase();
+  const logger = getUILogger();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -58,16 +60,18 @@ const Orders = () => {
         }
       });
       
-      console.log(`✅ BREAKPOINT: Loaded ${orderItems.length} orders (filter: ${filter})`, orderItems);
-      debugger; // Breakpoint - orders loaded from database
+      logger.info("Orders loaded from database", {
+        count: orderItems.length,
+        filter,
+        orders: orderItems
+      });
       setOrders(orderItems);
     } catch (error) {
-      console.error('❌ Error loading orders:', error);
-      debugger; // Breakpoint for errors
+      logger.error("Error loading orders", { error });
     } finally {
       setLoading(false);
     }
-  }, [db, filter]);
+  }, [db, filter, logger]);
 
   // Load orders and set up change listener
   useEffect(() => {
@@ -84,13 +88,14 @@ const Orders = () => {
     // Load orders initially
     void loadOrders();
     
-    // BREAKPOINT: Setting up change listener
-    console.log('🔔 BREAKPOINT: Setting up orders change listener...');
+    // Setting up change listener
+    logger.debug("Setting up orders change listener");
     const changeToken: ListenerToken = ordersCollection.addChangeListener((changes) => {
-      // BREAKPOINT: Collection change detected - sync has updated documents
-      console.log('📦 BREAKPOINT: Orders collection changed!', changes);
-      console.log(`🔄 Reloading orders after ${changes.size} change(s)...`);
-      debugger; // Breakpoint - document changes detected, triggering UI refresh
+      // Collection change detected - sync has updated documents
+      logger.info("Orders collection changed - reloading", {
+        changeCount: changes.size,
+        changes
+      });
       
       // Reload orders when changes are detected
       void loadOrders();
@@ -98,10 +103,10 @@ const Orders = () => {
     
     // Cleanup listener on unmount
     return () => {
-      console.log('🔕 Removing orders change listener');
+      logger.debug("Removing orders change listener");
       changeToken.remove();
     };
-  }, [db, loadOrders]);
+  }, [db, loadOrders, logger]);
 
   // Filter orders based on current filter
   const filteredOrders = filter === 'all' 

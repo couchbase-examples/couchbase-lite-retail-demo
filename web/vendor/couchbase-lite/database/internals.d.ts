@@ -37,6 +37,8 @@ export interface CollectionMeta {
 }
 /** Returns the generation number of a revid. */
 export declare function getGeneration(rev: RevID): number;
+/** Returns true if `newRev` has a higher generation than `oldRev`. */
+export declare function greaterGeneration(newRev: RevID | undefined, oldRev: RevID | undefined): boolean;
 /** Generates a new revid, given the document's prior revid, new body, and deletion status. */
 export declare function generateRevID(oldRevID: RevID | null | undefined, body: CBLDictionary | null, deleted: boolean): RevID;
 /** Returns a deep copy of this object whose keys are in alphabetical order.

@@ -1,10 +1,9 @@
 import { Database } from './database';
 import { DocID } from './types';
 import { Collection } from './collection';
-import { Checkpoint } from '../replicator/types';
-import * as repl from "@/replicator/replicator";
+import * as repl from "../replicator/replicator";
 import type * as logtape from "@logtape/logtape";
-export { type Credentials, type CheckpointerDelegate, type PusherConfig, type PullerConfig, type PullConflictResolver, type RemoteRevisionInfo, type Status } from '../replicator/replicator';
+export type { Credentials, CheckpointerDelegate, PusherConfig, PullerConfig, PullConflictResolver, RemoteRevisionInfo, ReplicatorError, Status } from '../replicator/replicator';
 /** Configuration for {@link Replicator}.
  *  @interface
  *  @property database  The Database to sync.
@@ -18,16 +17,22 @@ export interface ReplicatorConfig {
     credentials?: repl.Credentials;
     collections: Record<string, ReplicatorCollectionConfig>;
 }
-/** Per-collection Replicator configuration. At least one of `push` and `pull` must be defined. */
+/** Per-collection Replicator configuration.
+ *  @property push  Configuration for pushing. If not present, replicator will not push.
+ *  @property pull  Configuration for pulling. If not present, replicator will not pull.
+ *  @property documentIDs  If set, only these documents will be pushed or pulled.
+ */
 export interface ReplicatorCollectionConfig {
     push?: repl.PusherConfig;
     pull?: repl.PullerConfig;
+    documentIDs?: readonly DocID[];
 }
 /** Information about a document that's been pushed or pulled by a replicator.
  *  @see {@link Replicator.onDocuments} */
 export interface DocumentEnded {
     docID: DocID;
     deleted?: boolean;
+    lostAccess?: repl.LostAccess;
     error?: Error;
 }
 /** Syncs one or more {@link Collection}s with their remote counterparts. */
@@ -54,7 +59,9 @@ export declare class Replicator implements repl.CheckpointerDelegate {
      *
      *  Does nothing if `run` is not active. */
     stop(): void;
+    /** Returns the checkpoint ID to use for a collection with a replicator configuration. */
+    private getCheckpointID;
     /** Checkpointer delegate implementation. @internal */
-    saveCheckpoint(id: repl.CollectionID, checkpoint: Checkpoint): Promise<void>;
+    saveCheckpoint(id: repl.CollectionID, clientID: string, checkpoint: repl.Checkpoint): Promise<void>;
     readonly logger: logtape.Logger;
 }

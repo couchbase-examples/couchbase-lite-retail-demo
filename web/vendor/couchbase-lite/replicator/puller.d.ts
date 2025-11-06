@@ -1,24 +1,27 @@
 import { Endpoint, EndpointConfig, EndpointParams } from './endpoint';
 import { RemoteRevisionInfo, RemoteSequence, RemoteRevision } from './types';
-import { CBLDictionary } from '../database/types';
+import { Revision } from '../database/types';
 import { BlobLoader } from '../blob/blob';
-import { Collection, DocID } from '../couchbase-lite';
+import { Collection } from '../couchbase-lite';
 import * as blip from "@/blip/blip";
-/** Callback that resolves a conflict between a local and remote document revision.
+/** Callback that resolves a conflict between a local and remote (server) document revision,
+ *  after a replicator pulls a conflicting revision from the server.
  *  @param collection  The owning Collection.
- *  @param docID  The ID of the document.
- *  @param local  The current local document body, or null if it's been deleted (a tombstone.)
- *  @param remote  The current remove document body, or null if it's been deleted (a tombstone.)
- *  @returns  The resolved body to save, or null for a deletion. */
-export type PullConflictResolver = (collection: Collection, docID: DocID, local: CBLDictionary | null, remote: CBLDictionary | null) => Promise<CBLDictionary | null>;
+ *  @param local  The current local document revision.
+ *  @param remote  The conflicting remote document revision.
+ *  @returns  The resolved revision. `id` and `rev` are ignored. You may return `local` or `remote`
+ *            with or without modifying the body, or a new `Revision` object. */
+export type PullConflictResolver = (collection: Collection, local: Revision, remote: Revision) => Promise<Revision>;
 /** Configuration parameters for pulling changes from a remote collection.
  *  @property continuous    If true, stay connected indefinitely.
  *  @property channels      Optional set of Sync Gateway channels, for server-side filtering.
  *  @property activeOnly    If true, don't get deleted docs.
  *  @property filter        Callback that can skip individual revisions.
- *  @property conflictResolver  Callback that resolves conflicts between local and server docs. */
+ *  @property conflictResolver  Callback that resolves conflicts between local and server docs.
+ *                              If not given, a default resolver is used that chooses the one
+ *                              with the higher revision ID (Most Writes Wins.) */
 export interface PullerConfig extends EndpointConfig {
-    channels?: string[];
+    channels?: readonly string[];
     activeOnly?: boolean;
     filter?: (rev: RemoteRevisionInfo) => boolean;
     conflictResolver?: PullConflictResolver;

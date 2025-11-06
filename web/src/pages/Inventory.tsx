@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,14 @@ import type { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import InventoryItem from "@/components/InventoryItem";
 import { SyncStatus } from "@/components/SyncStatus";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
-import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins, type ListenerToken } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
+import { getUILogger } from "@/lib/logging";
 
 const Inventory = () => {
   const navigate = useNavigate();
   const db = useDatabase();
+  const logger = getUILogger();
   const [items, setItems] = useState<InventoryItemType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -53,57 +55,100 @@ const Inventory = () => {
   }, [filteredItems]);
 
   // Load items from database
-  useEffect(() => {
-    const loadItems = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading inventory from database...');
-        
-        // Get collection name from stored credentials
-        const credentials = getStoredCredentials();
-        if (!credentials) {
-          console.error('No credentials found');
-          return;
-        }
-        const scopeName = getScopeNameFromStoreId(credentials.storeId);
-        const inventoryCollectionName = `${scopeName}.inventory` as any;
-        
-        // Check collection count first
-        const count = await db.collections[inventoryCollectionName].count();
-        console.log(`Inventory collection has ${count} documents`);
-        
-        const query = db.createQuery(`SELECT * FROM \`${inventoryCollectionName}\``);
-        const inventoryItems: InventoryItemType[] = [];
-        
-        await query.execute((row) => {
-          console.log('Query row:', row);
-          // Extract collection data from row
-          const data = row[inventoryCollectionName];
-          if (data) {
-            inventoryItems.push(data as unknown as InventoryItemType);
-          }
-        });
-        
-        console.log(`Loaded ${inventoryItems.length} inventory items`, inventoryItems);
-        setItems(inventoryItems);
-      } catch (error) {
-        console.error('Error loading inventory:', error);
-      } finally {
-        setLoading(false);
+  const loadItems = useCallback(async () => {
+    try {
+      setLoading(true);
+      logger.debug("Loading inventory from database");
+      
+      // Get collection name from stored credentials
+      const credentials = getStoredCredentials();
+      if (!credentials) {
+        logger.error("No credentials found");
+        return;
       }
-    };
+      const scopeName = getScopeNameFromStoreId(credentials.storeId);
+      const inventoryCollectionName = `${scopeName}.inventory` as any;
+      
+      // Check collection count first
+      const count = await db.collections[inventoryCollectionName].count();
+      logger.debug("Inventory collection document count", { count });
+      
+      const query = db.createQuery(`SELECT * FROM \`${inventoryCollectionName}\``);
+      const inventoryItems: InventoryItemType[] = [];
+      
+      await query.execute((row) => {
+        // Extract collection data from row
+        const data = row[inventoryCollectionName];
+        if (data) {
+          inventoryItems.push(data as unknown as InventoryItemType);
+        }
+      });
+      
+      logger.info("Inventory items loaded from database", { 
+        count: inventoryItems.length 
+      });
+      setItems(inventoryItems);
+    } catch (error) {
+      logger.error("Error loading inventory", { error });
+    } finally {
+      setLoading(false);
+    }
+  }, [db, logger]);
 
+  // Load items and set up change listener
+  useEffect(() => {
+    const credentials = getStoredCredentials();
+    if (!credentials) {
+      logger.error("No credentials found");
+      return;
+    }
+    
+    const scopeName = getScopeNameFromStoreId(credentials.storeId);
+    const inventoryCollectionName = `${scopeName}.inventory` as any;
+    const inventoryCollection = db.collections[inventoryCollectionName];
+    
+    // Load items initially
     void loadItems();
-  }, [db]);
+    
+    // Set up change listener to reload when data changes
+    logger.debug("Setting up inventory change listener");
+    const changeToken: ListenerToken = inventoryCollection.addChangeListener((changes) => {
+      logger.info("Inventory collection changed - reloading", {
+        changeCount: changes.size
+      });
+      
+      // Reload items when changes are detected (from sync or local updates)
+      void loadItems();
+    });
+    
+    // Cleanup listener on unmount
+    return () => {
+      logger.debug("Removing inventory change listener");
+      changeToken.remove();
+    };
+  }, [db, logger, loadItems]);
 
   const handleCountChange = async (id: string, newCount: number) => {
-    console.log(`🎯 handleCountChange called: id=${id}, newCount=${newCount}`);
+    logger.debug("Inventory count change requested", { id, newCount });
+    
     try {
       // Get collection name from stored credentials
       const credentials = getStoredCredentials();
       if (!credentials) return;
       const scopeName = getScopeNameFromStoreId(credentials.storeId);
       const inventoryCollectionName = `${scopeName}.inventory` as any;
+      
+      // Check replicator status before saving
+      const replicator = (window as any).__replicator;
+      if (replicator) {
+        const status = replicator.currentStatus || replicator.status;
+        logger.info("Replicator status before document save", {
+          activity: status?.activity || status?.status,
+          status: JSON.stringify(status)
+        });
+      } else {
+        logger.warn("No replicator found - changes will not sync!");
+      }
       
       // Update in database using conflict-safe pattern
       const collection = db.collections[inventoryCollectionName];
@@ -121,30 +166,14 @@ const Inventory = () => {
         const docToSave = collection.createDocument(DocID(id), updatedData as any);
         await collection.save(docToSave, LastWriteWins);
         
-        console.log(`✅ Updated item ${id} stockQty to ${newCount} - document saved with LastWriteWins`);
+        logger.info("Document saved to collection", { 
+          id, 
+          newStockQty: newCount,
+          message: "CBL should now notify pusher automatically"
+        });
         
-        // Nudge the replicator to sync immediately if it's idle
-        const replicator = (window as any).__replicator;
-        if (replicator) {
-          const status = replicator.currentStatus || replicator.status;
-          const activity = status?.activity || status?.status;
-          console.log('🔍 Replicator activity after save:', activity);
-          
-          if (activity === 'idle') {
-            console.log('🔄 Nudging idle replicator to sync changes...');
-            try {
-              // Restart the replicator to force change detection
-              await replicator.stop();
-              await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-              await replicator.run();
-              console.log('✅ Replicator restarted to push changes');
-            } catch (error) {
-              console.error('⚠️ Error restarting replicator:', error);
-            }
-          } else {
-            console.log('📤 Replicator is active, will sync automatically');
-          }
-        }
+        // With continuous replication, the pusher should be automatically notified
+        // when save() is called. Watch console for "Notifying Pusher of changes" message.
         
         // Update local state
         setItems(prevItems =>
@@ -154,7 +183,7 @@ const Inventory = () => {
         );
       }
     } catch (error) {
-      console.error('Error updating count:', error);
+      logger.error("Error updating inventory count", { id, error });
     }
   };
 

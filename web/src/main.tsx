@@ -7,6 +7,7 @@ import { DatabaseProvider } from "./lib/database/DatabaseProvider";
 import { setupSync } from "./lib/database/sync";
 import { getStoredCredentials, getAppServicesUrl } from "./lib/auth";
 import type { RetailDatabase } from "./lib/database/types";
+import { initializeLogging } from "./lib/logging";
 
 /**
  * Start continuous sync for inventory and orders after successful login
@@ -48,6 +49,8 @@ export async function startContinuousSync(db: RetailDatabase) {
 
 async function bootstrap() {
   try {
+    // Initialize logging first
+    await initializeLogging();
     console.log('🚀 Bootstrapping application...');
     
     // Check if user has stored credentials

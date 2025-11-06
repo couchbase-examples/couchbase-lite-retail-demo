@@ -5,7 +5,7 @@ import type * as logtape from "@logtape/logtape";
 export { type CheckpointerConfig, type CheckpointerDelegate } from './checkpointer';
 export { type PullConflictResolver, type PullerConfig, type PullerDelegate } from './puller';
 export { type PusherConfig, type PusherDelegate } from './pusher';
-export { type LocalRevision, type LocalSequence, type RemoteRevision, type RemoteRevisionInfo } from './types';
+export { type Checkpoint, type PushRevision, type LocalSequence, type LostAccess, type RemoteRevision, type RemoteRevisionInfo, ReplicatorError } from './types';
 export declare const SyncLogger: logtape.Logger;
 export type CollectionID = string & {
     __brand: 'CollectionID';
@@ -35,16 +35,18 @@ export interface CollectionConfig {
 }
 /** Replication status and progress.
  *  @property status  The current state of the replicator.
+ *  @property error  Fatal error, if any.
  *  @property pushedRevisions  The number of documents uploaded to the server so far.
  *  @property pulledRevisions  The number of documents downloaded from the server so far. */
 export interface Status {
     status?: "connecting" | "busy" | "idle" | "stopped";
+    error?: Error;
     pushedRevisions?: number;
     pulledRevisions?: number;
 }
 /** Couchbase Mobile replicator protocol implementation.
  *  This class is database-agnostic: it relies on delegate interfaces to read and write revisions.
- *  {@link database.Replicator} is a wrapper that supports this package's simple database API. */
+ *  {@link ../database.Replicator} is a wrapper that supports this package's simple database API. */
 export declare class Replicator {
     #private;
     private readonly config;
@@ -52,6 +54,7 @@ export declare class Replicator {
     readonly logger: logtape.Logger;
     /** Starts the replicator. Completes when the replicator finishes (never if continuous.) */
     run(): Promise<void>;
+    /** Authenticates to the server. Returns an (optional) session-id token. */
     private authenticate;
     private start;
     /** Stops the replicator, if it's running. */
@@ -61,7 +64,6 @@ export declare class Replicator {
     get running(): boolean;
     statusChanged_(): void;
     maybeNotifyStatus(): void;
-    notifyStatusAtEnd(): void;
     protected finish(error?: Error): void;
     fatalError(error: Error): void;
 }

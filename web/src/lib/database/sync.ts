@@ -1,6 +1,7 @@
 import { Replicator } from "@couchbaselabs/couchbase-lite";
 import type { RetailDatabase } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
+import { getSyncLogger } from "../logging";
 
 export interface SyncConfig {
   url: string;
@@ -77,11 +78,12 @@ export function setupOneShotSync(db: RetailDatabase, config: SyncConfig): Replic
 }
 
 export function setupSync(db: RetailDatabase, config: SyncConfig) {
+  const logger = getSyncLogger();
   const scopeName = getScopeNameFromStoreId(config.storeId);
   const inventoryCollection = `${scopeName}.inventory`;
   const ordersCollection = `${scopeName}.orders`;
   
-  console.log("🔄 Setting up sync with config:", {
+  logger.info("Setting up continuous sync", {
     url: config.url,
     username: config.username,
     storeId: config.storeId,
@@ -131,96 +133,77 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
     // Store status on replicator object for external access
     (replicator as any).currentStatus = status;
     
-    // BREAKPOINT: Status change detected
     const activity = status.activity || status.status;
-    const statusStatus = status.status || status.activity;
     
-    console.log("🔄 Replicator Status Change:", {
-      status: statusStatus,
-      activity: activity,
-      progress: status.progress,
+    logger.debug("Replicator status change", {
+      activity,
       pulledRevisions: status.pulledRevisions,
       pushedRevisions: status.pushedRevisions,
       error: status.error
     });
     
-    // BREAKPOINT: Error detected in replication
+    // Log errors
     if (status.error) {
-      console.error("❌ Replication error:", status.error);
-      console.error("Error details:", JSON.stringify(status.error, null, 2));
-      debugger; // Breakpoint for debugging errors
+      logger.error("Replication error occurred", {
+        error: status.error,
+        errorDetails: JSON.stringify(status.error, null, 2)
+      });
     }
     
-    if (activity === "stopped" || activity === "idle") { 
+    // Handle different activity states
+    if (activity === "stopped") {
       if (status.error) {
-        console.error("❌ Replication stopped with error");
-        debugger; // Breakpoint for error stops
+        logger.error("Replicator stopped with error", { error: status.error });
       } else {
-        console.log("⏸️  Replicator stopped (no error)");
+        logger.warn("Replicator stopped unexpectedly");
       }
     }
     
     if (activity === "idle") {
-      console.log("✅ Sync complete - all changes synced");
+      // Idle = all caught up, still watching for changes (this is normal for continuous replication)
+      logger.info("Replicator idle - all changes synced, watching for new changes");
     }
     
     if (activity === "connecting") {
-      console.log("🔌 Connecting to App Services...");
+      logger.info("Connecting to App Services");
     }
 
     if (activity === "busy") {
-      console.log("⚡️ Sync in progress...");
+      logger.info("Sync in progress");
     }
   };
 
   // Document replication listener
   replicator.onDocuments = (collection: any, direction: string, documents: any[]) => {
-    // BREAKPOINT: Document sync detected - documents are being pushed/pulled
+    // Log document sync activity
     const arrow = direction === "push" ? "⬆️" : "⬇️";
-    console.log(`${arrow} BREAKPOINT: Synced ${documents.length} docs in ${collection.name}`, {
+    logger.info(`${arrow} Documents synced`, {
       direction,
       collection: collection.name,
+      count: documents.length,
       documentIds: documents.map(d => d.id || d._id).slice(0, 5) // Show first 5 IDs
     });
     
-    // BREAKPOINT: First document being synced
+    // Log sample document at debug level
     if (documents.length > 0) {
-      console.log("📄 BREAKPOINT: Sample document:", documents[0]);
-      debugger; // Breakpoint - document changes are triggering sync
+      logger.debug("Sample document synced", {
+        document: documents[0]
+      });
     }
   };
 
-  // Log replicator object details for debugging
-  console.log("🔍 Replicator object methods:", Object.keys(replicator));
-  console.log("🔍 Replicator status before start:", replicator.status);
+  // Start the replicator for continuous sync
+  // With continuous replication, run() keeps the replicator active
+  // and it will automatically sync changes as they occur
+  logger.info("Starting continuous replicator");
   
-  // Start the replicator - THIS IS THE KEY!
-  console.log("🚀 Starting replicator with .run()...");
-  
-  // Run async without blocking
-  replicator.run().then(() => {
-    console.log("✅ Replicator.run() completed");
-    console.log("🔍 Replicator status after run():", replicator.status);
-  }).catch((error: any) => {
-    console.error("❌ Replicator.run() failed:", error);
-    console.error("Error type:", typeof error);
-    console.error("Error keys:", Object.keys(error || {}));
+  // Important: Don't await run() - let it run in the background
+  // For continuous replication, run() will keep going until stop() is called
+  replicator.run().catch((error: any) => {
+    logger.error("Replicator run failed", { error });
   });
 
-  console.log("✅ Continuous replicator started");
-  console.log("⏳ Waiting for sync to begin...");
-  
-  // Check status after 2 seconds
-  setTimeout(() => {
-    const status = replicator.status;
-    console.log("🔍 Replicator status after 2s:", {
-      status: status?.status || status?.activity,
-      activity: status?.activity || status?.status,
-      pulledRevisions: status?.pulledRevisions,
-      pushedRevisions: status?.pushedRevisions
-    });
-    console.log("🔍 Is replicator running?", status?.activity || status?.status);
-  }, 2000);
+  logger.info("Continuous replicator started and watching for changes");
 
   return replicator;
 }
