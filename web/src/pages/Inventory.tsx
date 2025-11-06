@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,9 @@ const Inventory = () => {
   const [items, setItems] = useState<InventoryItemType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Track local changes to prevent unnecessary reloads
+  const localChangesRef = React.useRef<Set<string>>(new Set());
 
   const filteredItems = useMemo(() => {
     if (!searchQuery) return items;
@@ -110,20 +113,46 @@ const Inventory = () => {
     // Load items initially
     void loadItems();
     
-    // Set up change listener to reload when data changes
+    // Set up change listener for REMOTE changes only
+    // We use a debounce to avoid reloading too frequently during sync
     logger.debug("Setting up inventory change listener");
+    let reloadTimeout: NodeJS.Timeout | null = null;
+    
     const changeToken: ListenerToken = inventoryCollection.addChangeListener((changes) => {
-      logger.info("Inventory collection changed - reloading", {
-        changeCount: changes.size
+      // Check if any of the changed documents are from remote (not local changes)
+      const changedDocs = Array.from(changes);
+      const hasRemoteChanges = changedDocs.some(docId => !localChangesRef.current.has(docId));
+      
+      if (!hasRemoteChanges) {
+        logger.debug("Skipping reload - all changes are local", {
+          changeCount: changes.size
+        });
+        return;
+      }
+      
+      logger.debug("Remote changes detected in inventory", {
+        changeCount: changes.size,
+        remoteChanges: changedDocs.filter(id => !localChangesRef.current.has(id)).length
       });
       
-      // Reload items when changes are detected (from sync or local updates)
-      void loadItems();
+      // Debounce reloads to avoid multiple rapid reloads during sync
+      // This prevents scroll jumps and improves performance
+      if (reloadTimeout) {
+        clearTimeout(reloadTimeout);
+      }
+      
+      reloadTimeout = setTimeout(() => {
+        logger.info("Reloading inventory after remote sync changes");
+        void loadItems();
+      }, 500); // Wait 500ms after last change before reloading
     });
     
     // Cleanup listener on unmount
     return () => {
       logger.debug("Removing inventory change listener");
+      if (reloadTimeout) {
+        clearTimeout(reloadTimeout);
+      }
       changeToken.remove();
     };
   }, [db, logger, loadItems]);
@@ -138,23 +167,22 @@ const Inventory = () => {
       const scopeName = getScopeNameFromStoreId(credentials.storeId);
       const inventoryCollectionName = `${scopeName}.inventory` as any;
       
-      // Check replicator status before saving
-      const replicator = (window as any).__replicator;
-      if (replicator) {
-        const status = replicator.currentStatus || replicator.status;
-        logger.info("Replicator status before document save", {
-          activity: status?.activity || status?.status,
-          status: JSON.stringify(status)
-        });
-      } else {
-        logger.warn("No replicator found - changes will not sync!");
-      }
+      // Mark this as a local change
+      localChangesRef.current.add(id);
       
       // Update in database using conflict-safe pattern
       const collection = db.collections[inventoryCollectionName];
       const existingDoc = await collection.getDocument(DocID(id));
       
       if (existingDoc) {
+        // IMPORTANT: Update local state FIRST before saving to database
+        // This gives instant UI feedback without reloading
+        setItems(prevItems =>
+          prevItems.map(item =>
+            item.id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
+          )
+        );
+        
         // Create a new document with updated values
         const updatedData = {
           ...existingDoc,
@@ -166,24 +194,21 @@ const Inventory = () => {
         const docToSave = collection.createDocument(DocID(id), updatedData as any);
         await collection.save(docToSave, LastWriteWins);
         
-        logger.info("Document saved to collection", { 
+        logger.debug("Document saved and will sync automatically", { 
           id, 
-          newStockQty: newCount,
-          message: "CBL should now notify pusher automatically"
+          newStockQty: newCount
         });
         
-        // With continuous replication, the pusher should be automatically notified
-        // when save() is called. Watch console for "Notifying Pusher of changes" message.
-        
-        // Update local state
-        setItems(prevItems =>
-          prevItems.map(item =>
-            item.id === id ? { ...item, stockQty: newCount, lastUpdated: Date.now() } : item
-          )
-        );
+        // Clear the local change flag after a delay (after sync completes)
+        setTimeout(() => {
+          localChangesRef.current.delete(id);
+        }, 2000);
       }
     } catch (error) {
       logger.error("Error updating inventory count", { id, error });
+      localChangesRef.current.delete(id);
+      // On error, reload from database to get correct state
+      void loadItems();
     }
   };
 
