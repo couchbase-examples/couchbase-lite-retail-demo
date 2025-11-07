@@ -62,10 +62,9 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
     }
   };
 
-  const getCountColor = (count: number) => {
-    if (count <= 10) return "text-destructive font-bold";
-    if (count <= 50) return "text-warning font-semibold";
-    return "text-success font-semibold";
+  const getCountColor = () => {
+    // Single color for all stock quantities
+    return "text-[#fd9b0b] font-bold";
   };
 
   const formatDate = (timestamp: number) => {
@@ -122,7 +121,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
             <div className="py-3">
               <div className="text-center mb-3">
                 <p className="text-sm font-medium mb-1">Stock Quantity</p>
-                <div className={`text-4xl font-extrabold ${getCountColor(item.stockQty)}`}>
+                <div className={`text-4xl font-extrabold ${getCountColor()}`}>
                   {item.stockQty}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{item.unit}</p>
