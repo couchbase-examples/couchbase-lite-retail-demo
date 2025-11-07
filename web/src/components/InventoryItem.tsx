@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import { Minus, Plus, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -109,11 +108,6 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
               <p><span className="font-medium">Price:</span> ${item.price.toFixed(2)}</p>
               {item.location && (
                 <p><span className="font-medium">Location:</span> Aisle {item.location.aisle}, Bin {item.location.bin}</p>
-              )}
-              {item.attributes?.organic && (
-                <Badge variant="secondary" className="text-xs">
-                  Organic
-                </Badge>
               )}
             </div>
 
