@@ -28,7 +28,7 @@ const Orders = () => {
   const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔄 BREAKPOINT: Loading orders from database...', { filter });
+      logger.debug('Loading orders from database');
       
       // Get collection name from stored credentials
       const credentials = getStoredCredentials();
@@ -40,20 +40,15 @@ const Orders = () => {
       const ordersCollectionName = `${scopeName}.orders` as any;
       
       const count = await db.collections[ordersCollectionName].count();
-      console.log(`📊 Orders collection has ${count} documents`);
+      logger.debug(`Orders collection has ${count} documents`);
       
-      // Build query based on filter with sorting (latest first)
-      let queryString = `SELECT * FROM \`${ordersCollectionName}\``;
-      if (filter !== 'all') {
-        queryString += ` WHERE orderStatus = '${filter}'`;
-      }
-      queryString += ` ORDER BY orderDate DESC`;
+      // Always load ALL orders (no filter in query) - filtering happens in UI
+      let queryString = `SELECT * FROM \`${ordersCollectionName}\` ORDER BY orderDate DESC`;
       
       const query = db.createQuery(queryString);
       const orderItems: Order[] = [];
       
       await query.execute((row) => {
-        // BREAKPOINT: Document change detected in query
         const data = row[ordersCollectionName];
         if (data) {
           orderItems.push(data);
@@ -62,7 +57,6 @@ const Orders = () => {
       
       logger.info("Orders loaded from database", {
         count: orderItems.length,
-        filter,
         orders: orderItems
       });
       setOrders(orderItems);
@@ -71,7 +65,7 @@ const Orders = () => {
     } finally {
       setLoading(false);
     }
-  }, [db, filter, logger]);
+  }, [db, logger]);
 
   // Load orders and set up change listener
   useEffect(() => {
