@@ -27,6 +27,7 @@ export interface RemoteRevisionInfo {
 /** A revision pulled from the server. */
 export interface RemoteRevision extends db.Revision {
     readonly history: RevID[];
+    hasBlobs?: boolean;
 }
 /** An object that holds the persistent state of replication. */
 export declare class Checkpoint {

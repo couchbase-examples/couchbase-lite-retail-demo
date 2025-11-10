@@ -349,10 +349,10 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     private _actuallyReadMeta;
     /** Saves cached changes (`this.meta`) back to the db. Called by Database.inTransaction.
         @internal */
-    transactionEnding(committing: boolean): Promise<void>;
+    transactionEnding(mode: TransactionMode, committing: boolean): Promise<void>;
     /** Posts change notifications after a transaction is committed.
      *  Called by Database.inTransaction. @internal */
-    transactionEnded(committing: boolean): void;
+    transactionEnded(mode: TransactionMode, committing: boolean): void;
     private _readMeta;
     /** The MetaStore table. */
     private get metaTable();

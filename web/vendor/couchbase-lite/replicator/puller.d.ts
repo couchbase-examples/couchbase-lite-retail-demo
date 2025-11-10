@@ -16,6 +16,8 @@ export type PullConflictResolver = (collection: Collection, local: Revision, rem
  *  @property continuous    If true, stay connected indefinitely.
  *  @property channels      Optional set of Sync Gateway channels, for server-side filtering.
  *  @property activeOnly    If true, don't get deleted docs.
+ *  @property enableAutoPurge   If true, automatically purges documents when the user loses access
+ *                              through channel revocation on Sync Gateway. Defaults to true.
  *  @property filter        Callback that can skip individual revisions.
  *  @property conflictResolver  Callback that resolves conflicts between local and server docs.
  *                              If not given, a default resolver is used that chooses the one
@@ -23,6 +25,7 @@ export type PullConflictResolver = (collection: Collection, local: Revision, rem
 export interface PullerConfig extends EndpointConfig {
     channels?: readonly string[];
     activeOnly?: boolean;
+    enableAutoPurge?: boolean;
     filter?: (rev: RemoteRevisionInfo) => boolean;
     conflictResolver?: PullConflictResolver;
     wantBatchSize?: number;
@@ -39,6 +42,11 @@ export interface PullerDelegate {
     missingBlobs(digests: Set<string>): Promise<string[] | undefined>;
     /** Adds a blob. Implementor must verify that the contents match the digest. */
     addBlob(digest: string, contents: Uint8Array): Promise<void>;
+    /** Returns true if the onDocuments callback is set.
+     * When true, the pull replicator includes the revocations flag in subChanges
+     * requests to Sync Gateway, allowing it to receive notifications when access
+     * to a document is revoked even when auto-purge is disabled. */
+    hasOnDocumentsCallback(): boolean;
     blobLoader: BlobLoader;
 }
 interface RemoteRevisionWithMsg extends RemoteRevision {

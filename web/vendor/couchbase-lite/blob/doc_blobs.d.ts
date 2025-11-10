@@ -11,7 +11,7 @@ export declare function asBloblike(obj: CBLValue | undefined): Bloblike | null;
 export declare function ImportBlobs(properties: CBLDictionary, loader: BlobLoader): void;
 /** Converts all NewBlob instances into ExistingBlobs. */
 export declare function NewToExistingBlobs(properties: CBLDictionary, loader: BlobLoader): void;
-/** Returns 0 if the dict contains no blobs,
+/** Returns 0 if the dict contains no Blob instances,
  *          1 if it contains ExistingBlobs,
  *          2 if it contains NewBlobs. */
 export declare function ContainsBlobs(properties: CBLDictionary): 0 | 1 | 2;
@@ -22,7 +22,7 @@ type ForEachBlobCallback = (blob: Blob, path: PathArray) => boolean;
 /** Recurses into the doc properties looking for {@link Blob} instances,
  *  and invokes the callback on each one. @internal */
 export declare function ForEachBlob(properties: CBLDictionary, callback: ForEachBlobCallback): void;
-type ForEachBloblikeCallback = (blob: Bloblike) => void;
+type ForEachBloblikeCallback = (blob: Bloblike, path: PathArray) => void;
 /** Recurses into the doc properties looking for blob metadata (dicts containing `"@type":"blob"`),
  *  and invokes the callback on each one. @internal */
 export declare function ForEachBloblike(properties: CBLDictionary, callback: ForEachBloblikeCallback): void;

@@ -21,11 +21,13 @@ export interface ReplicatorConfig {
  *  @property push  Configuration for pushing. If not present, replicator will not push.
  *  @property pull  Configuration for pulling. If not present, replicator will not pull.
  *  @property documentIDs  If set, only these documents will be pushed or pulled.
- */
+ *  @property resetCheckpoint  If true, the replicator will ignore its current state and compare
+*                              all document revision IDs with the server.  */
 export interface ReplicatorCollectionConfig {
     push?: repl.PusherConfig;
     pull?: repl.PullerConfig;
     documentIDs?: readonly DocID[];
+    resetCheckpoint?: boolean;
 }
 /** Information about a document that's been pushed or pulled by a replicator.
  *  @see {@link Replicator.onDocuments} */
@@ -44,7 +46,11 @@ export declare class Replicator implements repl.CheckpointerDelegate {
     readonly database: Database;
     /** Callback that notifies when {@link status} changes. */
     onStatusChange?: (status: repl.Status) => void;
-    /** Callback that notifies when documents have been pushed or pulled. */
+    /** Callback that notifies when documents have been pushed or pulled.
+     *
+     * Note: To receive lost-access (revocation) notifications from the pull replicator
+     * when auto-purge is disabled, this callback must be registered *before*
+     * starting the pull replicator. */
     onDocuments?: (collection: Collection, direction: 'push' | 'pull', documents: DocumentEnded[]) => void;
     /** Current replication status & progress. */
     get status(): repl.Status;
@@ -59,9 +65,9 @@ export declare class Replicator implements repl.CheckpointerDelegate {
      *
      *  Does nothing if `run` is not active. */
     stop(): void;
-    /** Returns the checkpoint ID to use for a collection with a replicator configuration. */
-    private getCheckpointID;
-    /** Checkpointer delegate implementation. @internal */
+    /** Returns the checkpoint ID that will be used for a collection. @internal */
+    getCheckpointID(collection: Collection): Promise<string>;
+    /** Saves a checkpoint to the local database. @internal */
     saveCheckpoint(id: repl.CollectionID, clientID: string, checkpoint: repl.Checkpoint): Promise<void>;
     readonly logger: logtape.Logger;
 }
