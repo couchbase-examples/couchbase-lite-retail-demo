@@ -85,12 +85,12 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
       <CardContent className="p-4">
         <div className="flex flex-col h-full">
           {/* Item Image */}
-          <div className="w-full h-32 bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+          <div className="w-full h-48 bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
             {!imageError ? (
               <img 
                 src={item.imageURL} 
                 alt={item.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 onError={() => setImageError(true)}
               />
             ) : (
@@ -147,7 +147,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
             {/* Reorder Button */}
             <Button 
               onClick={handleReorderClick}
-              className="w-full bg-[#fc9d0a] hover:bg-[#e38d09] text-white"
+              className="w-full bg-[#FC9C0C] hover:bg-[#E38C0B] text-white"
               size="sm"
             >
               Re-order now

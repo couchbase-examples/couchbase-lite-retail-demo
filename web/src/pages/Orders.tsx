@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDatabase } from "@/lib/database/DatabaseProvider";
 import type { Order } from "@/lib/database/types";
 import { SyncStatus } from "@/components/SyncStatus";
+import { OfflineToggle } from "@/components/OfflineToggle";
 import { ArrowLeft, ClipboardList, Package, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
@@ -269,7 +270,10 @@ const Orders = () => {
                 </div>
               </div>
             </div>
-            <SyncStatus />
+            <div className="flex items-center gap-3">
+              <OfflineToggle />
+              <SyncStatus />
+            </div>
           </div>
         </div>
       </header>

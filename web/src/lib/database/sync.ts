@@ -154,9 +154,9 @@ export function setupSync(db: RetailDatabase, config: SyncConfig) {
     if (activity === "stopped") {
       if (status.error) {
         logger.error("Replicator stopped with error", { error: status.error });
-      } else {
-        logger.warn("Replicator stopped unexpectedly");
       }
+      // Don't log a warning for normal stops (e.g., when user toggles offline mode)
+      // The stop is intentional and expected
     }
     
     if (activity === "idle") {

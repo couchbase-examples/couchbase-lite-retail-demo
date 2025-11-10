@@ -104,13 +104,15 @@ export function SyncStatus() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge 
-            variant={config.variant} 
-            className={`gap-2 cursor-help ${config.color}`}
-          >
-            {config.icon}
-            <span className="hidden sm:inline">{config.label}</span>
-          </Badge>
+          <div className="inline-flex cursor-help">
+            <Badge 
+              variant={config.variant} 
+              className={`gap-2 ${config.color}`}
+            >
+              {config.icon}
+              <span className="hidden sm:inline">{config.label}</span>
+            </Badge>
+          </div>
         </TooltipTrigger>
         <TooltipContent>
           <p>{getTooltipContent()}</p>

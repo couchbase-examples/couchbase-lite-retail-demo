@@ -71,7 +71,7 @@ export function ReorderDialog({ open, onOpenChange, item, onConfirm }: ReorderDi
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !quantity || parseInt(quantity) <= 0}>{isSubmitting ? "Creating..." : "Create Order"}</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting || !quantity || parseInt(quantity) <= 0} className="bg-[#FC9C0C] hover:bg-[#E38C0B] text-white">{isSubmitting ? "Creating..." : "Create Order"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

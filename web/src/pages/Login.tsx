@@ -38,7 +38,7 @@ const Login = () => {
   // Set solid background color for the entire page
   useEffect(() => {
     const originalBackground = document.body.style.backgroundColor;
-    document.body.style.backgroundColor = '#f1c48d';
+    document.body.style.backgroundColor = '#FFF0DB';
     
     return () => {
       document.body.style.backgroundColor = originalBackground;
@@ -148,21 +148,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-6 md:p-8" style={{ backgroundColor: '#f1c48d' }}>
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 md:p-8" style={{ backgroundColor: '#FFF0DB' }}>
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md space-y-8">
         {/* Header with Shopping Cart Icon */}
         <div className="text-center space-y-6">
           <div className="flex justify-center">
-            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-lg">
-              <ShoppingCart className="h-12 w-12 text-white" strokeWidth={2} />
+            <div className="w-24 h-24 bg-[#FFCB77] rounded-3xl flex items-center justify-center shadow-md">
+              <ShoppingCart className="h-12 w-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
           
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-black mb-2">
               Grocery Inventory
             </h1>
-            <p className="text-lg md:text-xl text-white/90 font-medium">
+            <p className="text-lg md:text-xl text-black font-normal">
               Management System
             </p>
           </div>
@@ -180,7 +180,7 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Username Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-white">
+              <label htmlFor="email" className="text-sm font-semibold text-black">
                 Username
               </label>
               <div className="relative">
@@ -197,14 +197,14 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-14 pl-12 pr-4 bg-white/90 border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-0"
+                  className="h-14 pl-12 pr-4 bg-white border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-[#FC9C0C]/30 focus-visible:ring-offset-0 shadow-sm"
                 />
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-white">
+              <label htmlFor="password" className="text-sm font-semibold text-black">
                 Password
               </label>
               <div className="relative">
@@ -221,7 +221,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-14 pl-12 pr-12 bg-white/90 border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-0"
+                  className="h-14 pl-12 pr-12 bg-white border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-[#FC9C0C]/30 focus-visible:ring-offset-0 shadow-sm"
                 />
                 <button
                   type="button"
@@ -239,7 +239,8 @@ const Login = () => {
             <Button
               type="submit"
               disabled={!email || !password || loading}
-              className="w-full h-14 bg-[#D4945A] hover:bg-[#C8844A] text-white text-base font-semibold rounded-xl border-0 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="w-full h-14 !bg-[#FC9C0C] hover:!bg-[#E38C0B] !text-white text-base font-semibold rounded-xl border-0 shadow-md transition-all disabled:cursor-not-allowed disabled:!bg-[#FC9C0C] disabled:!opacity-100 mt-6"
+              style={{ backgroundColor: '#FC9C0C' }}
             >
               {loading ? (
                 <>
@@ -260,13 +261,13 @@ const Login = () => {
                 <button
                   type="button"
                   disabled={loading}
-                  className="w-full h-14 bg-transparent text-[#D4945A] text-base font-semibold rounded-xl border-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:bg-white/10"
+                  className="w-full h-14 bg-transparent text-black text-base font-semibold rounded-xl border-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:bg-black/5"
                 >
                   <Info className="h-5 w-5 mr-2" />
                   View Demo Credentials
                 </button>
               </DialogTrigger>
-              <DialogContent className="bg-[#F5E5D8] border-0">
+              <DialogContent className="bg-[#FFF0DB] border-0">
                 <DialogHeader>
                   <DialogTitle className="text-gray-800">Demo Credentials</DialogTitle>
                   <DialogDescription className="text-gray-600">

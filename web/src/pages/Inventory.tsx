@@ -8,6 +8,7 @@ import { useDatabase } from "@/lib/database/DatabaseProvider";
 import type { InventoryItem as InventoryItemType } from "@/lib/database/types";
 import InventoryItem from "@/components/InventoryItem";
 import { SyncStatus } from "@/components/SyncStatus";
+import { OfflineToggle } from "@/components/OfflineToggle";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
 import { DocID, LastWriteWins, type ListenerToken } from "@couchbaselabs/couchbase-lite";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
@@ -121,7 +122,7 @@ const Inventory = () => {
     const changeToken: ListenerToken = inventoryCollection.addChangeListener((changes) => {
       // Check if any of the changed documents are from remote (not local changes)
       const changedDocs = Array.from(changes);
-      const hasRemoteChanges = changedDocs.some(docId => !localChangesRef.current.has(docId));
+      const hasRemoteChanges = changedDocs.some(docId => !localChangesRef.current.has(String(docId)));
       
       if (!hasRemoteChanges) {
         logger.debug("Skipping reload - all changes are local", {
@@ -132,7 +133,7 @@ const Inventory = () => {
       
       logger.debug("Remote changes detected in inventory", {
         changeCount: changes.size,
-        remoteChanges: changedDocs.filter(id => !localChangesRef.current.has(id)).length
+        remoteChanges: changedDocs.filter(id => !localChangesRef.current.has(String(id))).length
       });
       
       // Debounce reloads to avoid multiple rapid reloads during sync
@@ -238,7 +239,10 @@ const Inventory = () => {
                 </div>
               </div>
             </div>
-            <SyncStatus />
+            <div className="flex items-center gap-3">
+              <OfflineToggle />
+              <SyncStatus />
+            </div>
           </div>
         </div>
       </header>
