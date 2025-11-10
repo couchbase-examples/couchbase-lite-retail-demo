@@ -10,53 +10,54 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 - 🏪 **Multi-Platform Support**: Support for [iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html), [Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html) and [web](TODO). Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
 
 ## Setup
-The setup would look like this ![](./common/assets/app-setup.png)
+The complete setup of the demo would look like this ![](./common/assets/app-setup.png)
 
-[!NOTE] You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for that functionality.
+> [!NOTE]
+> You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for just that app and functionality.
 
-### Setting up Capella Cluster
+## Setting up Capella Cluster
 These are common set of instructions that you must follow to setup the cloud backend regardless of whether you are running iOS, Android and web versions of the app.
 
 Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
 
-* Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html). 
+- Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+  
+- Create a bucket named **"supermarket"** cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets). 
 
-* Create a bucket named **"supermarket"** cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets). 
+- Create two scopes named **"NYC-Store"** and **"AA-Store"** in the bucket by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes). 
 
-* Create two scopes named **"NYC-Store"** and **"AA-Store"** in the bucket by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes). 
+- In each scope, create three collectes named **"inventory"**, **"profile"** and **"orders"** respectively by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection). 
 
-* In each scope, create three collected named **"inventory"**, **"profile"** and **"orders"** respectively by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection). 
+- At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
 
-* At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
+- Download and unzip sample dataset from ![](TODO INSERT s3 URL)
 
-* Download and unzip sample dataset from ![](TODO INSERT s3 URL)
-
-* Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
-[!NOTE] When importing data, Select the Field option to map doc Id. 
+- Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
+> [!NOTE]
+>  When importing data, Select the Field option to map doc Id. 
 
 ![](./common/assets/import-data.png)
 
-### Setting up Capella App Services
+## Setting up Capella App Services
 
-* Create App Services named **"supermarket-appservice"** (you can name it anything) that is linked to supermarket cluster by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) 
+- Create App Services named **"supermarket-appservice"** (you can name it anything) that is linked to supermarket cluster by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) 
 
-* Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
+- Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
 
 The configuration of App Endpoint should look like this: 
-   ![](./common/assets/appendpoint.png)
+![](./common/assets/appendpoint.png)
 
-* Configure 2 App Users corresponding to the two stores (one in each App Endpoint).You can choose any password. If you would like to run the app with prefilled demo credentials, you must use the password mentioned below. This will make more sense when you setup the individual apps later.
-**user**=nyc-store-01@supermarket.com / **password**=P@ssword1 (this is created in App Endpoint supermarket-aa)
-**user**=aa-store-01@supermarket.com / **password**=P@ssword1 (this is created App Endpoint supermarket-nyc) 
+- Configure two App Users corresponding to the two stores (one in each App Endpoint) by following these [instructions](https://docs.couchbase.com/cloud/app-services/user-management/create-user.html).You can choose any password. If you would like to run the app with prefilled demo credentials, you must use the password mentioned below. This will make more sense when you setup the individual apps later.
+   - **user**=nyc-store-01@supermarket.com / **password**=P@ssword1 (this is created in App Endpoint supermarket-aa)
+   - **user**=aa-store-01@supermarket.com / **password**=P@ssword1 (this is created App Endpoint supermarket-nyc) 
 
 
-   The configuration of App User should look something like this:
+The configuration of App User should look something like this:
+![](./common/assets/appuser.png)
 
-   ![](./common/assets/appuser.png)
+- Go to the "connect" tab and record the public URL endpoint. You will need it when you setup your apps later
 
-* Go to the "connect" tab and record the public URL endpoint. You will need it when you setup your apps later
-
-   ![](./common/assets/connectapp.png)
+![](./common/assets/connectapp.png)
 
 ## Repo Structure
 
