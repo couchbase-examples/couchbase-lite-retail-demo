@@ -63,7 +63,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
 
   const getCountColor = () => {
     // Single color for all stock quantities
-    return "text-[#fd9b0b] font-bold";
+    return "text-[#2dbb6e] font-bold";
   };
 
   const formatDate = (timestamp: number) => {
@@ -147,7 +147,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
             {/* Reorder Button */}
             <Button 
               onClick={handleReorderClick}
-              className="w-full"
+              className="w-full bg-[#fc9d0a] hover:bg-[#e38d09] text-white"
               size="sm"
             >
               Re-order now

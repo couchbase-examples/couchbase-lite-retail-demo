@@ -1,6 +1,6 @@
 import { JSONObject } from '../util/json_types';
 import { DocID, CBLDictionary, CBLValue, RevID, Sequence } from './types';
-import { Encrypted } from './cryptoCodec';
+import { Encrypted, PartlyEncrypted } from './cryptoCodec';
 export declare const CheckpointStore = "cbl_checkpoints";
 export declare const MetaStore = "cbl_collections";
 export declare const BlobTableName = "cbl_blobs";
@@ -13,20 +13,29 @@ export type RevisionFlags = number & {
 export declare const RevFlagBlobby: RevisionFlags;
 export declare const RevFlagConflicted: RevisionFlags;
 export declare const RevFlagDeleted: RevisionFlags;
-/** A local document as stored in the local database.
+/** Common base of `LocalRevision` and `StoredRevision`. A document as stored in the Dexie table.
  *  Unlike `Revision`, it has mutable properties. */
-export interface LocalRevision {
+export interface LocalRevisionBase {
     readonly id: DocID;
     rev: RevID;
     seq: Sequence;
-    body: JSONObject;
     flags?: RevisionFlags;
     expires?: number;
     serverRev?: RevID;
-    conflict?: JSONObject | null;
-    encrypted?: Encrypted;
+    conflict?: PartlyEncrypted | null;
+    body: JSONObject;
 }
-export declare function revIsDeleted(rev: LocalRevision): boolean;
+/** This is the exact document type stored in a Collection's Dexie table.
+ *  In this form, `body` is the unencrypted parts of the body
+ *  and `encrypted`, if present, is the encrypted parts. */
+export interface StoredRevision extends LocalRevisionBase, PartlyEncrypted {
+}
+/** Decrypted form of a document.
+ *  (But `conflict` remains encrypted since it rarely needs decryption.) */
+export interface LocalRevision extends LocalRevisionBase {
+    encrypted?: false;
+}
+export declare function revIsDeleted(rev: LocalRevisionBase): boolean;
 export interface DatabaseMeta {
     challenge?: Encrypted;
 }

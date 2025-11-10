@@ -4,8 +4,8 @@ import { PusherConfig, PusherDelegate } from './pusher';
 import type * as logtape from "@logtape/logtape";
 export { type CheckpointerConfig, type CheckpointerDelegate } from './checkpointer';
 export { type PullConflictResolver, type PullerConfig, type PullerDelegate } from './puller';
-export { type PusherConfig, type PusherDelegate } from './pusher';
-export { type Checkpoint, type PushRevision, type LocalSequence, type LostAccess, type RemoteRevision, type RemoteRevisionInfo, ReplicatorError } from './types';
+export { type ChangeSet, type PusherConfig, type PusherDelegate } from './pusher';
+export { type Checkpoint, DocumentFlags, type ReplicationFilter, type PushRevision, type LocalSequence, type LostAccess, type RemoteRevision, type RemoteRevisionInfo, ReplicatorError } from './types';
 export declare const SyncLogger: logtape.Logger;
 export type CollectionID = string & {
     __brand: 'CollectionID';

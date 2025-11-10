@@ -6,6 +6,7 @@ import { WorkerParams } from './endpoint';
 export interface CheckpointerConfig {
     clientID: string;
     initialCheckpoint?: Checkpoint;
+    reset?: boolean;
 }
 /** @internal */
 export interface CheckpointerDelegate {
@@ -23,6 +24,9 @@ export declare class Checkpointer {
     get remoteSequence(): RemoteSequence | undefined;
     set localSequence(s: LocalSequence | undefined);
     set remoteSequence(s: RemoteSequence | undefined);
+    /** If there are unsaved changes, begins saving them immediately. */
+    saveASAP(): void;
+    /** Mark that I have unsaved changes, and schedule a save after kSaveDelay. */
     private saveSoon;
     private stopTimer;
     saveNow(): Promise<void>;

@@ -3,7 +3,6 @@ import { DocID } from './types';
 import { Collection } from './collection';
 import * as repl from "../replicator/replicator";
 import type * as logtape from "@logtape/logtape";
-export type { Credentials, CheckpointerDelegate, PusherConfig, PullerConfig, PullConflictResolver, RemoteRevisionInfo, ReplicatorError, Status } from '../replicator/replicator';
 /** Configuration for {@link Replicator}.
  *  @interface
  *  @property database  The Database to sync.
@@ -21,11 +20,36 @@ export interface ReplicatorConfig {
  *  @property push  Configuration for pushing. If not present, replicator will not push.
  *  @property pull  Configuration for pulling. If not present, replicator will not pull.
  *  @property documentIDs  If set, only these documents will be pushed or pulled.
- */
+ *  @property resetCheckpoint  If true, the replicator will ignore its current state and compare
+ *                             all document revision IDs with the server.  */
 export interface ReplicatorCollectionConfig {
-    push?: repl.PusherConfig;
-    pull?: repl.PullerConfig;
+    push?: PushConfig;
+    pull?: PullConfig;
     documentIDs?: readonly DocID[];
+    resetCheckpoint?: boolean;
+}
+/** Configuration parameters for pushing changes to the remote collection.
+ *  @property continuous    If true, stay connected indefinitely.
+ *  @property filter        Callback that can skip revisions one at a time. */
+export interface PushConfig {
+    continuous?: boolean;
+    filter?: repl.ReplicationFilter;
+}
+/** Configuration parameters for pulling changes from a remote collection.
+ *  @property continuous    If true, stay connected indefinitely.
+ *  @property channels      Optional set of Sync Gateway channels, for server-side filtering.
+ *  @property enableAutoPurge   If true, automatically purges documents when the user loses access
+ *                              through channel revocation on Sync Gateway. Defaults to true.
+ *  @property filter        Callback that can skip individual revisions.
+ *  @property conflictResolver  Callback that resolves conflicts between local and server docs.
+ *                              If not given, a default resolver is used that chooses the one
+ *                              with the higher revision ID (Most Writes Wins.) */
+export interface PullConfig {
+    continuous?: boolean;
+    channels?: readonly string[];
+    enableAutoPurge?: boolean;
+    filter?: repl.ReplicationFilter;
+    conflictResolver?: repl.PullConflictResolver;
 }
 /** Information about a document that's been pushed or pulled by a replicator.
  *  @see {@link Replicator.onDocuments} */
@@ -44,7 +68,11 @@ export declare class Replicator implements repl.CheckpointerDelegate {
     readonly database: Database;
     /** Callback that notifies when {@link status} changes. */
     onStatusChange?: (status: repl.Status) => void;
-    /** Callback that notifies when documents have been pushed or pulled. */
+    /** Callback that notifies when documents have been pushed or pulled.
+     *
+     * Note: To receive lost-access (revocation) notifications from the pull replicator
+     * when auto-purge is disabled, this callback must be registered *before*
+     * starting the pull replicator. */
     onDocuments?: (collection: Collection, direction: 'push' | 'pull', documents: DocumentEnded[]) => void;
     /** Current replication status & progress. */
     get status(): repl.Status;
@@ -59,9 +87,9 @@ export declare class Replicator implements repl.CheckpointerDelegate {
      *
      *  Does nothing if `run` is not active. */
     stop(): void;
-    /** Returns the checkpoint ID to use for a collection with a replicator configuration. */
-    private getCheckpointID;
-    /** Checkpointer delegate implementation. @internal */
+    /** Returns the checkpoint ID that will be used for a collection. @internal */
+    getCheckpointID(collection: Collection): Promise<string>;
+    /** Saves a checkpoint to the local database. @internal */
     saveCheckpoint(id: repl.CollectionID, clientID: string, checkpoint: repl.Checkpoint): Promise<void>;
     readonly logger: logtape.Logger;
 }

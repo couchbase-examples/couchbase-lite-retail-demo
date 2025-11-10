@@ -1,9 +1,18 @@
 import { JSONObject, JSONValue } from '../util/json_types';
+import { CBLDocument } from '../database/document';
 import type * as db from "@/database/types";
 export { type RevisionInfo } from '../database/types';
 export type DocID = db.DocID;
 export type RevID = db.RevID;
 export type LocalSequence = db.Sequence;
+/** Flags associated with a document being pushed or pulled. Passed to a filter function. */
+export declare enum DocumentFlags {
+    none = 0,
+    deleted = 1,
+    accessRemoved = 2
+}
+/** A user-supplied function that decides whether a document should be pushed or pulled. */
+export type ReplicationFilter = (doc: CBLDocument, flags: DocumentFlags) => boolean;
 /** A local revision being pushed. */
 export interface PushRevision extends db.Revision {
     readonly seq: LocalSequence;
@@ -27,6 +36,8 @@ export interface RemoteRevisionInfo {
 /** A revision pulled from the server. */
 export interface RemoteRevision extends db.Revision {
     readonly history: RevID[];
+    hasBlobs?: boolean;
+    readonly lostAccess?: LostAccess;
 }
 /** An object that holds the persistent state of replication. */
 export declare class Checkpoint {

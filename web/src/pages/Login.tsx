@@ -1,10 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, AlertCircle, Loader2, Eye, EyeOff, Info } from "lucide-react";
+import { ShoppingCart, AlertCircle, Loader2, Eye, EyeOff, Info, User, Lock, ArrowRight } from "lucide-react";
 import { initializeDatabase } from "@/lib/database/initDatabase";
 import { setupOneShotSync } from "@/lib/database/sync";
 import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl, getScopeNameFromStoreId } from "@/lib/auth";
@@ -36,6 +34,16 @@ const Login = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoDialog, setShowDemoDialog] = useState(false);
+
+  // Set solid background color for the entire page
+  useEffect(() => {
+    const originalBackground = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = '#f1c48d';
+    
+    return () => {
+      document.body.style.backgroundColor = originalBackground;
+    };
+  }, []);
 
   const performLogin = async (loginEmail: string, loginPassword: string) => {
     setError("");
@@ -140,111 +148,128 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <div className="absolute inset-0 bg-gradient-warm opacity-50 pointer-events-none"></div>
-      
-      <Card className="w-full max-w-md shadow-strong border-0 bg-card/95 backdrop-blur-sm relative z-10">
-        <CardHeader className="text-center space-y-4">
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 md:p-8" style={{ backgroundColor: '#f1c48d' }}>
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md space-y-8">
+        {/* Header with Shopping Cart Icon */}
+        <div className="text-center space-y-6">
           <div className="flex justify-center">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Package className="h-8 w-8 text-primary" />
+            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-lg">
+              <ShoppingCart className="h-12 w-12 text-white" strokeWidth={2} />
             </div>
           </div>
+          
           <div>
-            <CardTitle className="text-2xl font-bold">Inventory Pro</CardTitle>
-            <CardDescription className="text-base">
-              Employee login to access inventory management
-            </CardDescription>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Grocery Inventory
+            </h1>
+            <p className="text-lg md:text-xl text-white/90 font-medium">
+              Management System
+            </p>
           </div>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="store-id@supermarket.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="h-11"
-              />
-              <p className="text-xs text-muted-foreground">
-                Example: nyc-store-01@supermarket.com
-              </p>
+        </div>
+
+        {/* Login Form */}
+        <div className="w-full space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
-            
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Username Field */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative" style={{ isolation: 'isolate' }}>
+              <label htmlFor="email" className="text-sm font-semibold text-white">
+                Username
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <User className="h-5 w-5" />
+                </div>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="h-14 pl-12 pr-4 bg-white/90 border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-0"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-semibold text-white">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Lock className="h-5 w-5" />
+                </div>
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="Enter your password"
+                  placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-11 pr-12"
+                  className="h-14 pl-12 pr-12 bg-white/90 border-0 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-0"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground pointer-events-auto"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-                  <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base"
+
+            {/* Sign In Button */}
+            <Button
+              type="submit"
               disabled={!email || !password || loading}
+              className="w-full h-14 bg-[#D4945A] hover:bg-[#C8844A] text-white text-base font-semibold rounded-xl border-0 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Authenticating...
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Signing In...
                 </>
               ) : (
-                'Sign In'
+                <>
+                  <ArrowRight className="h-5 w-5 mr-2" />
+                  Sign In
+                </>
               )}
             </Button>
 
+            {/* View Demo Credentials Button */}
             <Dialog open={showDemoDialog} onOpenChange={setShowDemoDialog}>
               <DialogTrigger asChild>
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  className="w-full h-11 text-base"
                   disabled={loading}
+                  className="w-full h-14 bg-transparent text-[#D4945A] text-base font-semibold rounded-xl border-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:bg-white/10"
                 >
-                  <Info className="h-4 w-4 mr-2" />
+                  <Info className="h-5 w-5 mr-2" />
                   View Demo Credentials
-                </Button>
+                </button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="bg-[#F5E5D8] border-0">
                 <DialogHeader>
-                  <DialogTitle>Demo Credentials</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-gray-800">Demo Credentials</DialogTitle>
+                  <DialogDescription className="text-gray-600">
                     Click on a credential to sign in automatically
                   </DialogDescription>
                 </DialogHeader>
@@ -254,10 +279,10 @@ const Login = () => {
                       key={index}
                       onClick={() => handleDemoCredentialSelect(credential)}
                       disabled={loading}
-                      className="w-full text-left p-4 rounded-lg border border-border hover:bg-accent hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left p-4 rounded-xl bg-white hover:bg-white/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
-                      <div className="font-medium text-sm">{credential.email}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="font-medium text-sm text-gray-800">{credential.email}</div>
+                      <div className="text-xs text-gray-500 mt-1">
                         App Endpoint: {credential.appEndpoint}
                       </div>
                     </button>
@@ -266,8 +291,20 @@ const Login = () => {
               </DialogContent>
             </Dialog>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Powered by Couchbase - Bottom */}
+      <div className="flex flex-col items-center space-y-3 pb-4">
+        <img
+          src="/images/couchbase-logo.png"
+          alt="Couchbase"
+          className="h-12 w-12 object-contain"
+        />
+        <p className="text-[#D4945A] text-base font-medium">
+          Powered by Couchbase
+        </p>
+      </div>
     </div>
   );
 };

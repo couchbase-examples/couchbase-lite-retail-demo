@@ -1,19 +1,21 @@
 import { Endpoint, EndpointConfig, EndpointParams } from './endpoint';
-import { LocalSequence, PushRevision, RevisionInfo } from './types';
+import { LocalSequence, PushRevision, ReplicationFilter } from './types';
 import type * as blip from "@/blip/blip";
-/** Configuration parameters for pushing changes to the remote collection.
- *  @property continuous    If true, stay connected indefinitely.
- *  @property filter        Callback that can skip revisions one at a time. */
 export interface PusherConfig extends EndpointConfig {
-    filter?: (rev: RevisionInfo) => boolean;
+    filter?: ReplicationFilter;
     batchSize?: number;
 }
 export interface PusherDelegate {
-    /** Fetches revisions, ordered by sequence */
-    getChanges(since: LocalSequence | undefined, limit: number): Promise<PushRevision[]>;
+    /** Fetches up to `limit` revisions starting after sequence `seq`, ordered by sequence */
+    getChanges(since: LocalSequence | undefined, limit: number): Promise<ChangeSet>;
     getBlob(digest: string): Promise<Uint8Array | undefined>;
     /** Notification that a revision has been pushed, or failed to be pushed. */
     pushedRev?(rev: PushRevision, error?: Error): void;
+}
+export interface ChangeSet {
+    changes: Array<PushRevision>;
+    since?: LocalSequence;
+    lastSequence?: LocalSequence;
 }
 export declare class Pusher extends Endpoint {
     #private;
@@ -22,6 +24,7 @@ export declare class Pusher extends Endpoint {
     constructor(params: EndpointParams, config: PusherConfig, delegate: PusherDelegate);
     checkIdle(): boolean;
     private getMoreChanges;
+    /** This is an async task that runs until the replication completes. */
     private sendMoreChanges;
     /** Sends a 'rev' message with a single document revision. */
     private sendRev;

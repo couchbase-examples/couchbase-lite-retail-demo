@@ -90,7 +90,6 @@ export declare class Socket extends SocketAPI {
     sendMessage(message: msg.Message, mode?: ErrorMode): Promise<msg.Message>;
     /** Queues a {@link Message} object to be sent.
      * @param message  A Message object.
-     * @returns  A promise of a reply message, or `null` if the {@link NoReply} option is set.
      */
     sendMessageNoReply(message: msg.Message): void;
     private handleWSOpen;

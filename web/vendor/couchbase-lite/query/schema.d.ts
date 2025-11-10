@@ -15,7 +15,7 @@ export declare function ExprIsLiteral(expr: Expr): expr is LiteralExpr;
 export interface OperationMeta {
     sourceTextStart?: number;
     sourceTextEnd?: number;
-    aliasAdded?: boolean;
+    starColumn?: boolean;
 }
 /** A parsed SELECT statement, in LiteCore's JSON query schema.. */
 export interface Select {
