@@ -21,6 +21,7 @@ const Inventory = () => {
   const [items, setItems] = useState<InventoryItemType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Track local changes to prevent unnecessary reloads
   const localChangesRef = React.useRef<Set<string>>(new Set());
@@ -59,9 +60,11 @@ const Inventory = () => {
   }, [filteredItems]);
 
   // Load items from database
-  const loadItems = useCallback(async () => {
+  const loadItems = useCallback(async (showLoadingSpinner = false) => {
     try {
-      setLoading(true);
+      if (showLoadingSpinner) {
+        setLoading(true);
+      }
       logger.debug("Loading inventory from database");
       
       // Get collection name from stored credentials
@@ -95,9 +98,14 @@ const Inventory = () => {
     } catch (error) {
       logger.error("Error loading inventory", { error });
     } finally {
-      setLoading(false);
+      if (showLoadingSpinner) {
+        setLoading(false);
+      }
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     }
-  }, [db, logger]);
+  }, [db, logger, isInitialLoad]);
 
   // Load items and set up change listener
   useEffect(() => {
@@ -111,8 +119,8 @@ const Inventory = () => {
     const inventoryCollectionName = `${scopeName}.inventory` as any;
     const inventoryCollection = db.collections[inventoryCollectionName];
     
-    // Load items initially
-    void loadItems();
+    // Load items initially with loading spinner
+    void loadItems(true);
     
     // Set up change listener for REMOTE changes only
     // We use a debounce to avoid reloading too frequently during sync
@@ -138,13 +146,14 @@ const Inventory = () => {
       
       // Debounce reloads to avoid multiple rapid reloads during sync
       // This prevents scroll jumps and improves performance
+      // DON'T show loading spinner on background refreshes - this maintains scroll position
       if (reloadTimeout) {
         clearTimeout(reloadTimeout);
       }
       
       reloadTimeout = setTimeout(() => {
         logger.info("Reloading inventory after remote sync changes");
-        void loadItems();
+        void loadItems(false); // false = no loading spinner, keeps scroll position
       }, 500); // Wait 500ms after last change before reloading
     });
     
@@ -208,8 +217,8 @@ const Inventory = () => {
     } catch (error) {
       logger.error("Error updating inventory count", { id, error });
       localChangesRef.current.delete(id);
-      // On error, reload from database to get correct state
-      void loadItems();
+      // On error, reload from database to get correct state (no loading spinner)
+      void loadItems(false);
     }
   };
 
