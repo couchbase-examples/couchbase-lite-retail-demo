@@ -10,8 +10,14 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 - 🏪 **Multi-Platform Support**: Support for [iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html), [Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html) and [web](TODO). Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
 
 ## Demo Video
-A demo video where we are able to sync data between two android devices and a IPhone with CouchbaseLite's P2P.
-![](./common/assets/P2P_demo_android-android-ios.mp4)
+### Peer-to-Peer Sync across iOS and Android
+A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P.
+
+<video src="https://github.com/user-attachments/assets/P2P_demo_android-android-ios.mp4" controls width="700">
+  Your browser does not support the video tag.
+</video>
+
+> **Note**: If the video doesn't load, you can view it directly [here](./common/assets/P2P_demo_android-android-ios.mp4).
 
 ## Setup
 The complete setup of the demo would look like this:
@@ -77,14 +83,6 @@ The repo is organized as follows
 
 - **web**: This folder includes source code corresponding to the web version of the retail application. Follow the instructions in the [README.md](./web/README.md) file in that folder to build and run the web app.
 
-
-
-## App Demo
-If everything is configured per instructions, you should be able to demonstrate the following
-
 ### Real time Data Sync via Capella App Services
 ![](TODO:INCLUDE A GIF IMAGE SHOWCASING SYNC ACROSS ALL THREE APPS)
-
-### Peer-to-Peer Sync across iOS and Android
-![](TODO: INCLUDE A GIF IMAGE SHOWCASING P2P SYNC BETWEEN iOS and Android App or just iOS app)
 
