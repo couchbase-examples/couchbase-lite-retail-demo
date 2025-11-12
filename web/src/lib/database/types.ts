@@ -1,4 +1,4 @@
-import { type Database, type DatabaseConfig } from "@couchbaselabs/couchbase-lite";
+import { type Database, type DatabaseConfig } from "@couchbase/lite-js";
 
 export interface InventoryItem {
   id: string;

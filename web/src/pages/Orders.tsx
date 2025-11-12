@@ -10,8 +10,8 @@ import { SyncStatus } from "@/components/SyncStatus";
 import { OfflineToggle } from "@/components/OfflineToggle";
 import { ArrowLeft, ClipboardList, Package, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
-import type { ListenerToken } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins } from "@couchbase/lite-js";
+import type { ListenerToken } from "@couchbase/lite-js";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 import { getUILogger } from "@/lib/logging";
 

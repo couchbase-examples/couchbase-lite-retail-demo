@@ -1,4 +1,4 @@
-import { Replicator } from "@couchbaselabs/couchbase-lite";
+import { Replicator } from "@couchbase/lite-js";
 import type { RetailDatabase } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
 import { getSyncLogger } from "../logging";

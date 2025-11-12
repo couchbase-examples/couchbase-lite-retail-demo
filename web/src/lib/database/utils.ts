@@ -4,4 +4,4 @@ export function DocID(id: string): string {
 }
 
 // Re-export types we need
-export type { Database, DatabaseConfig } from "@couchbaselabs/couchbase-lite";
+export type { Database, DatabaseConfig } from "@couchbase/lite-js";

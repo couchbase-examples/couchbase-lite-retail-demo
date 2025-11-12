@@ -1,4 +1,4 @@
-import { DocID, LastWriteWins } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins } from "@couchbase/lite-js";
 import type { RetailDatabase, InventoryItem, Order } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
 import { getUILogger } from "../logging";

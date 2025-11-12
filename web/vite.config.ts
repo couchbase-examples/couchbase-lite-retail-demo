@@ -16,8 +16,7 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@couchbaselabs/couchbase-lite": path.resolve(__dirname, "./vendor/couchbase-lite/couchbase-lite.es.js"),
+      "@": path.resolve(__dirname, "./src")
     },
   },
 }));

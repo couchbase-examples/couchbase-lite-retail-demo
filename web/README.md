@@ -99,56 +99,11 @@ web/
 │   │   └── auth.ts        # Authentication helpers
 │   ├── pages/             # Page components
 │   └── App.tsx            # Main app component
-├── vendor/
-│   └── couchbase-lite/    # Couchbase Lite JavaScript SDK
 ├── public/                # Static assets
 ├── .env.example           # Environment variables template
 └── package.json           # Dependencies and scripts
 ```
 
-## Couchbase Lite
-
-### Adding the SDK to Your Project
-
-If you're setting up this project from scratch or need to add the SDK:
-
-Below steps are just for dev testing. Otherwise, we will have to use npm package whenever it is live.
-
-1. **Create the vendor directory structure:**
-   ```bash
-   mkdir -p vendor/couchbase-lite
-   ```
-
-2. **Copy the SDK files** to `vendor/couchbase-lite/`:
-   - `couchbase-lite.es.js` - Main ES module (primary entry point)
-   - `couchbase-lite.cjs.js` - CommonJS module
-   - `couchbase-lite.d.ts` - TypeScript definitions
-   - `database/` - Database classes and types
-   - `replicator/` - Replication functionality
-   - `query/` - Query APIs
-   - `blob/` - Blob handling
-   - `blip/` - BLIP protocol for sync
-   - `util/` - Utility functions
-
-3. **Verify the vite.config.ts alias** is pointing to the correct file:
-   ```typescript
-   "@couchbaselabs/couchbase-lite": path.resolve(__dirname, "./vendor/couchbase-lite/couchbase-lite.es.js")
-   ```
-
-4. **Install dependencies and test:**
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-### SDK Capabilities
-
-The bundled version provides:
-- Offline-first local database
-- Document-based NoSQL storage
-- Full-text search capabilities
-- Live queries with automatic updates
-- Efficient data sync with Capella App Services
 
 ## Authentication
 

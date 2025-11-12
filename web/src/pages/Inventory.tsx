@@ -10,7 +10,7 @@ import InventoryItem from "@/components/InventoryItem";
 import { SyncStatus } from "@/components/SyncStatus";
 import { OfflineToggle } from "@/components/OfflineToggle";
 import { ArrowLeft, Search, Package2 } from "lucide-react";
-import { DocID, LastWriteWins, type ListenerToken } from "@couchbaselabs/couchbase-lite";
+import { DocID, LastWriteWins, type ListenerToken } from "@couchbase/lite-js";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 import { getUILogger } from "@/lib/logging";
 
