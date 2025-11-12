@@ -9,8 +9,14 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 - 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android apps over a local network
 - 🏪 **Multi-Platform Support**: Support for [iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html), [Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html) and [web](TODO). Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
 
+## Demo Video
+A demo video where we are able to sync data between two android devices and a IPhone with CouchbaseLite's P2P.
+![](./common/assets/P2P_demo_android-android-ios.mp4)
+
 ## Setup
-The complete setup of the demo would look like this ![](./common/assets/app-setup.png)
+The complete setup of the demo would look like this:
+
+<img src="./common/assets/app-setup.png" height="400" alt="App Setup Diagram" />
 
 > [!NOTE]
 > You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for just that app and functionality.
