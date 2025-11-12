@@ -30,7 +30,7 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 - At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
 
-- Download and unzip sample dataset from ![](TODO INSERT s3 URL)
+- Download and unzip sample dataset from `./common/assets/demo-dataset.zip`
 
 - Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
 > [!NOTE]
