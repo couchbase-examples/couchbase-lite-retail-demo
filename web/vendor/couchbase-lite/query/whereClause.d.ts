@@ -1,10 +1,10 @@
 import { CompiledExpr, Value } from './eval';
 import { Expr } from './schema';
 import { DocProperty } from '../database/docProperty';
-import { LocalRevision } from '../database/internals';
+import { StoredRevision } from '../database/internals';
 import type * as dexie from "dexie";
-export type DexieWhereClause = dexie.WhereClause<LocalRevision, string, LocalRevision>;
-export type DexieQuery = dexie.Collection<LocalRevision, string, LocalRevision>;
+export type DexieWhereClause = dexie.WhereClause<StoredRevision, string, StoredRevision>;
+export type DexieQuery = dexie.Collection<StoredRevision, string, StoredRevision>;
 /** A constraint on a document property which can be handled by an index.
  *  Subclasses represent single values, string prefixes, and value ranges.
  *  @property sourceExpression  The JSON `Expr` this represents.

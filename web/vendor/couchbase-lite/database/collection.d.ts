@@ -1,9 +1,10 @@
 import { Database, SchemaKeys, TransactionMode } from './database';
 import { DocProperty } from './docProperty';
-import { LocalRevision } from './internals';
+import { LocalRevision, StoredRevision } from './internals';
 import { DocID, RevID, Sequence, CBLDictionary } from './types';
+import { JSONObject } from '../util/json_types';
 import { DocumentMeta, CBLDictLike, CBLDocument } from './document';
-import { CryptoCodec } from './cryptoCodec';
+import { CryptoCodec, PartlyEncrypted } from './cryptoCodec';
 import { ListenerToken } from '../couchbase-lite';
 import * as repl from "../replicator/types";
 import type * as logtape from "@logtape/logtape";
@@ -114,7 +115,7 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     /** {@link https://logtape.org LogTape} logger instance for this Collection. @internal */
     readonly logger: logtape.Logger;
     /** @internal */
-    get dexieTable(): dexie.Table<LocalRevision, string, LocalRevision>;
+    get dexieTable(): dexie.Table<StoredRevision, string, StoredRevision>;
     /** True if the database is open.  @internal */
     get isOpen(): boolean;
     /** @internal */
@@ -139,13 +140,21 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     /** Called by `rekey`, and by the Database after `encrypt` or `decrypt` if something went wrong.
      *  @internal */
     resetEncryption(codec: CryptoCodec | undefined, unencryptedProperties: Set<string> | undefined): void;
-    /** Called by queries to decrypt a LocalRevision returned from a Dexie query.  @internal */
-    decryptRevision(rev: LocalRevision): Promise<void>;
+    /** Called by queries to decrypt a StoredRevision returned from a Dexie query.  @internal */
+    decryptRevision(rev: StoredRevision): Promise<LocalRevision>;
+    /** Encrypts properties of each rev's `body` and puts the ciphertext in its `encrypted`. */
+    private decryptMaybeRevisions;
+    /** Encrypts properties of each rev's `body` and puts the ciphertext in its `encrypted`. */
+    private decryptRevisions;
+    /** Returns the rev's conflict in decrypted form. @internal */
+    decryptConflict(conflict: PartlyEncrypted): Promise<JSONObject>;
     /** Loads an existing {@link CBLDocument document}, or returns `undefined` if it doesn't exist. */
     getDocument(id: DocID): Promise<CBLDocument<D> | undefined>;
+    /** Gets an existing document without decrypting it. @internal */
+    getStoredRevision(id: DocID): Promise<StoredRevision | undefined>;
     /** Gets an existing document in its raw `LocalRevision` form. @internal
-     *  @throws EncryptionError  if `decrypt` is true, doc is encrypted & collection is locked. */
-    getRevision(id: DocID, decrypt: boolean): Promise<LocalRevision | undefined>;
+     *  @throws EncryptionError  if doc is encrypted & collection is locked. */
+    getRevision(id: DocID): Promise<LocalRevision | undefined>;
     /** Creates a new {@link CBLDocument document} instance tied to this collection.
      *  The document will not be persisted to the database until you save it.
      *  @param id  The document ID, which must be unique in the Collection.
@@ -303,12 +312,12 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     /** The last/highest sequence number assigned to a document.
      *  @internal */
     lastSequence(): Promise<Sequence>;
-    /** Gets the local current revision(s) of a document, during a pull operation.
+    /** Checks whether a remote revision is newer than the local one, during pull replication.
      *  @param id  The document ID.
-     *  @param serverRevID  The current revID on the server.
+     *  @param remoteRevID  The current revID on the server.
      *  @returns  Array of current revIDs, or null if the document is up to date with the server.
      *  @internal */
-    getAncestorRevs(id: DocID, serverRevID: RevID): Promise<RevID[] | null>;
+    getAncestorRevs(id: DocID, remoteRevID: RevID): Promise<RevID[] | null>;
     /** Saves multiple revisions received from the server.
      *  @param newRevs  Array of revisions received from the server.
      *  @param assumeNew  Set this to true if the docs most likely don't exist locally.
@@ -323,25 +332,26 @@ export declare class Collection<D extends CBLDictLike<D> = CBLDictionary> {
     /** Returns an ordered list of revisions that were created since a given local Sequence.
      *  @param since  The sequence to start just past; use `undefined` for all changes.
      *  @param limit  The maximum number of revisions to return.
+     *  @param filter  Optional function that can reject revisions.
      *  @returns  An array of `PushRevision`, ordered by Sequence.
      *  @internal */
-    getDocsSinceSequence(since: Sequence | undefined, limit: number): Promise<Array<repl.PushRevision>>;
+    getDocsSinceSequence(since: Sequence | undefined, limit: number, filter?: (rev: StoredRevision) => boolean): Promise<Array<repl.PushRevision>>;
     /** Updates documents' `serverRev` properties, after they've been pushed. @internal */
     updateServerRevs(pushedRevs: Map<DocID, RevID>): Promise<void>;
     /** Resolves a replication conflict. Returns false if `revID` is out of date. @internal */
     resolveConflict(docID: DocID, revID: RevID, resolvedBody: CBLDictionary | null): Promise<boolean>;
     /** Creates a LocalRevision from a RemoteRevision. */
     private createLocalRev;
-    /** Updates or creates a LocalRevision from a RemoteRevision. */
+    /** Updates or creates a LocalRevision from a RemoteRevision.
+     *  Returns the LocalRevision, or `undefined` if it would be unchanged. */
     private updateLocalRev;
     /** Encrypts properties of `rev.body` and puts the ciphertext in `rev.encrypted`.
-     *  - Precondition: *Codec exists* and is unlocked.
      *  - Precondition: `rev.body` contains _all_ doc properties. */
     private encryptLocalRev;
     /** Encrypts properties of each rev's `body` and puts the ciphertext in its `encrypted`. */
     private encryptLocalRevs;
-    /** Converts a LocalRevision read from the Table into a client Document object. */
-    private revToDoc;
+    /** Converts a LocalRevision read from the Table into a client Document object. @internal */
+    revToDoc(rev: LocalRevision): CBLDocument<D> | undefined;
     private nextSequence;
     /** generates the next consecutive sequence number; non-async but #meta must be loaded already */
     private _nextSequence;
