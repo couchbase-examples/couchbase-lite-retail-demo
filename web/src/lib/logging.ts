@@ -4,7 +4,7 @@
  */
 
 import * as logtape from "@logtape/logtape";
-import { LogCategory } from "@couchbaselabs/couchbase-lite";
+import { LogCategory } from "@couchbase/lite-js";
 
 // App-specific log categories (as subcategories of CouchbaseLite)
 export const APP_LOG_CATEGORY = [LogCategory, "App"];

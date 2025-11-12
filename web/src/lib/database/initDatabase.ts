@@ -1,4 +1,4 @@
-import { Database } from "@couchbaselabs/couchbase-lite";
+import { Database } from "@couchbase/lite-js";
 import { createRetailConfig } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
 

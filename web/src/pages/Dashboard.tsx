@@ -6,7 +6,7 @@ import { SyncStatus } from "@/components/SyncStatus";
 import { Package2, ShoppingCart, ClipboardList, LogOut } from "lucide-react";
 import { useDatabase } from "@/lib/database/DatabaseProvider";
 import { getStoredCredentials, clearCredentials, getScopeNameFromStoreId } from "@/lib/auth";
-import { DocID } from "@couchbaselabs/couchbase-lite";
+import { DocID } from "@couchbase/lite-js";
 import { startContinuousSync } from "@/main";
 import type { StoreProfile } from "@/lib/database/types";
 

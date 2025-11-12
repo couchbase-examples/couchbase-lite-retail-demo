@@ -26,9 +26,11 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 - Create two scopes named **"NYC-Store"** and **"AA-Store"** in the bucket by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes). 
 
-- In each scope, create three collectes named **"inventory"**, **"profile"** and **"orders"** respectively by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection). 
+- In each scope, create three collections named **"inventory"**, **"profile"** and **"orders"** respectively by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection). 
 
 - At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
+
+## Importing Sample Data Set
 
 - Download and unzip sample dataset from `./common/assets/demo-dataset.zip`
 

@@ -24,7 +24,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@couchbaselabs/couchbase-lite": ["./vendor/couchbase-lite/couchbase-lite.d.ts"]
+      "@couchbase/lite-js": ["./vendor/couchbase-lite/couchbase-lite.d.ts"]
     }
   },
   "include": ["src"]

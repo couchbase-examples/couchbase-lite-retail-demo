@@ -1,4 +1,4 @@
-import { Replicator, type ReplicatorConfig, type ReplicatorCollectionConfig, type ReplicatorStatus } from "@couchbaselabs/couchbase-lite";
+import { Replicator, type ReplicatorConfig, type ReplicatorCollectionConfig, type ReplicatorStatus } from "@couchbase/lite-js";
 import type { RetailDatabase } from "./types";
 
 // App Services configuration
