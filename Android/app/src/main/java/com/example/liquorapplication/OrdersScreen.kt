@@ -51,7 +51,7 @@ fun OrdersScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF2F2F7))  // iOS light gray background
+            .background(MaterialTheme.colorScheme.background)
     ) {
         TopAppBar(
             title = { Text("Orders", fontWeight = FontWeight.SemiBold) },
@@ -77,8 +77,8 @@ fun OrdersScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.White,
-                titleContentColor = Color.Black
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface
             )
         )
         
@@ -90,7 +90,7 @@ fun OrdersScreen(
                 "Approved" -> 2
                 else -> 0
             },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = Color(0xFF007AFF)
         ) {
             Tab(
@@ -186,7 +186,7 @@ fun OrderCard(order: Order) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),  // Subtle shadow like iOS
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)  // Rounded corners like iOS
     ) {
         Column(
@@ -203,7 +203,7 @@ fun OrderCard(order: Order) {
                     text = "Order #${order.orderId}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF000000)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 // Status Badge - More subtle iOS-like design
@@ -247,7 +247,7 @@ fun OrderCard(order: Order) {
                         text = order.sku,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF000000)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 
@@ -262,7 +262,7 @@ fun OrderCard(order: Order) {
                         text = "${order.orderQty} ${order.unit}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF000000)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -277,7 +277,7 @@ fun OrderCard(order: Order) {
                 Text(
                     text = order.productId.toString(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF000000),
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
                 )
             }

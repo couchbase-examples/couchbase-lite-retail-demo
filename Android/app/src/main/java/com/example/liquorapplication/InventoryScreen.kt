@@ -29,7 +29,6 @@ fun InventoryScreen(
     var searchText by remember { mutableStateOf("") }
     var groceryItems by remember { mutableStateOf<List<GroceryItem>>(emptyList()) }
     var filteredItems by remember { mutableStateOf<List<GroceryItem>>(emptyList()) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
     var profileName by remember { mutableStateOf<String?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -75,31 +74,6 @@ fun InventoryScreen(
         }
     }
     
-    // Logout confirmation dialog
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Sign Out") },
-            text = { Text("Are you sure you want to sign out?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        authManager.logout()
-                        showLogoutDialog = false
-                        onBackPressed()
-                    }
-                ) {
-                    Text("Sign Out")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-    
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -123,34 +97,10 @@ fun InventoryScreen(
                     }
                 }
             },
-            navigationIcon = {
-                IconButton(onClick = { showLogoutDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Logout,
-                        contentDescription = "Sign Out"
-                    )
-                }
-            },
             actions = {
-                // Refresh button
-                IconButton(onClick = { refreshData() }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh"
-                    )
-                }
-                // P2P sync indicator
-                P2PSyncIndicator(databaseManager = databaseManager)
-                // App Services sync indicator
-                AppServicesSyncIndicator(databaseManager = databaseManager)
+                // No actions - moved to Settings screen
             }
         )
-        
-        // App Services sync status bar
-        AppServicesSyncStatusBar(databaseManager = databaseManager)
-        
-        // P2P sync status bar
-        P2PSyncStatusBar(databaseManager = databaseManager)
         
         // Search bar
         OutlinedTextField(

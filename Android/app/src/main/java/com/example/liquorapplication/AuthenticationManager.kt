@@ -29,29 +29,21 @@ class AuthenticationManager(
     var storeProfile: StoreProfile? = null
         private set
     
-    // Valid credentials (matches iOS)
+    // Valid credentials (matches iOS - only these 2 credentials)
     private val validCredentials = mapOf(
-        // Ann Arbor Store
-        "aa-store-01@supermarket.com" to UserCredentials(
-            password = "P@ssword1",
-            fullName = "Ann Arbor Store Manager",
-            role = "Store Manager"
-        ),
-        "aa-store-01" to UserCredentials(
-            password = "P@ssword1",
-            fullName = "Ann Arbor Store Manager",
-            role = "Store Manager"
-        ),
-        // NYC Store
+        // NYC user → AA endpoint (supermarket-aa)
         "nyc-store-01@supermarket.com" to UserCredentials(
             password = "P@ssword1",
             fullName = "NYC Store Manager",
-            role = "Store Manager"
+            role = "Store Manager",
+            endpoint = "supermarket-aa"
         ),
-        "nyc-store-01" to UserCredentials(
+        // AA user → NYC endpoint (supermarket-nyc)
+        "aa-store-01@supermarket.com" to UserCredentials(
             password = "P@ssword1",
-            fullName = "NYC Store Manager",
-            role = "Store Manager"
+            fullName = "Ann Arbor Store Manager",
+            role = "Store Manager",
+            endpoint = "supermarket-nyc"
         )
     )
     
@@ -196,6 +188,21 @@ class AuthenticationManager(
     }
     
     /**
+     * Get all demo users for credentials screen
+     */
+    fun getAllUsers(): List<DemoUser> {
+        return validCredentials.map { (username, creds) ->
+            DemoUser(
+                username = username,
+                fullName = creds.fullName,
+                role = creds.role,
+                endpoint = creds.endpoint,
+                password = creds.password
+            )
+        }.sortedBy { it.username }
+    }
+    
+    /**
      * Close database connection
      */
     fun close() {
@@ -224,7 +231,19 @@ data class User(
 private data class UserCredentials(
     val password: String,
     val fullName: String,
-    val role: String
+    val role: String,
+    val endpoint: String
+)
+
+/**
+ * Demo user info for credentials screen
+ */
+data class DemoUser(
+    val username: String,
+    val fullName: String,
+    val role: String,
+    val endpoint: String,
+    val password: String
 )
 
 /**

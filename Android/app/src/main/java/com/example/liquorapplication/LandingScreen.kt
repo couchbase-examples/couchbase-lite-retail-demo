@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,14 +41,15 @@ fun LandingScreen(
     val navigationItems = listOf(
         NavigationItem("inventory", Icons.Default.List, "Inventory"),
         NavigationItem("profile", Icons.Default.Store, "Profile"),
-        NavigationItem("orders", Icons.Default.ShoppingCart, "Orders")
+        NavigationItem("orders", Icons.Default.ShoppingCart, "Orders"),
+        NavigationItem("settings", Icons.Default.Settings, "Settings")
     )
     
     // Scaffold with bottom navigation - Clean iOS-like design
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFFF8F8F8),  // Light gray background like iOS
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = Color(0xFF007AFF)     // iOS blue for active items
             ) {
                 navigationItems.forEach { item ->
@@ -93,11 +95,17 @@ fun LandingScreen(
                 "profile" -> ProfileScreen(
                     authManager = authManager,
                     databaseManager = databaseManager,
-                    onBackPressed = { /* No back action needed with bottom nav */ }
+                    onBackPressed = { currentScreen = "inventory" }
                 )
                 "orders" -> OrdersScreen(
                     databaseManager = databaseManager,
-                    onBackPressed = { /* No back action needed with bottom nav */ }
+                    onBackPressed = { currentScreen = "inventory" }
+                )
+                "settings" -> SettingsScreen(
+                    authManager = authManager,
+                    databaseManager = databaseManager,
+                    onBackPressed = { currentScreen = "inventory" },
+                    onLogout = onLogout // Pass logout callback to navigate to login
                 )
             }
         }

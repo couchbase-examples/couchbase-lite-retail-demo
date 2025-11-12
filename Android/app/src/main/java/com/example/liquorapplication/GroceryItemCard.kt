@@ -45,22 +45,18 @@ fun GroceryItemCard(
         }
     }
     
-    // Color coding for quantity
-    val quantityColor = when {
-        currentQuantity > 30 -> Color(0xFF2EBC6E) // Green
-        currentQuantity > 10 -> Color(0xFFF2C219) // Yellow/Orange  
-        else -> Color(0xFFF2574F) // Red
-    }
+    // Always use green color for quantity
+    val quantityColor = Color(0xFF2EBC6E) // Green
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(400.dp)
+            .height(440.dp)
     ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(400.dp),
+            .height(440.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -68,18 +64,23 @@ fun GroceryItemCard(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Product Image - larger, no rounded corners on top
+            // Product Image - larger size with minimal top padding
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
-                    .background(Color(0xFFF5F5F5))
+                    .height(160.dp)
+                    .padding(top = 2.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
                     model = item.imageURL,
                     contentDescription = item.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit
                 )
                 
                 // Fallback shopping cart icon when image fails to load
@@ -90,7 +91,7 @@ fun GroceryItemCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(32.dp),
-                        tint = Color.Gray
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -98,7 +99,9 @@ fun GroceryItemCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(top = 8.dp)
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Product name - bold, left aligned
@@ -108,7 +111,7 @@ fun GroceryItemCard(
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth()
                 )
                 
@@ -116,7 +119,7 @@ fun GroceryItemCard(
                 Text(
                     text = "Price: $${String.format("%.2f", item.price)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 // Inventory Count Section
@@ -129,7 +132,7 @@ fun GroceryItemCard(
                         text = "Inventory Count",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     // Large quantity number with color coding
@@ -158,7 +161,7 @@ fun GroceryItemCard(
                                 imageVector = Icons.Outlined.RemoveCircle,
                                 contentDescription = "Decrease",
                                 modifier = Modifier.size(32.dp),
-                                tint = if (currentQuantity > 0) Color.Gray else Color.Gray.copy(alpha = 0.3f)
+                                tint = if (currentQuantity > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
                         }
                         
@@ -172,7 +175,7 @@ fun GroceryItemCard(
                                 imageVector = Icons.Outlined.AddCircle,
                                 contentDescription = "Increase",
                                 modifier = Modifier.size(32.dp),
-                                tint = Color.Gray
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -189,7 +192,7 @@ fun GroceryItemCard(
                         .fillMaxWidth()
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFD9B0B)
+                        containerColor = Color(0xFFFC9C0C)
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {

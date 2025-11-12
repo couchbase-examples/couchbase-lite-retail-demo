@@ -86,7 +86,7 @@ object AppConfig {
     // NOTE: This MUST match iOS peer group ID for cross-platform sync!
     const val P2P_PEER_GROUP_ID = "com.example.groceryapp"  // Network identifier for discovering peers (matches iOS)
     const val P2P_IDENTITY_LABEL = "com.example.liquorapp.p2p.identity"  // TLS identity label
-    const val P2P_AUTO_START = false  // Auto-start P2P sync on app launch
+    const val P2P_AUTO_START = true  // Auto-start P2P sync on app launch
     
     // MARK: - Debug Configuration
     const val DEBUG_LOGGING = true
