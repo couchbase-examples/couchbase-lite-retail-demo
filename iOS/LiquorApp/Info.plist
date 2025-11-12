@@ -2,26 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_couchbaseP2P._tcp</string>
-	</array>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Grocery Mart uses local network to discover and sync data with nearby devices for peer-to-peer synchronization.</string>
-	<!-- Couchbase Lite App Services Configuration -->
-	<!-- These values can be overridden by environment variables when running from Xcode -->
-	<!-- To set env vars: Edit Scheme -> Run -> Arguments -> Environment Variables -->
-	<key>CBL_BASE_URL</key>
-	<string>wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984</string>
 	<key>CBL_AA_DB</key>
 	<string>supermarket-aa</string>
-	<key>CBL_NYC_DB</key>
-	<string>supermarket-nyc</string>
 	<key>CBL_AA_USER</key>
 	<string>aa-store-01@supermarket.com</string>
+	<key>CBL_BASE_URL</key>
+	<string>wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984/</string>
+	<key>CBL_NYC_DB</key>
+	<string>supermarket-nyc</string>
 	<key>CBL_NYC_USER</key>
 	<string>nyc-store-01@supermarket.com</string>
 	<key>CBL_PASSWORD</key>
 	<string>P@ssword1</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_couchbaseP2P._tcp</string>
+	</array>
 </dict>
 </plist>

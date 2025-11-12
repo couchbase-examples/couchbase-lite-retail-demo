@@ -4,7 +4,7 @@ struct StoreProfileView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
     @State private var profile: StoreProfile?
     @State private var isLoading = true
-    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedTab: Int
     
     var body: some View {
         NavigationView {
@@ -118,7 +118,7 @@ struct StoreProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        dismiss()
+                        selectedTab = 0
                     }
                 }
             }

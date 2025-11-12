@@ -42,22 +42,23 @@ struct LiquorItemCard: View {
     
     var body: some View {
         ZStack {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             // Product image - larger size
             CachedAsyncImage(
                 url: item.imageURL,
                 placeholder: Image(systemName: "cart.fill")
             )
-            .aspectRatio(contentMode: .fill)
-            .frame(height: 120)
+            .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .clipped()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(0)
+            .frame(height: 160)
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(8)
+            .padding(.top, 2)
             
             VStack(alignment: .leading, spacing: 8) {
                 // Product name - bold and left aligned
                 Text(item.name)
+                    .padding(.top, 8)
                     .font(.system(size: 16, weight: .bold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -67,7 +68,7 @@ struct LiquorItemCard: View {
                 // Price only
                 Text("Price: $\(item.price, specifier: "%.2f")")
                     .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                 
                 // Inventory Count Section
                 VStack(spacing: 8) {
@@ -92,7 +93,7 @@ struct LiquorItemCard: View {
                         }) {
                             Image(systemName: "minus.circle")
                                 .font(.system(size: 32))
-                                .foregroundColor(currentQuantity > 0 ? .gray : .gray.opacity(0.3))
+                                .foregroundColor(currentQuantity > 0 ? Color(UIColor.systemGray) : Color(UIColor.systemGray).opacity(0.3))
                         }
                         .disabled(currentQuantity == 0)
                         
@@ -102,7 +103,7 @@ struct LiquorItemCard: View {
                         }) {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 32))
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color(UIColor.systemGray))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -118,18 +119,18 @@ struct LiquorItemCard: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color(red: 0.99, green: 0.61, blue: 0.04))
+                        .background(Color(hex: "FC9C0C"))
                         .cornerRadius(8)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }
-        .frame(height: 400)
+        .frame(height: 440)
         .frame(maxWidth: .infinity)
-        .background(Color.white)
+        .background(Color(UIColor.systemBackground))
         .cornerRadius(12)
-        .shadow(color: .gray.opacity(0.2), radius: 8, x: 0, y: 4)
+        .shadow(color: Color(UIColor.label).opacity(0.1), radius: 8, x: 0, y: 4)
         .onAppear {
             currentQuantity = item.quantity
         }
@@ -145,7 +146,7 @@ struct LiquorItemCard: View {
         if showOrderPlaced {
             Color(red: 0.30, green: 0.69, blue: 0.31)
                 .opacity(0.95)
-                .frame(height: 400)
+                .frame(height: 440)
                 .frame(maxWidth: .infinity)
                 .cornerRadius(12)
                 .overlay(

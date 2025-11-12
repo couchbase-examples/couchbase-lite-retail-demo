@@ -7,7 +7,7 @@ struct OrdersView: View {
     @State private var isLoading = true
     @State private var cancellables = Set<AnyCancellable>()
     @State private var selectedFilter = "All"  // "All", "In Review", "Approved"
-    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedTab: Int
     
     // Filter orders based on selected filter
     var filteredOrders: [Order] {
@@ -80,7 +80,7 @@ struct OrdersView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        dismiss()
+                        selectedTab = 0
                     }
                 }
             }

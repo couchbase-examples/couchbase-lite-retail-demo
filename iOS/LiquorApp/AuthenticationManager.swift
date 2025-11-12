@@ -20,30 +20,21 @@ class AuthenticationManager: ObservableObject {
     private let sessionDocID = "user_session"
     
     // Capella App Services credentials
-    // Using the credentials from AppConfig for the selected store
-    private let validCredentials: [String: (password: String, fullName: String, role: String)] = [
-        // Ann Arbor Store
-        "aa-store-01@supermarket.com": (
-            password: "P@ssword1",
-            fullName: "Ann Arbor Store Manager",
-            role: "Store Manager"
-        ),
-        // NYC Store
+    // Only these 2 credentials are valid
+    private let validCredentials: [String: (password: String, fullName: String, role: String, endpoint: String)] = [
+        // NYC user → AA endpoint (supermarket-aa)
         "nyc-store-01@supermarket.com": (
             password: "P@ssword1",
             fullName: "NYC Store Manager",
-            role: "Store Manager"
+            role: "Store Manager",
+            endpoint: "supermarket-aa"
         ),
-        // For convenience, also accept simplified usernames
-        "aa-store-01": (
+        // AA user → NYC endpoint (supermarket-nyc)
+        "aa-store-01@supermarket.com": (
             password: "P@ssword1",
             fullName: "Ann Arbor Store Manager",
-            role: "Store Manager"
-        ),
-        "nyc-store-01": (
-            password: "P@ssword1",
-            fullName: "NYC Store Manager",
-            role: "Store Manager"
+            role: "Store Manager",
+            endpoint: "supermarket-nyc"
         )
     ]
     
@@ -178,9 +169,9 @@ class AuthenticationManager: ObservableObject {
     
     // MARK: - Utility Methods
     
-    func getAllUsers() -> [(username: String, fullName: String, role: String)] {
+    func getAllUsers() -> [(username: String, fullName: String, role: String, endpoint: String, password: String)] {
         return validCredentials.map { (username, details) in
-            (username: username, fullName: details.fullName, role: details.role)
+            (username: username, fullName: details.fullName, role: details.role, endpoint: details.endpoint, password: details.password)
         }.sorted { $0.username < $1.username }
     }
 }

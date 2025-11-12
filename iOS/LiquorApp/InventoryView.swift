@@ -30,32 +30,12 @@ struct InventoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Search bar with sync indicator
+                // Search bar
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
                     
                     TextField("Search liquor...", text: $searchText)
-                    
-                    // Sync indicators with App Services + P2P
-                    HStack(spacing: 8) {
-                        // App Services sync indicator
-                        AppServicesSyncIndicator()
-                        
-                        // P2P sync indicator
-                        HStack(spacing: 4) {
-                            Image(systemName: "wifi")
-                                .foregroundColor(.blue)
-                                .opacity(0.8)
-                            
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("P2P: \(p2pSyncManager.connectedPeers.count)")
-                                    .font(.caption2)
-                                    .foregroundColor(.blue)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
                 }
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal, 16)
@@ -109,37 +89,14 @@ struct InventoryView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        // Refresh button
-                        Button(action: {
-                            Task {
-                                await refreshData()
-                            }
-                        }) {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundColor(.blue)
-                                .font(.title3)
-                        }
-                        
-                        // User role badge
-                        if let user = authManager.currentUser {
-                            Text(user.role)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
-                        }
-                        
-                        // Logout button
-                        Button(action: {
-                            authManager.logout()
-                            dismiss()
-                        }) {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                                .foregroundColor(.red)
-                                .font(.title2)
-                        }
+                    // User role badge
+                    if let user = authManager.currentUser {
+                        Text(user.role)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(8)
                     }
                 }
             }

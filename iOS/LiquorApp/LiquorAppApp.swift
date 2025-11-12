@@ -60,6 +60,12 @@ struct LiquorAppApp: App {
     
     @MainActor
     private func initializeMultipeerReplicatorSync() async {
+        // Check if P2P sync is enabled
+        guard AppConfig.enableP2PSync else {
+            print("⚠️ [MultipeerReplicator] P2P sync is disabled in AppConfig")
+            return
+        }
+        
         // Get the database and collections from DatabaseManager
         guard let database = databaseManager.database else {
             print("⚠️ [MultipeerReplicator] Database not ready yet")
