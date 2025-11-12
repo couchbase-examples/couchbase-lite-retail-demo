@@ -44,7 +44,7 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 ## Importing Sample Data Set
 
-- Download and unzip sample dataset from `./common/assets/demo-dataset.zip`
+- Download and unzip sample dataset from [demo-dataset.zip](https://cbda-pulkit-bucket.s3.us-west-1.amazonaws.com/All-Jsons/demo-dataset.zip)
 
 - Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
 > [!NOTE]
