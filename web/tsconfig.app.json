@@ -23,8 +23,7 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@couchbase/lite-js": ["./vendor/couchbase-lite/couchbase-lite.d.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]
