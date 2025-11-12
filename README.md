@@ -13,11 +13,8 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 ### Peer-to-Peer Sync across iOS and Android
 A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P.
 
-<video src="https://github.com/couchbase-examples/couchbase-lite-retail-demo/blob/main/common/assets/P2P_demo_android-android-ios.mp4" controls width="700">
-  Your browser does not support the video tag.
-</video>
 
-> **Note**: If the video doesn't load, you can view it directly [here](./common/assets/P2P_demo_android-android-ios.mp4).
+https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
 ## Setup
 The complete setup of the demo would look like this:
