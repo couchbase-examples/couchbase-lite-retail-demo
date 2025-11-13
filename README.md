@@ -7,7 +7,7 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 - 📱 **Offline-First**: Ability to operate in disconnected mode without an Internet connection with Couchbase Lite as a local database. 
 - 🔄 **Real-Time Sync**: Opportunistically sync data, in uni-directional or bi-directional mode with backend Couchbase Capella clusters via Capella App Services. Data is synced across iOS, Android and JS app via App Services.
 - 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android apps over a local network
-- 🏪 **Multi-Platform Support**: Support for [iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html), [Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html) and [web](TODO). Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
+- 🏪 **Multi-Platform Support**: Support for **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)** and **[web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
 
 ## Demo Video
 ### Peer-to-Peer Sync across iOS and Android
@@ -16,7 +16,11 @@ A demo video where we are able to sync data between two android devices and an i
 
 https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
-## Setup
+
+### Real time Data Sync via Capella App Services
+![COMING SOON]()
+
+## Demo Setup
 The complete setup of the demo would look like this:
 
 <img src="./common/assets/app-setup.png" height="400" alt="App Setup Diagram" />
@@ -70,6 +74,20 @@ The configuration of App User should look something like this:
 
 ![](./common/assets/connectapp.png)
 
+### CORS Setup for Web Applications
+If you are trying out the web application, you will need to configure App Endpoints to enable CORS. Skip this section if you are only testing mobile apps.
+Repeat these steps for each of the App Endpoints
+
+- Enable CORS on your App Endpoint from the Settings Page by following these [instructions](https://docs.couchbase.com/cloud/app-services/deployment/cors-configuration-for-app-services.html#about-cors-configuration)
+  
+- Set **Origin** as "http://localhost:8080". This corresponds to the URL that is running the web app. Make sure the ports match as well
+  ![](./common/assets/cors1.png)
+
+- Set **Login Origin** as "http://localhost:8080". This corresponds to the URL that is running the web app. Make sure the ports match as well
+
+- Set **Allowed Headers** as "Authorization". This corresponds to the URL that is running the web app. Make sure the ports match as well
+  ![](./common/assets/cors2.png)
+
 ## Repo Structure
 
 The repo is organized as follows
@@ -80,6 +98,5 @@ The repo is organized as follows
 
 - **web**: This folder includes source code corresponding to the web version of the retail application. Follow the instructions in the [README.md](./web/README.md) file in that folder to build and run the web app.
 
-### Real time Data Sync via Capella App Services
-![](TODO:INCLUDE A GIF IMAGE SHOWCASING SYNC ACROSS ALL THREE APPS)
+
 
