@@ -78,7 +78,7 @@ The configuration of App User should look something like this:
 If you are trying out the web application, you will need to configure App Endpoints to enable CORS. Skip this section if you are only testing mobile apps.
 Repeat these steps for each of the App Endpoints
 
-- Enable CORS on your App Endpoint from the Settings Page by following the these [instructions](https://docs.couchbase.com/cloud/app-services/deployment/cors-configuration-for-app-services.html#about-cors-configuration)
+- Enable CORS on your App Endpoint from the Settings Page by following these [instructions](https://docs.couchbase.com/cloud/app-services/deployment/cors-configuration-for-app-services.html#about-cors-configuration)
   
 - Set **Origin** as "http://localhost:8080". This corresponds to the URL that is running the web app. Make sure the ports match as well
   ![](./common/assets/cors1.png)
