@@ -18,7 +18,12 @@ https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
 
 ### Real time Data Sync via Capella App Services
-![COMING SOON]()
+
+
+
+https://github.com/user-attachments/assets/72f61f2b-118f-4bc6-8f43-30dfac6e8f5e
+
+
 
 ## Demo Setup
 The complete setup of the demo would look like this:
