@@ -89,6 +89,9 @@ class DatabaseManager: ObservableObject {
     
     private func openDatabase() {
         do {
+            // Check if we need to delete the old database due to store change
+            checkAndHandleStoreChange()
+            
             let config = DatabaseConfiguration()
             database = try Database(name: databaseName, config: config)
             print("✅ Database opened successfully: \(databaseName)")
@@ -104,6 +107,32 @@ class DatabaseManager: ObservableObject {
         } catch {
             print("❌ Error opening database: \(error)")
         }
+    }
+    
+    /// Check if the store configuration has changed and delete old database if needed
+    private func checkAndHandleStoreChange() {
+        let defaults = UserDefaults.standard
+        let lastStoreKey = "lastConfiguredStore"
+        let currentStoreId = AppConfig.storeId
+        let lastStoreId = defaults.string(forKey: lastStoreKey)
+        
+        // If store has changed, delete the old database
+        if let lastStoreId = lastStoreId, lastStoreId != currentStoreId {
+            print("🔄 Store changed from \(lastStoreId) to \(currentStoreId)")
+            print("🗑️ Deleting old database to prevent data conflicts...")
+            
+            do {
+                try Database.delete(withName: databaseName)
+                print("✅ Old database deleted successfully")
+            } catch {
+                print("⚠️ Failed to delete old database: \(error)")
+            }
+        } else {
+            print("📍 Store configuration unchanged: \(currentStoreId)")
+        }
+        
+        // Save current store ID for next launch
+        defaults.set(currentStoreId, forKey: lastStoreKey)
     }
     
     // MARK: - Data Seeding REMOVED

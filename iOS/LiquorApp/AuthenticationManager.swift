@@ -22,19 +22,19 @@ class AuthenticationManager: ObservableObject {
     // Capella App Services credentials
     // Only these 2 credentials are valid
     private let validCredentials: [String: (password: String, fullName: String, role: String, endpoint: String)] = [
-        // NYC user → AA endpoint (supermarket-aa)
+        // NYC user → NYC endpoint (supermarket-nyc)
         "nyc-store-01@supermarket.com": (
             password: "P@ssword1",
             fullName: "NYC Store Manager",
             role: "Store Manager",
-            endpoint: "supermarket-aa"
+            endpoint: "supermarket-nyc"
         ),
-        // AA user → NYC endpoint (supermarket-nyc)
+        // AA user → AA endpoint (supermarket-aa)
         "aa-store-01@supermarket.com": (
             password: "P@ssword1",
             fullName: "Ann Arbor Store Manager",
             role: "Store Manager",
-            endpoint: "supermarket-nyc"
+            endpoint: "supermarket-aa"
         )
     ]
     
@@ -140,6 +140,28 @@ class AuthenticationManager: ObservableObject {
               let fullName = sessionDoc.string(forKey: "fullName"),
               let role = sessionDoc.string(forKey: "role") else {
             print("ℹ️ Invalid session data")
+            return
+        }
+        
+        // Validate that the stored credentials still match the current app configuration
+        guard validCredentials[username] != nil else {
+            print("⚠️ Stored credentials are no longer valid, clearing session")
+            clearStoredLogin()
+            return
+        }
+        
+        // Validate that the stored session matches the current store configuration
+        let expectedUsername: String
+        switch AppConfig.currentStore {
+        case .aa:
+            expectedUsername = "aa-store-01@supermarket.com"
+        case .nyc:
+            expectedUsername = "nyc-store-01@supermarket.com"
+        }
+        
+        guard username == expectedUsername else {
+            print("⚠️ Stored session (\(username)) doesn't match current store (\(AppConfig.currentStore.displayName)), clearing session")
+            clearStoredLogin()
             return
         }
         

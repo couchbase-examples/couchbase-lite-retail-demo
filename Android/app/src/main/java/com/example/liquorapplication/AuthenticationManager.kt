@@ -31,19 +31,19 @@ class AuthenticationManager(
     
     // Valid credentials (matches iOS - only these 2 credentials)
     private val validCredentials = mapOf(
-        // NYC user → AA endpoint (supermarket-aa)
+        // NYC user → NYC endpoint (supermarket-nyc)
         "nyc-store-01@supermarket.com" to UserCredentials(
             password = "P@ssword1",
             fullName = "NYC Store Manager",
             role = "Store Manager",
-            endpoint = "supermarket-aa"
+            endpoint = "supermarket-nyc"
         ),
-        // AA user → NYC endpoint (supermarket-nyc)
+        // AA user → AA endpoint (supermarket-aa)
         "aa-store-01@supermarket.com" to UserCredentials(
             password = "P@ssword1",
             fullName = "Ann Arbor Store Manager",
             role = "Store Manager",
-            endpoint = "supermarket-nyc"
+            endpoint = "supermarket-aa"
         )
     )
     
@@ -137,14 +137,41 @@ class AuthenticationManager(
                 val isAuth = sessionDoc.getBoolean("isAuthenticated")
                 
                 if (isAuth && username != null && fullName != null && role != null) {
+                    // Validate that the stored credentials still match the current app configuration
+                    val storedCredentials = validCredentials[username]
+                    if (storedCredentials == null) {
+                        // Credentials no longer valid, clear session
+                        Log.d(TAG, "⚠️ Stored credentials are no longer valid, clearing session")
+                        clearSession()
+                        return
+                    }
+                    
+                    // Validate that the stored session matches the current store configuration
+                    val expectedUsername = when (AppConfig.currentStore) {
+                        StoreLocation.AA -> "aa-store-01@supermarket.com"
+                        StoreLocation.NYC -> "nyc-store-01@supermarket.com"
+                    }
+                    
+                    if (username != expectedUsername) {
+                        Log.d(TAG, "⚠️ Stored session ($username) doesn't match current store (${AppConfig.currentStore.displayName}), clearing session")
+                        clearSession()
+                        return
+                    }
+                    
                     // Restore session
                     currentUser = User(username, fullName, role, profileName)
                     isAuthenticated = true
                     Log.d(TAG, "🔄 Restored login session: $fullName")
+                } else {
+                    Log.d(TAG, "ℹ️ No valid stored session found")
                 }
+            } else {
+                Log.d(TAG, "ℹ️ No stored session document")
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error checking stored login", e)
+            // Clear invalid session on error
+            clearSession()
         }
     }
     

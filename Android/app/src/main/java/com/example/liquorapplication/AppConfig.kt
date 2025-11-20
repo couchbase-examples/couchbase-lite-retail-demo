@@ -19,7 +19,7 @@ object AppConfig {
     
     // MARK: - Current Store Selection
     // Change this value to switch between stores
-    val currentStore: StoreLocation = StoreLocation.AA
+    val currentStore: StoreLocation = StoreLocation.NYC
     
     // MARK: - Capella App Services Configuration (ENV-DRIVEN)
     // Values are injected via BuildConfig (from Gradle properties or env vars)

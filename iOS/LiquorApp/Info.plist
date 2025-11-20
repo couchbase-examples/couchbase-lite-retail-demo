@@ -7,7 +7,7 @@
 	<key>CBL_AA_USER</key>
 	<string>aa-store-01@supermarket.com</string>
 	<key>CBL_BASE_URL</key>
-	<string>wss://rmyrslbide2f0qwi.apps.cloud.couchbase.com:4984/</string>
+	<string>wss://d91glcpey3egweng.apps.cloud.couchbase.com:4984</string>
 	<key>CBL_NYC_DB</key>
 	<string>supermarket-nyc</string>
 	<key>CBL_NYC_USER</key>

@@ -2,6 +2,24 @@
 
 A retail inventory management app for Android demonstrating Couchbase Lite's offline-first capabilities, real-time sync with Capella App Services, and peer-to-peer sync between devices.
 
+## Quick Start (For Already Configured Systems)
+
+If you've already completed the initial setup and have Java 17 + Couchbase Lite EE installed:
+
+```bash
+# Open the project in Android Studio
+open -a "Android Studio" /path/to/Android
+
+# Or build from command line
+cd /path/to/Android
+./gradlew assembleDebug
+
+# Install on device
+./gradlew installDebug
+```
+
+**First time setup?** Continue reading below for complete installation instructions.
+
 ## Requirements
 
 - **Android Studio**: Ladybug (2024.2.1) or later
@@ -9,8 +27,9 @@ A retail inventory management app for Android demonstrating Couchbase Lite's off
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
-- **JDK**: 17 or later (bundled with Android Studio)
+- **JDK**: 17 or later
 - **Kotlin**: 2.0.21
+- **Homebrew**: For installing Java on macOS (optional but recommended)
 
 ## Dependencies
 
@@ -21,17 +40,102 @@ The project uses Gradle with Kotlin DSL for dependency management. Key dependenc
 - **Kotlin Coroutines**: For asynchronous operations
 - **Lifecycle Components**: ViewModel and LiveData
 
-All dependencies are declared in `gradle/libs.versions.toml` and automatically downloaded by Gradle.
+All dependencies are declared in `gradle/libs.versions.toml` and automatically resolved by Gradle.
+
+## Initial Setup (macOS)
+
+### Step 1: Install Java 17
+
+If you don't have Java 17 installed, install it using Homebrew:
+
+```bash
+# Install OpenJDK 17
+brew install openjdk@17
+
+# Configure environment variables in ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.zshrc
+echo 'export JAVA_HOME="/opt/homebrew/opt/openjdk@17"' >> ~/.zshrc
+
+# Apply changes
+source ~/.zshrc
+
+# Verify installation
+java -version
+```
+
+You should see: `openjdk version "17.0.x"`
+
+### Step 2: Configure Gradle for SSL
+
+Create global Gradle configuration to handle SSL certificates:
+
+```bash
+# Create global gradle.properties
+cat > ~/.gradle/gradle.properties << 'EOF'
+# Global Gradle properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+EOF
+```
+
+### Step 3: Install Couchbase Lite Enterprise Edition (Local Repository)
+
+Due to SSL certificate issues with the Couchbase Maven repository, we need to manually download the Enterprise Edition libraries:
+
+```bash
+# Create local Maven repository directories
+mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0
+mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0
+
+# Download EE KTX (72KB)
+cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o couchbase-lite-android-ee-ktx-3.3.0.aar
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o couchbase-lite-android-ee-ktx-3.3.0.pom
+
+# Download EE Core (9.4MB)
+cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o couchbase-lite-android-ee-3.3.0.aar
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o couchbase-lite-android-ee-3.3.0.pom
+
+# Verify files were downloaded
+ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/
+ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
+```
+
+**Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
 
 ## Getting Started
 
-### 1. Open the Project
+### 1. Verify Prerequisites
+
+Before opening the project, ensure:
+
+```bash
+# Check Java version
+java -version  # Should show 17.0.x
+
+# Check Gradle wrapper exists
+cd /path/to/Android
+ls -la gradlew  # Should exist and be executable
+
+# Verify Couchbase EE is installed locally
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+```
+
+### 2. Open the Project
 
 Open Android Studio and select **File** > **Open**, then navigate to the `Android` directory and open it.
 
-Android Studio will automatically sync Gradle and download all required dependencies. This may take a few minutes on first open.
+Android Studio will automatically sync Gradle and resolve dependencies from:
+1. Local Maven repository (`~/.m2/repository/`) for Couchbase Lite EE
+2. Google Maven for Android libraries  
+3. Maven Central for other dependencies
 
-### 2. Configure Capella App Services
+This may take a few minutes on first open.
+
+### 3. Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
@@ -69,7 +173,7 @@ CBL_PASSWORD=P@ssword1
 
 **Note**: Do not commit `gradle.properties` with sensitive credentials to version control.
 
-### 3. Build and Run
+### 4. Build and Run
 
 Select an emulator or connected device from the device dropdown and click **Run** (▶).
 
@@ -178,10 +282,50 @@ For production releases, configure signing in `app/build.gradle.kts`.
 
 ### Build Errors
 
+**"Could not install Gradle distribution" or SSL/Certificate errors**
+
+If you see errors related to Gradle distribution or SSL certificates:
+
+```bash
+# Stop all Gradle daemons
+cd /path/to/Android
+./gradlew --stop
+
+# Clean caches
+rm -rf .gradle/
+rm -rf ~/.gradle/daemon/
+
+# Verify global gradle.properties exists with SSL config
+cat ~/.gradle/gradle.properties
+# Should contain: -Djavax.net.ssl.trustStoreType=KeychainStore
+
+# Restart Android Studio and sync again
+```
+
 **"Could not resolve com.couchbase.lite:couchbase-lite-android-ee-ktx"**
-- Ensure you have internet connectivity for Gradle to download dependencies
-- Try **File** > **Invalidate Caches** > **Invalidate and Restart**
-- Check your `gradle/libs.versions.toml` has the correct Couchbase Lite version
+
+This usually means the Couchbase Lite EE libraries aren't in your local Maven repository:
+
+```bash
+# Verify the files exist
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
+
+# If missing, re-run Step 3 from Initial Setup
+```
+
+Also verify that `settings.gradle.kts` includes `mavenLocal()`:
+
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        mavenLocal()  // Must be first!
+        google()
+        mavenCentral()
+    }
+}
+```
 
 **"BuildConfig cannot be resolved"**
 - Make sure `buildFeatures { buildConfig = true }` is set in `app/build.gradle.kts`
@@ -189,9 +333,11 @@ For production releases, configure signing in `app/build.gradle.kts`.
 - Verify all required environment variables or Gradle properties are set
 
 **Gradle sync failures**
+- Verify Java 17 is installed: `java -version`
+- Check `JAVA_HOME` is set: `echo $JAVA_HOME`
 - Update Android Gradle Plugin: **Tools** > **SDK Manager** > **SDK Tools**
-- Check you have JDK 17 or later installed
 - Clean and rebuild: **Build** > **Clean Project**, then **Build** > **Rebuild Project**
+- Try invalidating caches: **File** > **Invalidate Caches** > **Invalidate and Restart**
 
 ### Sync Issues
 
@@ -243,16 +389,84 @@ You can use the Couchbase Lite command-line tool to inspect the database file:
 
 ## Additional Notes
 
+### Configuration Files Created During Setup
+
+The following files were created or configured during the initial setup process:
+
+#### Global Configuration (`~/.gradle/gradle.properties`)
+Contains JVM arguments and Gradle settings, including SSL certificate handling:
+```properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+```
+
+#### Project Configuration (`settings.gradle.kts`)
+Configured with `mavenLocal()` repository to use locally downloaded Couchbase Lite EE:
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        mavenLocal()  // Check local Maven repository first
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://mobile.maven.couchbase.com/maven2/dev/")
+            isAllowInsecureProtocol = false
+        }
+    }
+}
+```
+
+#### Environment Variables (`~/.zshrc`)
+Java configuration added to your shell profile:
+```bash
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
+```
+
 ### Enterprise vs Community Edition
 
-This project uses Couchbase Lite Enterprise Edition, which includes features like encrypted sync and delta sync. To use the Community Edition, change the dependency in `app/build.gradle.kts`:
+This project uses Couchbase Lite Enterprise Edition, which includes features like:
+- **Peer-to-peer sync** (MultipeerReplicator) - Required for this demo
+- **Encrypted sync** - Additional security layer
+- **Delta sync** - More efficient synchronization
+
+The Community Edition does **not** include peer-to-peer sync, so the MultipeerSyncManager features won't work if you switch to CE.
+
+To use the Community Edition (if you don't need P2P sync), change the dependency in `app/build.gradle.kts`:
 
 ```kotlin
 // Replace enterprise edition
 implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:3.3.0")
 
-// With community edition
+// With community edition (available on Maven Central)
 implementation("com.couchbase.lite:couchbase-lite-android-ktx:3.3.0")
+```
+
+You would also need to comment out or remove the P2P sync functionality in:
+- `MultipeerSyncManager.kt`
+- `MultipeerSyncComponents.kt`
+- References to MultipeerSyncManager in other screens
+
+
+### Verification Commands
+
+To verify your setup:
+
+```bash
+# Check Java
+java -version  # Should show: openjdk version "17.0.x"
+
+# Check Gradle
+./gradlew --version  # Should show: Gradle 8.11.1
+
+# Check Couchbase EE locally installed
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+
+# Test build
+./gradlew assembleDebug  # Should complete successfully
 ```
 
 ## Related Documentation

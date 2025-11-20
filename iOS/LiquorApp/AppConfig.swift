@@ -18,7 +18,7 @@ struct AppConfig {
     
     // MARK: - Current Store Selection
     // Change this value to switch between stores
-    static let currentStore: StoreLocation = .aa
+    static let currentStore: StoreLocation = .nyc
     
     // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
     // Prefer Info.plist (via .xcconfig) or environment variables when running from Xcode
