@@ -13,6 +13,7 @@ import { ArrowLeft, Search, Package2 } from "lucide-react";
 import { DocID, LastWriteWins, type ListenerToken } from "@couchbase/lite-js";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 import { getUILogger } from "@/lib/logging";
+import { convertCBLToPlain } from "@/lib/database/utils";
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -87,7 +88,9 @@ const Inventory = () => {
         // Extract collection data from row
         const data = row[inventoryCollectionName];
         if (data) {
-          inventoryItems.push(data as unknown as InventoryItemType);
+          // Convert Couchbase Lite objects to plain JavaScript values
+          const plainData = convertCBLToPlain(data);
+          inventoryItems.push(plainData as InventoryItemType);
         }
       });
       

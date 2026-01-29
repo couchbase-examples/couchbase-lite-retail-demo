@@ -2,6 +2,7 @@ import { DocID, LastWriteWins } from "@couchbase/lite-js";
 import type { RetailDatabase, InventoryItem, Order } from "./types";
 import { getScopeNameFromStoreId } from "../auth";
 import { getUILogger } from "../logging";
+import { convertCBLToPlain } from "./utils";
 
 /**
  * Generate a NanoID-style random string
@@ -30,7 +31,9 @@ async function getNextOrderId(db: RetailDatabase, storeId: string): Promise<numb
     
     let maxId = 0;
     await query.execute((row) => {
-      const maxValue = row.maxId;
+      // Convert Couchbase Lite objects to plain JavaScript values
+      const plainRow = convertCBLToPlain(row);
+      const maxValue = plainRow.maxId;
       if (maxValue !== null && maxValue !== undefined) {
         maxId = Number(maxValue);
       }

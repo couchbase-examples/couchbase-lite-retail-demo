@@ -9,6 +9,7 @@ import { getStoredCredentials, clearCredentials, getScopeNameFromStoreId } from 
 import { DocID } from "@couchbase/lite-js";
 import { startContinuousSync } from "@/main";
 import type { StoreProfile } from "@/lib/database/types";
+import { convertCBLToPlain } from "@/lib/database/utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -48,7 +49,9 @@ const Dashboard = () => {
         
         if (profile) {
           console.log('✅ Store profile loaded:', profile);
-          setStoreProfile(profile as StoreProfile);
+          // Convert Couchbase Lite objects to plain JavaScript values
+          const plainProfile = convertCBLToPlain(profile);
+          setStoreProfile(plainProfile as StoreProfile);
         } else {
           console.log('⚠️ No store profile found in database');
         }

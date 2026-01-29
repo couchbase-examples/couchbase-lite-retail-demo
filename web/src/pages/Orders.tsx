@@ -14,6 +14,7 @@ import { DocID, LastWriteWins } from "@couchbase/lite-js";
 import type { ListenerToken } from "@couchbase/lite-js";
 import { getStoredCredentials, getScopeNameFromStoreId } from "@/lib/auth";
 import { getUILogger } from "@/lib/logging";
+import { convertCBLToPlain } from "@/lib/database/utils";
 
 type FilterType = 'all' | 'In Review' | 'Approved';
 
@@ -52,7 +53,9 @@ const Orders = () => {
       await query.execute((row) => {
         const data = row[ordersCollectionName];
         if (data) {
-          orderItems.push(data);
+          // Convert Couchbase Lite objects to plain JavaScript values
+          const plainData = convertCBLToPlain(data);
+          orderItems.push(plainData);
         }
       });
       
