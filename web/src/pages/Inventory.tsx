@@ -197,8 +197,12 @@ const Inventory = () => {
         );
         
         // Create a new document with updated values
+        // IMPORTANT: Exclude CRDT "quantity" field to prevent conflict storms with Android P2P sync
+        // Android P2P uses CRDT counters that create complex revision histories (482+ revisions/update)
+        // Web uses simple stockQty field - mixing them causes infinite conflict loops
+        const { quantity, ...docWithoutCRDT } = existingDoc as any;
         const updatedData = {
-          ...existingDoc,
+          ...docWithoutCRDT,
           stockQty: newCount,
           lastUpdated: Date.now()
         };

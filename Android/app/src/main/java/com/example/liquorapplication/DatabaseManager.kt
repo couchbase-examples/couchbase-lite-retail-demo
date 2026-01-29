@@ -107,7 +107,8 @@ class DatabaseManager(private val context: Context) {
                 document.setString("imageURL", item.imageURL)
                 document.setInt("stockQty", item.quantity)  // Map 'quantity' to 'stockQty' for Capella
                 
-                collection.save(document)
+                // Use conflict handler for sync compatibility (Last Write Wins)
+                collection.save(document, ConcurrencyControl.LAST_WRITE_WINS)
                 Log.d("DatabaseManager", "Saved grocery item: ${item.name}")
             } catch (e: Exception) {
                 Log.e("DatabaseManager", "Error saving grocery item", e)
@@ -256,7 +257,15 @@ class DatabaseManager(private val context: Context) {
                 document?.let {
                     val mutableDoc = it.toMutable()
                     mutableDoc.setInt("stockQty", newQuantity)  // Save as stockQty for Capella
-                    collection.save(mutableDoc)
+                    // IMPORTANT: Remove CRDT "quantity" field to prevent conflict storms with Web
+                    // Android P2P uses CRDT counters that create complex revision histories
+                    // Web uses simple stockQty field - mixing them causes infinite conflict loops
+                    if (mutableDoc.contains("quantity")) {
+                        mutableDoc.remove("quantity")
+                        Log.d("DatabaseManager", "Removed CRDT 'quantity' field to prevent conflicts")
+                    }
+                    // Use conflict handler for sync compatibility (Last Write Wins)
+                    collection.save(mutableDoc, ConcurrencyControl.LAST_WRITE_WINS)
                     Log.d("DatabaseManager", "Updated quantity for $itemId to $newQuantity")
                 }
             } catch (e: Exception) {
@@ -576,7 +585,8 @@ class DatabaseManager(private val context: Context) {
                 document.setInt("orderQty", order.orderQty)
                 document.setInt("orderId", order.orderId)
                 
-                collection.save(document)
+                // Use conflict handler for sync compatibility (Last Write Wins)
+                collection.save(document, ConcurrencyControl.LAST_WRITE_WINS)
                 Log.d("DatabaseManager", "✅ Created order: $documentId (productId: ${order.productId}, qty: $quantity)")
                 
                 // Trigger sync if App Services is enabled
@@ -685,7 +695,8 @@ class DatabaseManager(private val context: Context) {
             document.setInt("stockQty", finalValue)
             
             // Save the document - MultipeerReplicator will detect and push this change
-            collection.save(document)
+            // Use conflict handler for sync compatibility (Last Write Wins)
+            collection.save(document, ConcurrencyControl.LAST_WRITE_WINS)
             
             Log.d("DatabaseManager", "✅ Updated quantity for $itemId: $currentQuantity → $finalValue")
             Log.d("DatabaseManager", "   🎭 Actor: $actorId")
@@ -703,9 +714,11 @@ class DatabaseManager(private val context: Context) {
     
     fun updateQuantityWithSync(itemId: String, newQuantity: Int) {
         // Choose the appropriate update method based on sync type
+        // IMPORTANT: App Services takes priority over P2P to avoid CRDT conflict storms
+        // CRDT (P2P) creates 482+ revisions per update, causing conflicts with Web's simple updates
         when {
-            isP2PEnabled -> updateQuantityWithP2P(itemId, newQuantity)
             isAppServicesEnabled -> updateQuantityWithAppServices(itemId, newQuantity)
+            isP2PEnabled -> updateQuantityWithP2P(itemId, newQuantity)
             else -> updateQuantity(itemId, newQuantity)
         }
     }
