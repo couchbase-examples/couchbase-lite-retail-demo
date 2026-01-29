@@ -35,7 +35,7 @@ struct InventoryView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
                     
-                    TextField("Search liquor...", text: $searchText)
+                    TextField("Search", text: $searchText)
                 }
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal, 16)
@@ -75,20 +75,15 @@ struct InventoryView: View {
             .navigationTitle("Grocery Inventory")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                // Profile name on leading side (from Capella) with truncation
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if let user = authManager.currentUser {
-                        let displayName = profileName ?? user.fullName
-                        // Truncate if longer than 35 characters
-                        let truncatedName = displayName.count > 35 ? String(displayName.prefix(32)) + "..." : displayName
-                        Text("Welcome, \(truncatedName)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+                // Welcome message on leading side
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Welcome!")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     // User role badge
                     if let user = authManager.currentUser {
                         Text(user.role)

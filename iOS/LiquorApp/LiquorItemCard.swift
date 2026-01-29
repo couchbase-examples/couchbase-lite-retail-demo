@@ -51,7 +51,7 @@ struct LiquorItemCard: View {
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
             .frame(height: 160)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(Color(UIColor.systemBackground))
             .cornerRadius(8)
             .padding(.top, 2)
             

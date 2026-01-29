@@ -114,7 +114,7 @@ const InventoryItem = ({ item, onCountChange }: InventoryItemProps) => {
             {/* Count Display */}
             <div className="py-3">
               <div className="text-center mb-3">
-                <p className="text-sm font-medium mb-1">Stock Quantity</p>
+                <p className="text-sm font-medium mb-1">Inventory Count</p>
                 <div className={`text-4xl font-extrabold ${getCountColor()}`}>
                   {item.stockQty}
                 </div>

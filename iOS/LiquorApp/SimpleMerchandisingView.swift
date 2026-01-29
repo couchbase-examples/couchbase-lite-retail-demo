@@ -37,166 +37,54 @@ struct CameraPreviewView: UIViewRepresentable {
     }
 }
 
-/// Simplified merchandising view focused on single beer detection (PlantPal style)
+/// Simplified merchandising view showing "Coming Soon" banner
 struct SimpleMerchandisingView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var cameraManager = CameraManager()
-    @State private var isProcessing = false
-    @State private var detectionResult: BeerDetectionResult?
-    @State private var capturedImage: UIImage?
+    // @StateObject private var cameraManager = CameraManager()
+    // @State private var isProcessing = false
+    // @State private var detectionResult: BeerDetectionResult?
+    // @State private var capturedImage: UIImage?
     
     var body: some View {
         NavigationView {
             ZStack {
-                // Camera preview background
-                Color.black.ignoresSafeArea()
+                // Background color
+                Color(hex: "FFF0DB")
+                    .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                        .foregroundColor(.white)
-                        .padding()
-                        
-                        Spacer()
-                        
-                        Text("Beer Scanner")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        // Debug info
-                        HStack {
-                            Button("🔧") {
-                                print("🔧 DEBUG INFO:")
-                                print("📷 Has Permission: \(cameraManager.hasPermission)")
-                                print("🎥 Session Running: \(cameraManager.isSessionRunning)")
-                                print("📱 Session inputs: \(cameraManager.session.inputs.count)")
-                                print("📱 Session outputs: \(cameraManager.session.outputs.count)")
-                                
-                                // Just restart the session, don't reconfigure
-                                if !cameraManager.isSessionRunning {
-                                    print("🔄 Restarting camera session...")
-                                    cameraManager.startSession()
-                                } else {
-                                    print("✅ Camera session is already running properly")
-                                }
-                            }
-                            .foregroundColor(.white)
-                            
-                            Button("🧠") {
-                                print("🧠 Generating REAL embeddings from beer images...")
-                                Task {
-                                    await generateRealEmbeddingsAndPrint()
-                                }
-                            }
-                            .foregroundColor(.white)
-                        }
-                        .padding()
-                    }
-                    .background(Color.black.opacity(0.7))
+                VStack(spacing: 40) {
+                    Spacer()
                     
-                    // Camera preview
-                    ZStack {
-                        CameraPreviewView(session: cameraManager.session)
-                            .ignoresSafeArea()
-                        
-                        // Viewfinder overlay
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white, lineWidth: 2)
-                            .frame(width: 280, height: 200)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Icon
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 100))
+                        .foregroundColor(Color(hex: "FC9C0C"))
                     
-                    // Bottom section with results
+                    // Coming Soon Text
                     VStack(spacing: 16) {
-                        if isProcessing {
-                            VStack {
-                                ProgressView()
-                                    .scaleEffect(1.5)
-                                    .tint(.white)
-                                Text("Analyzing beer...")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(height: 100)
-                        } else if let result = detectionResult {
-                            // PlantPal-style detection result
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Beer Identified:")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(result.name)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                        
-                                        Text(result.brand)
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                        
-                                        Text("\(Int(result.confidence))% confidence")
-                                            .font(.subheadline)
-                                            .foregroundColor(.green)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    // Confidence indicator
-                                    VStack {
-                                        Circle()
-                                            .fill(result.confidence > 80 ? Color.green : 
-                                                  result.confidence > 60 ? Color.orange : Color.red)
-                                            .frame(width: 24, height: 24)
-                                        
-                                        Text(result.packSize)
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                }
-                                .padding()
-                                .background(Color.black.opacity(0.4))
-                                .cornerRadius(12)
-                            }
-                            .frame(height: 120)
-                        } else {
-                            VStack {
-                                Text("Point camera at a beer pack")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(height: 60)
-                        }
+                        Text("Scanner Feature")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
                         
-                        // Capture button
-                        Button(action: captureAndAnalyze) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 70, height: 70)
-                                
-                                Circle()
-                                    .stroke(Color.white, lineWidth: 4)
-                                    .frame(width: 80, height: 80)
-                            }
-                        }
-                        .disabled(isProcessing)
-                        .opacity(isProcessing ? 0.5 : 1.0)
+                        Text("Coming Soon")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                            .foregroundColor(Color(hex: "FC9C0C"))
+                        
+                        Text("This feature is currently under development.")
+                            .font(.body)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
                     }
-                    .padding()
-                    .background(Color.black.opacity(0.8))
+                    
+                    Spacer()
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .navigationBarHidden(true)
+        /* COMMENTED OUT: Camera functionality for future implementation
         .onAppear {
             print("🎬 SimpleMerchandisingView appeared - checking camera status")
             print("📷 Camera permission: \(cameraManager.hasPermission)")
@@ -211,8 +99,10 @@ struct SimpleMerchandisingView: View {
             print("👋 SimpleMerchandisingView disappeared - stopping camera")
             cameraManager.stopSession()
         }
+        */
     }
     
+    /* COMMENTED OUT: Camera functionality for future implementation
     /// Capture image and perform single beer identification (PlantPal style)
     private func captureAndAnalyze() {
         isProcessing = true
@@ -343,6 +233,7 @@ struct SimpleMerchandisingView: View {
             print("❌ Failed to save embeddings: \(error)")
         }
     }
+    */
 }
 
 /// Simple result structure for single beer detection
