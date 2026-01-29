@@ -79,22 +79,12 @@ fun InventoryScreen(
             title = {
                 Column {
                     Text("Grocery Mart Inventory")
-                    // Show store profile name (from Capella) with Welcome and truncation
-                    val displayName = profileName ?: authManager.currentUser?.fullName ?: ""
-                    // Truncate if longer than 35 characters
-                    val truncatedName = if (displayName.length > 35) {
-                        displayName.take(32) + "..."
-                    } else {
-                        displayName
-                    }
-                    if (displayName.isNotEmpty()) {
-                        Text(
-                            text = "Welcome, $truncatedName",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }
+                    Text(
+                        text = "Welcome!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
                 }
             },
             actions = {

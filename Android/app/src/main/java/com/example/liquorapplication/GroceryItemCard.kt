@@ -69,8 +69,7 @@ fun GroceryItemCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
-                    .padding(top = 2.dp)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                    .padding(top = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
