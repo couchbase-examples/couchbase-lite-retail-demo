@@ -449,6 +449,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LiquorApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LiquorApp needs access to your camera to scan beer packages and planograms for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "LiquorApp uses the local network to synchronize your liquor inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -480,6 +481,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LiquorApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LiquorApp needs access to your camera to scan beer packages and planograms for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "LiquorApp uses the local network to synchronize your liquor inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
