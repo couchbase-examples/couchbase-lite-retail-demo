@@ -162,10 +162,10 @@ class DatabaseManager(private val context: Context) {
                             val imageURL = it.getString("imageURL") ?: return@let
                             val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                             val price = it.getDouble("price")
-                            // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
-                            // iOS reads from CRDT counter on "quantity" field
-                            val quantity = it.getDictionary("quantity")?.getInt("value")
-                                ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
+                            // 🔧 SYNC FIX: Read stockQty FIRST (matches iOS and Web for App Services sync)
+                            // Fall back to CRDT "quantity.value" only for P2P sync compatibility
+                            val quantity = it.getInt("stockQty").takeIf { q -> q > 0 }
+                                ?: it.getDictionary("quantity")?.getInt("value")
                                 ?: it.getInt("quantity")
                             val productId = it.getInt("productId")
                             val sku = it.getString("sku")
@@ -224,10 +224,10 @@ class DatabaseManager(private val context: Context) {
                         val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                         val price = it.getDouble("price")
                         
-                        // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
-                        // iOS reads from CRDT counter on "quantity" field
-                        val quantity = it.getDictionary("quantity")?.getInt("value")
-                            ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
+                        // 🔧 SYNC FIX: Read stockQty FIRST (matches iOS and Web for App Services sync)
+                        // Fall back to CRDT "quantity.value" only for P2P sync compatibility
+                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 }
+                            ?: it.getDictionary("quantity")?.getInt("value")
                             ?: it.getInt("quantity")
                         
                         // Read productId, sku, and unit fields (needed for order creation)
@@ -304,10 +304,10 @@ class DatabaseManager(private val context: Context) {
                         val type = it.getString("category") ?: it.getString("type") ?: "Unknown"
                         val price = it.getDouble("price")
                         
-                        // 🔧 SYNC FIX: Read from CRDT "quantity" field first (matches iOS)
-                        // iOS reads from CRDT counter on "quantity" field
-                        val quantity = it.getDictionary("quantity")?.getInt("value")
-                            ?: it.getInt("stockQty").takeIf { q -> q > 0 } 
+                        // 🔧 SYNC FIX: Read stockQty FIRST (matches iOS and Web for App Services sync)
+                        // Fall back to CRDT "quantity.value" only for P2P sync compatibility
+                        val quantity = it.getInt("stockQty").takeIf { q -> q > 0 }
+                            ?: it.getDictionary("quantity")?.getInt("value")
                             ?: it.getInt("quantity")
                         
                         // Read productId, sku, and unit fields (needed for order creation)
