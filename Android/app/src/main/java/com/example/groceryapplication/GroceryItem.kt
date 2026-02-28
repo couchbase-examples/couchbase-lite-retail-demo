@@ -1,0 +1,14 @@
+package com.example.groceryapplication
+
+data class GroceryItem(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val type: String,
+    val price: Double,
+    val imageURL: String,
+    var quantity: Int = 0,
+    val productId: Int? = null,
+    val sku: String? = null,
+    val unit: String? = null
+)
+

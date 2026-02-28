@@ -23,7 +23,7 @@ Open the Xcode project:
 
 ```bash
 cd iOS
-open LiquorApp.xcodeproj
+open GroceryApp.xcodeproj
 ```
 
 Xcode will automatically resolve and download the required Swift packages when you first open the project.
@@ -36,7 +36,7 @@ Before running the app, you need to configure your Capella App Services connecti
 
 Add the configuration values to your `Info.plist` file:
 
-1. Open `LiquorApp/Info.plist` in Xcode
+1. Open `GroceryApp/Info.plist` in Xcode
 2. Add the following keys and values:
    - `CBL_BASE_URL`: `wss://your-endpoint.apps.cloud.couchbase.com:4984`
    - `CBL_AA_DB`: `supermarket-aa`
@@ -63,7 +63,7 @@ export CBL_PASSWORD="P@ssword1"
 Then launch Xcode from the terminal to inherit these variables:
 
 ```bash
-open LiquorApp.xcodeproj
+open GroceryApp.xcodeproj
 ```
 
 #### Option C: Xcode Scheme Configuration
@@ -89,7 +89,7 @@ Select a simulator or connected device and click **Run** (⌘R).
 
 ```
 iOS/
-├── LiquorApp/
+├── GroceryApp/
 │   ├── App.swift                        # Main app entry point
 │   ├── AppConfig.swift                  # Configuration (database, sync, stores)
 │   ├── DatabaseManager.swift            # Couchbase Lite database operations
@@ -102,17 +102,17 @@ iOS/
 │   │   ├── OrdersView.swift
 │   │   └── StoreProfileView.swift
 │   └── Models/
-│       ├── LiquorItem.swift
+│       ├── GroceryItem.swift
 │       ├── Order.swift
 │       └── StoreProfile.swift
-└── LiquorApp.xcodeproj
+└── GroceryApp.xcodeproj
 ```
 
 ## Configuration Details
 
 ### Database Settings
 
-- **Database Name**: `LiquorInventoryDB`
+- **Database Name**: `GroceryInventoryDB`
 - **Scopes**: `AA-Store`, `NYC-Store` (based on selected store)
 - **Collections**: 
   - `inventory` - Product inventory items

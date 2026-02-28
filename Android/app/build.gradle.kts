@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.liquorapplication"
+    namespace = "com.example.groceryapplication"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.liquorapplication"
+        applicationId = "com.example.groceryapplication"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

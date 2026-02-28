@@ -353,7 +353,7 @@ p2pSync.startDiscovery()
 ### iOS Setup
 
 1. Clone the repository
-2. Open `LiquorApp.xcodeproj` in Xcode
+2. Open `GroceryApp.xcodeproj` in Xcode
 3. Add `aa_store_inventory.json` to project (if not already added)
 4. Update App Endpoint URL in settings:
    ```swift
@@ -365,7 +365,7 @@ p2pSync.startDiscovery()
 ### Android Setup
 
 1. Clone the repository
-2. Open `LiquorApplication` in Android Studio
+2. Open `GroceryApplication` in Android Studio
 3. Add AAR files to `app/libs/`
 4. Update App Endpoint URL:
    ```kotlin
@@ -378,12 +378,12 @@ p2pSync.startDiscovery()
 
 **iOS**:
 ```bash
-xcrun simctl uninstall booted com.couchbase.LiquorApp
+xcrun simctl uninstall booted com.couchbase.GroceryApp
 ```
 
 **Android**:
 ```bash
-adb uninstall com.example.liquorapplication
+adb uninstall com.example.groceryapplication
 ```
 
 ---

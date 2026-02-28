@@ -183,8 +183,8 @@ Select an emulator or connected device from the device dropdown and click **Run*
 Android/
 ├── app/
 │   ├── src/main/
-│   │   ├── java/com/example/liquorapplication/
-│   │   │   ├── LiquorApplication.kt          # Application class
+│   │   ├── java/com/example/groceryapplication/
+│   │   │   ├── GroceryApplication.kt          # Application class
 │   │   │   ├── MainActivity.kt                # Main activity with Compose setup
 │   │   │   ├── AppConfig.kt                   # Configuration (database, sync, stores)
 │   │   │   ├── DatabaseManager.kt             # Couchbase Lite database operations
@@ -215,7 +215,7 @@ Android/
 
 ### Database Settings
 
-- **Database Name**: `LiquorInventoryDB`
+- **Database Name**: `GroceryInventoryDB`
 - **Scopes**: `AA-Store`, `NYC-Store` (based on selected store)
 - **Collections**: 
   - `inventory` - Product inventory items
@@ -384,7 +384,7 @@ Database.log.console.level = LogLevel.VERBOSE
 ### Inspect Database
 
 You can use the Couchbase Lite command-line tool to inspect the database file:
-1. Pull the database from device: `adb pull /data/data/com.example.liquorapplication/files/LiquorInventoryDB.cblite2`
+1. Pull the database from device: `adb pull /data/data/com.example.groceryapplication/files/GroceryInventoryDB.cblite2`
 2. Use `cblite` tool to query the database
 
 ## Additional Notes
