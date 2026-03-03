@@ -1,0 +1,59 @@
+{
+  "name": "grocery-inventory",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "patch-package",
+    "prebuild:clean": "expo prebuild --clean",
+    "prebuild": "expo prebuild",
+    "start": "expo start",
+    "reset-project": "node ./scripts/reset-project.js",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "jest --watchAll",
+    "lint": "expo lint"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.0.2",
+    "@react-navigation/native": "^6.0.2",
+    "@rneui/base": "^4.0.0-rc.7",
+    "@rneui/themed": "^4.0.0-rc.8",
+    "cbl-reactnative": "^1.0.0",
+    "expo": "~51.0.32",
+    "expo-constants": "~16.0.2",
+    "expo-dev-client": "~4.0.26",
+    "expo-dev-launcher": "^4.0.27",
+    "expo-dev-menu": "^5.0.21",
+    "expo-font": "~12.0.9",
+    "expo-linking": "~6.3.1",
+    "expo-router": "~3.5.23",
+    "expo-splash-screen": "~0.27.5",
+    "expo-status-bar": "~1.12.1",
+    "expo-system-ui": "~3.0.7",
+    "expo-web-browser": "~13.0.3",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.75.2",
+    "react-native-gesture-handler": "~2.19.0",
+    "react-native-reanimated": "~3.15.0",
+    "react-native-safe-area-context": "4.10.5",
+    "react-native-screens": "3.34.0",
+    "react-native-uuid": "^2.0.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/jest": "^29.5.12",
+    "@types/react": "~18.2.79",
+    "@types/react-test-renderer": "^18.0.7",
+    "jest": "^29.2.1",
+    "jest-expo": "~51.0.4",
+    "patch-package": "^8.0.0",
+    "react-test-renderer": "18.2.0",
+    "typescript": "~5.3.3"
+  },
+  "private": true
+}
