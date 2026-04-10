@@ -85,6 +85,13 @@ export function getStoredCredentials(): AuthCredentials | null {
 }
 
 /**
+ * Retrieve app endpoint
+ */
+export function getAppEndpoint(credentials: AuthCredentials): string {
+  return extractAppEndpointFromEmail(credentials.email);
+}
+
+/**
  * Clear stored credentials (logout)
  */
 export function clearCredentials(): void {
