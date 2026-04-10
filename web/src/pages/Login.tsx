@@ -65,7 +65,7 @@ const Login = () => {
       console.log('✅ Database initialized');
 
       // Get App Services URL from environment
-      const syncUrl = getAppServicesUrl() + `/${appEndpoint}`;
+      const syncUrl = `${getAppServicesUrl().replace(/\/+$/, '')}/${appEndpoint}`;
       console.log('🌐 App Services URL:', syncUrl);
 
       // Set up one-shot profile sync
