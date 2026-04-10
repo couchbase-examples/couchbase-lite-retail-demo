@@ -61,7 +61,7 @@ VITE_APP_SERVICES_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
 1. Log into [Couchbase Capella](https://cloud.couchbase.com/)
 2. Navigate to App Services
 3. Select your App Services endpoint
-4. Copy the complete WebSocket URL **EXCLUDING** the database path (it will be automatically inside the code based on the user selection)
+4. Copy the complete WebSocket URL **EXCLUDING** the database path ('/supermarket-aa' or "/supermarket-nyc' will be automatically added inside the code, based on the user selection)
    - Example: `wss://xxxxx.apps.cloud.couchbase.com:4984`
 
 ### 4. Start Development Server
