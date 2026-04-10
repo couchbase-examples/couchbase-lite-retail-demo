@@ -19,7 +19,7 @@ export function extractAppEndpointFromEmail(email: string): string {
   if (!match) {
     throw new Error('Invalid email format. Expected format: store-id@supermarket.com');
   }
-  return "supermarket-" + match[1];
+  return "supermarket-" + match[1].toLowerCase();
 }
 
 /**
