@@ -45,7 +45,7 @@ export function createReplicator(
     // Handle errors during replication
     replicator.onStatusChange = (status: ReplicatorStatus) => {
       if (onStatusChange) onStatusChange(status);
-      
+
       if (status.status === 'error' && status.error) {
         onError(status.error);
       }
