@@ -50,11 +50,11 @@ const Login = () => {
     setLoading(true);
     setShowDemoDialog(false);
 
-    if (null == appEndpoint) { // in case of manual login, extract app endpoint from email
-      appEndpoint = extractAppEndpointFromEmail(loginEmail);
-    }
-
     try {
+      if (null == appEndpoint) { // in case of manual login, extract app endpoint from email
+        appEndpoint = extractAppEndpointFromEmail(loginEmail);
+      }
+
       // Extract store ID from email
       const storeId = extractStoreIdFromEmail(loginEmail);
       console.log('📧 Extracted store ID:', storeId);
