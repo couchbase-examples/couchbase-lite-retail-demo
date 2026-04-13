@@ -107,5 +107,7 @@ The repo is organized as follows
 
 - **web**: This folder includes source code corresponding to the web version of the retail application. Follow the instructions in the [README.md](./web/README.md) file in that folder to build and run the web app.
 
+- **flutter**: This folder includes source code corresponding to the Flutter (iOS + Android) version of the retail application. It features cloud-to-edge sync with Capella App Services using [Couchbase Lite for Dart](https://cbl-dart.dev/). Follow the instructions in the [README.md](./flutter/README.md) file in that folder to build and run the Flutter app.
+
 
 
