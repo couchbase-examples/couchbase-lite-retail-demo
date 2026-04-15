@@ -42,9 +42,29 @@ class DatabaseManager(private val context: Context) {
         setupAppServicesIntegration()
         setupP2PIntegration()
         
-        // Auto-enable App Services if configured
+        // NOTE: Sync is NOT started here — it must wait until after login
+        // so that AppConfig.currentStore is set to the correct user's store.
+        // Call startSyncAfterLogin() after AuthenticationManager.login() completes.
+    }
+    
+    /**
+     * Called after login to set up indexes for the correct scope
+     * and start App Services / P2P sync with the correct endpoint.
+     */
+    fun startSyncAfterLogin() {
+        Log.d("DatabaseManager", "🔄 Starting sync after login for store: ${AppConfig.currentStore.displayName}")
+        Log.d("DatabaseManager", "🔄 Sync URL: ${AppConfig.syncGatewayURL}")
+        Log.d("DatabaseManager", "🔄 Scope: ${AppConfig.scopeName}")
+        Log.d("DatabaseManager", "🔄 Username: ${AppConfig.username}")
+        
+        // Recreate indexes in the correct scope for this user
+        setupIndexes()
+        
+        // Synchronously reconfigure and start App Services sync with correct endpoint.
+        // setupAndStartSync() guarantees: stop old → create replicator → start new.
         if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
-            enableAppServices()
+            appServicesSyncManager?.setupAndStartSync()
+            isAppServicesEnabled = true
         }
         
         // Auto-enable P2P if configured

@@ -32,8 +32,8 @@ class GroceryApplication : Application() {
         // Initialize database manager
         initializeDatabaseManager()
         
-        // Auto-enable App Services for testing
-        enableAppServicesAfterDelay()
+        // NOTE: Sync is NOT started here — it starts after login
+        // so the correct store endpoint is used.
         
         Log.d(TAG, "✅ GroceryApplication initialized successfully")
     }
@@ -46,18 +46,6 @@ class GroceryApplication : Application() {
             Log.e(TAG, "❌ Failed to initialize database manager", e)
             throw e
         }
-    }
-    
-    private fun enableAppServicesAfterDelay() {
-        // Auto-enable App Services after a short delay for testing
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            try {
-                Log.d(TAG, "🌐 Auto-enabling App Services sync for testing...")
-                databaseManager.enableAppServices()
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to auto-enable App Services", e)
-            }
-        }, 2000) // 2 second delay
     }
     
     override fun onTerminate() {

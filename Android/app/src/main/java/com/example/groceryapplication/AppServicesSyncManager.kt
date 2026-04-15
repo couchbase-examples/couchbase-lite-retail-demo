@@ -37,11 +37,6 @@ class AppServicesSyncManager(
     
     companion object {
         private const val TAG = "AppServicesSync"
-        // Using App Services credentials from AppConfig
-        private val SYNC_GATEWAY_URL = AppConfig.syncGatewayURL
-        private val USERNAME = AppConfig.username
-        private val PASSWORD = AppConfig.password
-        private val COLLECTION_NAME = AppConfig.COLLECTION_NAME
     }
     
     // State management
@@ -57,79 +52,101 @@ class AppServicesSyncManager(
     private var replicatorChangeToken: ListenerToken? = null
     private var isSyncActive = false
     
-    init {
-        setupAppServicesSync()
-    }
+    // NOTE: No init block — sync setup is deferred to after login
+    // so that AppConfig.currentStore is set to the correct user's store.
     
     // MARK: - Setup Methods
-    private fun setupAppServicesSync() {
-        viewModelScope.launch {
-            try {
-                Log.d(TAG, "🔧 Setting up App Services sync configuration...")
-                Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}")
-                Log.d(TAG, "🔧 Collections: inventory, profile, orders")
-                
-                // Get all collections from correct scope (matches Capella structure)
-                val inventoryCollection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
-                    ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
-                
-                val profileCollection = database.getCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
-                    ?: database.createCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
-                
-                val ordersCollection = database.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
-                    ?: database.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
-                
-                // Create target endpoint
-                Log.d(TAG, "📡 Connecting to: $SYNC_GATEWAY_URL")
-                val target = URLEndpoint(URI(SYNC_GATEWAY_URL))
-                
-                // Create replicator configuration
-                val config = ReplicatorConfiguration(target)
-                
-                // Configure authentication
-                config.authenticator = BasicAuthenticator(USERNAME, PASSWORD.toCharArray())
-                
-                // Configure replication type and behavior
-                config.replicatorType = AbstractReplicatorConfiguration.ReplicatorType.PUSH_AND_PULL
-                config.isContinuous = AppConfig.SYNC_CONTINUOUS
-                config.heartbeat = AppConfig.SYNC_HEARTBEAT.toInt()
-                config.maxAttempts = AppConfig.SYNC_MAX_ATTEMPTS
-                config.maxAttemptWaitTime = AppConfig.SYNC_MAX_ATTEMPT_WAIT_TIME.toInt()
-                
-                // Add all collections to replication
-                config.addCollection(inventoryCollection, null)
-                config.addCollection(profileCollection, null)
-                config.addCollection(ordersCollection, null)
-                
-                // Create replicator
-                replicator = Replicator(config)
-                
-                // Add change listener
-                replicatorChangeToken = replicator?.addChangeListener { change ->
-                    handleReplicationChange(change)
-                }
-                
-                Log.d(TAG, "✅ App Services sync configured successfully")
-                updateSyncState { state ->
-                    state.copy(status = "☁️ Ready to sync")
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to setup App Services sync", e)
-                updateSyncState { state ->
-                    state.copy(
-                        status = "Setup failed",
-                        error = e.message
-                    )
-                }
+    
+    /**
+     * Synchronously sets up the replicator with current AppConfig values.
+     * Stops any existing replicator first. Does NOT start replication —
+     * call enableAppServices() or setupAndStartSync() for that.
+     * Thread-safe: can be called from any thread.
+     */
+    @Synchronized
+    fun setupAppServicesSync() {
+        try {
+            // Stop and clean up any existing replicator before reconfiguring
+            stopSync()
+            replicatorChangeToken?.let { replicator?.removeChangeListener(it) }
+            replicator = null
+            replicatorChangeToken = null
+            
+            Log.d(TAG, "🔧 Setting up App Services sync configuration...")
+            Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}")
+            Log.d(TAG, "🔧 URL: ${AppConfig.syncGatewayURL}")
+            Log.d(TAG, "🔧 User: ${AppConfig.username}")
+            Log.d(TAG, "🔧 Collections: inventory, profile, orders")
+            
+            // Get all collections from correct scope (matches Capella structure)
+            val inventoryCollection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
+                ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
+            
+            val profileCollection = database.getCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
+                ?: database.createCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
+            
+            val ordersCollection = database.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+                ?: database.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+            
+            // Create target endpoint — read dynamically from AppConfig (not frozen companion vals)
+            val syncUrl = AppConfig.syncGatewayURL
+            Log.d(TAG, "📡 Connecting to: $syncUrl")
+            val target = URLEndpoint(URI(syncUrl))
+            
+            // Create replicator configuration
+            val config = ReplicatorConfiguration(target)
+            
+            // Configure authentication — read dynamically from AppConfig
+            config.authenticator = BasicAuthenticator(AppConfig.username, AppConfig.password.toCharArray())
+            
+            // Configure replication type and behavior
+            config.replicatorType = AbstractReplicatorConfiguration.ReplicatorType.PUSH_AND_PULL
+            config.isContinuous = AppConfig.SYNC_CONTINUOUS
+            config.heartbeat = AppConfig.SYNC_HEARTBEAT.toInt()
+            config.maxAttempts = AppConfig.SYNC_MAX_ATTEMPTS
+            config.maxAttemptWaitTime = AppConfig.SYNC_MAX_ATTEMPT_WAIT_TIME.toInt()
+            
+            // Add all collections to replication
+            config.addCollection(inventoryCollection, null)
+            config.addCollection(profileCollection, null)
+            config.addCollection(ordersCollection, null)
+            
+            // Create replicator
+            replicator = Replicator(config)
+            
+            // Add change listener
+            replicatorChangeToken = replicator?.addChangeListener { change ->
+                handleReplicationChange(change)
+            }
+            
+            Log.d(TAG, "✅ App Services sync configured successfully")
+            updateSyncState { state ->
+                state.copy(status = "☁️ Ready to sync")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to setup App Services sync", e)
+            updateSyncState { state ->
+                state.copy(
+                    status = "Setup failed",
+                    error = e.message
+                )
             }
         }
     }
     
+    /**
+     * Convenience: sets up the replicator with current AppConfig AND immediately starts it.
+     * Called from startSyncAfterLogin() to guarantee setup → start ordering.
+     */
+    @Synchronized
+    fun setupAndStartSync() {
+        setupAppServicesSync()
+        enableAppServices()
+    }
+    
     // MARK: - Public Sync Control Methods
     fun enableAppServices() {
-        if (isEnabled) return
-        
         Log.d(TAG, "🚀 Enabling App Services sync...")
         isEnabled = true
         startSync()
@@ -179,18 +196,16 @@ class AppServicesSyncManager(
     }
     
     private fun stopSync() {
-        replicator?.let { replicator ->
-            if (isSyncActive) {
-                Log.d(TAG, "🛑 Stopping App Services replicator...")
-                replicator.stop()
-                isSyncActive = false
-                
-                updateSyncState { state ->
-                    state.copy(
-                        status = "☁️ Sync stopped",
-                        isConnected = false
-                    )
-                }
+        if (isSyncActive) {
+            Log.d(TAG, "🛑 Stopping App Services replicator...")
+            replicator?.stop()
+            isSyncActive = false
+            
+            updateSyncState { state ->
+                state.copy(
+                    status = "☁️ Sync stopped",
+                    isConnected = false
+                )
             }
         }
     }
@@ -307,8 +322,8 @@ class AppServicesSyncManager(
     
     fun createGroceryItem(name: String, type: String, price: Double, imageURL: String, quantity: Int = 0): String? {
         return try {
-            val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName) 
-                ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
+            val collection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName) 
+                ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
             
             val itemId = UUID.randomUUID().toString()
             val document = MutableDocument(itemId)
@@ -346,8 +361,8 @@ class AppServicesSyncManager(
     
     fun updateGroceryItemQuantity(itemId: String, newQuantity: Int): Boolean {
         return try {
-            val collection = database.getCollection(COLLECTION_NAME, AppConfig.scopeName) 
-                ?: database.createCollection(COLLECTION_NAME, AppConfig.scopeName)
+            val collection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName) 
+                ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
             
             val document = collection.getDocument(itemId)?.toMutable() ?: run {
                 Log.e(TAG, "❌ Document not found: $itemId")
@@ -496,8 +511,8 @@ class AppServicesSyncManager(
             "last_sync" to (currentState.lastSyncTime ?: 0),
             "error" to (currentState.error ?: "none"),
             "replicator_active" to isSyncActive,
-            "sync_gateway_url" to SYNC_GATEWAY_URL,
-            "username" to USERNAME
+            "sync_gateway_url" to AppConfig.syncGatewayURL,
+            "username" to AppConfig.username
         )
     }
     
