@@ -9,6 +9,7 @@ import com.couchbase.lite.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
@@ -79,9 +80,15 @@ class DatabaseManager(private val context: Context) {
 
             // Reconfigure and start App Services sync with correct endpoint.
             // setupAndStartSync() guarantees: stop old → create replicator → start new.
+            // Only mark as enabled if setup actually succeeded (no exception thrown).
             if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
-                appServicesSyncManager?.setupAndStartSync()
-                isAppServicesEnabled = true
+                try {
+                    appServicesSyncManager?.setupAndStartSync()
+                    isAppServicesEnabled = true
+                } catch (e: Exception) {
+                    isAppServicesEnabled = false
+                    Log.e("DatabaseManager", "❌ App Services sync setup failed, not marking as enabled", e)
+                }
             }
 
             // Auto-enable P2P if configured
@@ -854,4 +861,15 @@ class DatabaseManager(private val context: Context) {
     
     // MARK: - Database Access
     fun getDatabase(): Database? = database
-} 
+
+    // MARK: - Cleanup
+    /**
+     * Cancel the background coroutine scope and release resources.
+     * Must be called when the DatabaseManager is no longer needed
+     * (e.g. from GroceryApplication.onTerminate()).
+     */
+    fun close() {
+        backgroundScope.cancel()
+        Log.d("DatabaseManager", "🧹 Background scope cancelled")
+    }
+}

@@ -230,10 +230,12 @@ class AppServicesSyncManager(
 
         stopSync()
 
-        // Restart after a delay
+        // Restart after a delay, but only if sync is still enabled.
+        // The user may have explicitly disabled sync during the delay window.
         viewModelScope.launch {
             kotlinx.coroutines.delay(1000)
-            startSync()
+            if (isEnabled) startSync()
+            else Log.d(TAG, "ℹ️ resetSync: sync was disabled during delay, skipping restart")
         }
 
         updateSyncState { state ->

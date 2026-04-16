@@ -50,12 +50,12 @@ class GroceryApplication : Application() {
     
     override fun onTerminate() {
         super.onTerminate()
-        
+
         Log.d(TAG, "🧹 Cleaning up GroceryApplication...")
-        
-        // Cleanup App Services
+
         try {
             _databaseManager?.disableAppServices()
+            _databaseManager?.close()  // cancel backgroundScope and release resources
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error during cleanup", e)
         }
