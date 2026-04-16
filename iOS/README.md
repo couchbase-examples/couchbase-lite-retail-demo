@@ -30,7 +30,7 @@ The project uses Swift Package Manager (SPM) for dependency management. Dependen
 > unable to read input file '.../GroceryApp/Info.plist': Operation not permitted
 > ```
 
-Create the file at `iOS/GroceryApp/Info.plist` with your Capella App Services credentials:
+Create the file at `GroceryApp/Info.plist` with your Capella App Services credentials:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -102,7 +102,7 @@ open GroceryApp.xcodeproj
    - `CBL_PASSWORD`: `P@ssword1`
 
 > [!NOTE]
-> An `Info.plist` file is still required for the build to succeed, even when using environment variables. You can create a minimal empty plist if you prefer to configure credentials via environment variables only.
+> An `Info.plist` file is still required for the build to succeed, even when using environment variables. You can create a minimal **valid** plist (containing a root dict) if you prefer to configure credentials via environment variables only.
 
 ### 4. Build and Run
 
