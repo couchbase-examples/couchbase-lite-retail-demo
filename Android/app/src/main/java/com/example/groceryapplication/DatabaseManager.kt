@@ -8,9 +8,12 @@ import androidx.compose.runtime.setValue
 import com.couchbase.lite.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,6 +29,14 @@ class DatabaseManager(private val context: Context) {
     // Background scope for post-login sync setup. Using SupervisorJob so that
     // a failure in one launch doesn't cancel the whole scope.
     private val backgroundScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Tracks the in-flight sync setup coroutine so we can cancel it if
+    // startSyncAfterLogin() is invoked again (e.g. rapid logout/login) or
+    // if the DatabaseManager is closed mid-setup. Guards against a race
+    // where a stale setup completes after logout and leaves the replicator
+    // active for the logged-out session.
+    @Volatile
+    private var syncSetupJob: Job? = null
 
     // App Services Integration
     var appServicesSyncManager: AppServicesSyncManager? = null
@@ -68,8 +79,20 @@ class DatabaseManager(private val context: Context) {
      * configured by the time this returns. UI that depends on profile
      * data should observe it reactively (see InventoryScreen).
      */
+    @Synchronized
     fun startSyncAfterLogin() {
-        backgroundScope.launch {
+        // Cancel any in-flight sync setup from a previous login/restore to
+        // avoid two setup coroutines racing (e.g. rapid logout→login), which
+        // could otherwise let a stale setup start the replicator after
+        // disableAppServices() has already run.
+        syncSetupJob?.let { existing ->
+            if (existing.isActive) {
+                Log.d("DatabaseManager", "⏹️ Cancelling in-flight sync setup before starting a new one")
+                existing.cancel()
+            }
+        }
+
+        syncSetupJob = backgroundScope.launch {
             Log.d("DatabaseManager", "🔄 Starting sync after login for store: ${AppConfig.currentStore.displayName}")
             Log.d("DatabaseManager", "🔄 Sync URL: ${AppConfig.syncGatewayURL}")
             Log.d("DatabaseManager", "🔄 Scope: ${AppConfig.scopeName}")
@@ -864,11 +887,44 @@ class DatabaseManager(private val context: Context) {
 
     // MARK: - Cleanup
     /**
-     * Cancel the background coroutine scope and release resources.
-     * Must be called when the DatabaseManager is no longer needed
-     * (e.g. from GroceryApplication.onTerminate()).
+     * Centralized cleanup: stops all active sync processes (App Services
+     * and P2P), cancels any in-flight sync-setup coroutine, and cancels
+     * the background scope. Safe to call multiple times. Callers
+     * (e.g. GroceryApplication.onTerminate()) may also call disableAppServices()
+     * beforehand — the underlying @Synchronized guards make the second call a no-op.
      */
     fun close() {
+        Log.d("DatabaseManager", "🧹 DatabaseManager.close(): shutting down sync and releasing resources")
+
+        // Stop any in-flight sync setup first so it doesn't race past the
+        // teardown below and restart the replicator after we've disabled it.
+        syncSetupJob?.let { job ->
+            if (job.isActive) {
+                Log.d("DatabaseManager", "⏹️ Cancelling in-flight sync setup during close()")
+                try {
+                    runBlocking { job.cancelAndJoin() }
+                } catch (e: Exception) {
+                    Log.w("DatabaseManager", "⚠️ Error awaiting sync-setup cancellation", e)
+                }
+            }
+        }
+        syncSetupJob = null
+
+        // Tear down App Services replicator (idempotent via @Synchronized).
+        try {
+            appServicesSyncManager?.disableAppServices()
+            isAppServicesEnabled = false
+        } catch (e: Exception) {
+            Log.w("DatabaseManager", "⚠️ Error disabling App Services during close()", e)
+        }
+
+        // Tear down P2P multipeer replicator so it stops advertising/browsing.
+        try {
+            disableP2P()
+        } catch (e: Exception) {
+            Log.w("DatabaseManager", "⚠️ Error disabling P2P during close()", e)
+        }
+
         backgroundScope.cancel()
         Log.d("DatabaseManager", "🧹 Background scope cancelled")
     }
