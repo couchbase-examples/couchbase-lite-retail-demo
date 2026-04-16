@@ -32,8 +32,17 @@ These are common set of instructions that you must follow to setup the cloud bac
 Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
 
 - Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+
+### Deploy App Service (do this early — it takes 5–25 minutes)
+
+> [!TIP]
+> App Service deployments can take between 5 and 25 minutes. Start the deployment now so it can provision in the background while you set up the bucket, scopes, collections, and sample data in the steps that follow.
+
+- Create an App Service named **"supermarket-appservice"** (you can name it anything) that is linked to the cluster you just created by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services)
+
+### Create Bucket, Scopes and Collections
   
-- Create a bucket named **"supermarket"** cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets). 
+- Create a bucket named **"supermarket"** on the cluster by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets). 
 
 - Create two scopes named **"NYC-Store"** and **"AA-Store"** in the bucket by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes). 
 
@@ -50,8 +59,9 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 ![](./common/assets/import-data.png)
 
-## Setting up Capella App Services
-- Create an App Service named **"supermarket-appservice"** (you can name it anything) that is linked to the supermarket cluster by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) 
+## Configuring Capella App Services
+
+By now your App Service deployment (started earlier) should be ready or close to ready.
 
 - Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
 
