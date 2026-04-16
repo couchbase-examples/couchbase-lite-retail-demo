@@ -146,23 +146,34 @@ class AppServicesSyncManager(
     }
     
     // MARK: - Public Sync Control Methods
+    @Synchronized
     fun enableAppServices() {
+        // Idempotency: skip if replicator is already running.
+        // Guarding on isSyncActive (not isEnabled) lets setupAndStartSync()
+        // correctly start a freshly reconfigured replicator even when a
+        // previous session left isEnabled = true.
+        if (isSyncActive) {
+            Log.d(TAG, "ℹ️ enableAppServices: sync already active, skipping")
+            return
+        }
+
         Log.d(TAG, "🚀 Enabling App Services sync...")
         isEnabled = true
         startSync()
-        
+
         updateSyncState { state ->
             state.copy(status = "☁️ Starting cloud sync...")
         }
     }
-    
+
+    @Synchronized
     fun disableAppServices() {
         if (!isEnabled) return
-        
+
         Log.d(TAG, "🛑 Disabling App Services sync...")
         isEnabled = false
         stopSync()
-        
+
         updateSyncState { state ->
             state.copy(
                 status = "☁️ Cloud sync stopped",
@@ -170,7 +181,8 @@ class AppServicesSyncManager(
             )
         }
     }
-    
+
+    @Synchronized
     fun toggleAppServices() {
         if (isEnabled) {
             disableAppServices()
@@ -178,14 +190,15 @@ class AppServicesSyncManager(
             enableAppServices()
         }
     }
-    
+
+    @Synchronized
     private fun startSync() {
         replicator?.let { replicator ->
             if (!isSyncActive) {
                 Log.d(TAG, "🌐 Starting App Services replicator...")
                 isSyncActive = true
                 replicator.start()
-                
+
                 updateSyncState { state ->
                     state.copy(status = "☁️ Connecting to cloud...")
                 }
@@ -194,13 +207,14 @@ class AppServicesSyncManager(
             Log.e(TAG, "⚠️ Cannot start sync - replicator not available")
         }
     }
-    
+
+    @Synchronized
     private fun stopSync() {
         if (isSyncActive) {
             Log.d(TAG, "🛑 Stopping App Services replicator...")
             replicator?.stop()
             isSyncActive = false
-            
+
             updateSyncState { state ->
                 state.copy(
                     status = "☁️ Sync stopped",
@@ -209,18 +223,19 @@ class AppServicesSyncManager(
             }
         }
     }
-    
+
+    @Synchronized
     fun resetSync() {
         Log.d(TAG, "🔄 Resetting App Services sync...")
-        
+
         stopSync()
-        
+
         // Restart after a delay
         viewModelScope.launch {
             kotlinx.coroutines.delay(1000)
             startSync()
         }
-        
+
         updateSyncState { state ->
             state.copy(
                 status = "☁️ Resetting sync...",

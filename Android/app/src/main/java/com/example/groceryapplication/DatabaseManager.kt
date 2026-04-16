@@ -6,7 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.couchbase.lite.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -18,13 +21,17 @@ class DatabaseManager(private val context: Context) {
     private var database: Database? = null
     private val databaseName = AppConfig.DATABASE_NAME
     private val collectionName = AppConfig.COLLECTION_NAME
-    
+
+    // Background scope for post-login sync setup. Using SupervisorJob so that
+    // a failure in one launch doesn't cancel the whole scope.
+    private val backgroundScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     // App Services Integration
     var appServicesSyncManager: AppServicesSyncManager? = null
         private set
     var isAppServicesEnabled by mutableStateOf(false)
         private set
-    
+
     // P2P Sync Integration
     var multipeerSyncManager: MultipeerSyncManager? = null
         private set
@@ -50,26 +57,37 @@ class DatabaseManager(private val context: Context) {
     /**
      * Called after login to set up indexes for the correct scope
      * and start App Services / P2P sync with the correct endpoint.
+     *
+     * Dispatches the heavy work (index creation, collection lookup,
+     * Replicator construction) onto Dispatchers.IO so it is safe to
+     * invoke from the main thread (e.g. from AuthenticationManager
+     * init via checkStoredLogin()) without risking an ANR.
+     *
+     * Fire-and-forget: callers should not rely on sync being fully
+     * configured by the time this returns. UI that depends on profile
+     * data should observe it reactively (see InventoryScreen).
      */
     fun startSyncAfterLogin() {
-        Log.d("DatabaseManager", "🔄 Starting sync after login for store: ${AppConfig.currentStore.displayName}")
-        Log.d("DatabaseManager", "🔄 Sync URL: ${AppConfig.syncGatewayURL}")
-        Log.d("DatabaseManager", "🔄 Scope: ${AppConfig.scopeName}")
-        Log.d("DatabaseManager", "🔄 Username: ${AppConfig.username}")
-        
-        // Recreate indexes in the correct scope for this user
-        setupIndexes()
-        
-        // Synchronously reconfigure and start App Services sync with correct endpoint.
-        // setupAndStartSync() guarantees: stop old → create replicator → start new.
-        if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
-            appServicesSyncManager?.setupAndStartSync()
-            isAppServicesEnabled = true
-        }
-        
-        // Auto-enable P2P if configured
-        if (AppConfig.P2P_AUTO_START && AppConfig.ENABLE_P2P_SYNC) {
-            enableP2P()
+        backgroundScope.launch {
+            Log.d("DatabaseManager", "🔄 Starting sync after login for store: ${AppConfig.currentStore.displayName}")
+            Log.d("DatabaseManager", "🔄 Sync URL: ${AppConfig.syncGatewayURL}")
+            Log.d("DatabaseManager", "🔄 Scope: ${AppConfig.scopeName}")
+            Log.d("DatabaseManager", "🔄 Username: ${AppConfig.username}")
+
+            // Recreate indexes in the correct scope for this user
+            setupIndexes()
+
+            // Reconfigure and start App Services sync with correct endpoint.
+            // setupAndStartSync() guarantees: stop old → create replicator → start new.
+            if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
+                appServicesSyncManager?.setupAndStartSync()
+                isAppServicesEnabled = true
+            }
+
+            // Auto-enable P2P if configured
+            if (AppConfig.P2P_AUTO_START && AppConfig.ENABLE_P2P_SYNC) {
+                enableP2P()
+            }
         }
     }
     
