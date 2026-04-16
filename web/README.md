@@ -22,6 +22,9 @@ A modern retail inventory management application built with Couchbase Lite for w
 
 ## Prerequisites
 
+> [!IMPORTANT]
+> Before proceeding with the web app setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, recording the public connection URL, and configuring CORS for the web app. If you skip these steps, the app will fail to authenticate and sync.
+
 - **Node.js**: Version 18 or higher ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
 - **npm**: Comes with Node.js
 - **Couchbase Capella Account**: For App Services sync functionality
