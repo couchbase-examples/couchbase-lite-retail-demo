@@ -1,9 +1,7 @@
 # Couchbase Mobile Retail Demo Application
-
 A simple retail inventory management application built with [Couchbase Lite](https://docs.couchbase.com/couchbase-lite/current/index.html) for web and mobile (iOS and Android) featuring real-time sync capabilities with [Couchbase Capella App Services](https://docs.couchbase.com/cloud/app-services/deployment/creating-an-app-service.html).
 
 ## Demo App Features
-
 - 📱 **Offline-First**: Ability to operate in disconnected mode without an Internet connection with Couchbase Lite as a local database. 
 - 🔄 **Real-Time Sync**: Opportunistically sync data, in uni-directional or bi-directional mode with backend Couchbase Capella clusters via Capella App Services. Data is synced across iOS, Android and JS app via App Services.
 - 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android apps over a local network
@@ -13,21 +11,12 @@ A simple retail inventory management application built with [Couchbase Lite](htt
 ### Peer-to-Peer Sync across iOS and Android
 A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P.
 
-
 https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
-
 ### Real time Data Sync via Capella App Services
-
-
-
 https://github.com/user-attachments/assets/781028cf-6f67-4ad9-abd5-a52daf4c83d6
 
-
-
 https://github.com/user-attachments/assets/72f61f2b-118f-4bc6-8f43-30dfac6e8f5e
-
-
 
 ## Demo Setup
 The complete setup of the demo would look like this:
@@ -53,7 +42,6 @@ Although instructions are specified for Capella App Services, equivalent instruc
 - At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
 
 ## Importing Sample Data Set
-
 - Download and unzip sample dataset from [demo-dataset.zip](https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/demo-dataset.zip)
 
 - Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
@@ -63,8 +51,7 @@ Although instructions are specified for Capella App Services, equivalent instruc
 ![](./common/assets/import-data.png)
 
 ## Setting up Capella App Services
-
-- Create App Services named **"supermarket-appservice"** (you can name it anything) that is linked to supermarket cluster by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) 
+- Create an App Service named **"supermarket-appservice"** (you can name it anything) that is linked to the supermarket cluster by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) 
 
 - Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
 
@@ -74,7 +61,6 @@ The configuration of App Endpoint should look like this:
 - Configure two App Users corresponding to the two stores (one in each App Endpoint) by following these [instructions](https://docs.couchbase.com/cloud/app-services/user-management/create-user.html).You can choose any password. If you would like to run the app with prefilled demo credentials, you must use the password mentioned below. This will make more sense when you setup the individual apps later.
    - **user**=nyc-store-01@supermarket.com / **password**=P@ssword1 (this is created in App Endpoint supermarket-aa)
    - **user**=aa-store-01@supermarket.com / **password**=P@ssword1 (this is created App Endpoint supermarket-nyc) 
-
 
 The configuration of App User should look something like this:
 ![](./common/assets/appuser.png)
@@ -98,7 +84,6 @@ Repeat these steps for each of the App Endpoints
   ![](./common/assets/cors2.png)
 
 ## Repo Structure
-
 The repo is organized as follows
 
 - **iOS**: This folder includes source code corresponding to the iOS version of the retail application. Follow the instructions in the [README.md](./iOS/README.md) file in the folder to build and run the iOS app. That folder also includes instructions to run the app in peer-to-peer mode.
@@ -106,6 +91,3 @@ The repo is organized as follows
 - **Android**: This folder includes source code corresponding to the Android version of the retail application. Follow the instructions in the [README.md](./Android/README.md) file in that folder to build and run the Android app. That folder also includes instructions to run the app in peer-to-peer mode.
 
 - **web**: This folder includes source code corresponding to the web version of the retail application. Follow the instructions in the [README.md](./web/README.md) file in that folder to build and run the web app.
-
-
-

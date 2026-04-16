@@ -79,6 +79,12 @@ class AuthenticationManager(
                 return@withContext LoginResult.Error("Invalid username or password")
             }
             
+            // Set store based on the user logging in
+            AppConfig.setStoreForUser(username)
+            
+            // Start sync with the correct endpoint for this user
+            databaseManager.startSyncAfterLogin()
+            
             // Fetch store profile from database
             storeProfile = databaseManager.getStoreProfile()
             
@@ -112,9 +118,13 @@ class AuthenticationManager(
      */
     fun logout() {
         try {
+            // Stop sync before clearing session to prevent stale connections
+            databaseManager.disableAppServices()
+            
             clearSession()
             currentUser = null
             isAuthenticated = false
+            storeProfile = null
             Log.d(TAG, "🚪 User logged out")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Logout error", e)
@@ -146,22 +156,16 @@ class AuthenticationManager(
                         return
                     }
                     
-                    // Validate that the stored session matches the current store configuration
-                    val expectedUsername = when (AppConfig.currentStore) {
-                        StoreLocation.AA -> "aa-store-01@supermarket.com"
-                        StoreLocation.NYC -> "nyc-store-01@supermarket.com"
-                    }
-                    
-                    if (username != expectedUsername) {
-                        Log.d(TAG, "⚠️ Stored session ($username) doesn't match current store (${AppConfig.currentStore.displayName}), clearing session")
-                        clearSession()
-                        return
-                    }
+                    // Set store based on the restored user
+                    AppConfig.setStoreForUser(username)
                     
                     // Restore session
                     currentUser = User(username, fullName, role, profileName)
                     isAuthenticated = true
                     Log.d(TAG, "🔄 Restored login session: $fullName")
+                    
+                    // Start sync with the correct endpoint for this user
+                    databaseManager.startSyncAfterLogin()
                 } else {
                     Log.d(TAG, "ℹ️ No valid stored session found")
                 }
