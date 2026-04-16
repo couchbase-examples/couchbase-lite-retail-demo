@@ -2,6 +2,11 @@
 
 A retail inventory management app for Android demonstrating Couchbase Lite's offline-first capabilities, real-time sync with Capella App Services, and peer-to-peer sync between devices.
 
+## Prerequisites
+
+> [!IMPORTANT]
+> Before proceeding with the Android setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
+
 ## Quick Start (For Already Configured Systems)
 
 If you've already completed the initial setup and have Java 17 + Couchbase Lite EE installed:
@@ -138,6 +143,8 @@ This may take a few minutes on first open.
 ### 3. Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
+
+**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL** — it will look like `wss://<id>.apps.cloud.couchbase.com:4984`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
 
 #### Option A: Environment Variables (Recommended)
 
