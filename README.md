@@ -41,14 +41,22 @@ Although instructions are specified for Capella App Services, equivalent instruc
 - Create an App Service named **"supermarket-appservice"** (you can name it anything) that is linked to the cluster you just created by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services)
 
 ### Create Bucket, Scopes and Collections
-  
-- Create a bucket named **"supermarket"** on the cluster by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets). 
 
-- Create two scopes named **"NYC-Store"** and **"AA-Store"** in the bucket by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes). 
+> [!NOTE]
+> The Capella UI only lets you create **one** scope and **one** collection at the time of bucket creation. The remaining scope and collections must be added afterwards. The steps below reflect that flow.
 
-- In each scope, create three collections named **"inventory"**, **"profile"** and **"orders"** respectively by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection). 
+1. **Create the bucket with its first scope and collection.** Follow these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#buckets) and, on the bucket-creation screen, fill in:
+   - **Bucket name**: `supermarket`
+   - **Scope name**: `NYC-Store`
+   - **Collection name**: `inventory`
 
-- At end of the steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
+2. **Add the second scope.** In the `supermarket` bucket, add a new scope named `AA-Store` by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes).
+
+3. **Add the remaining collections.** Using these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection), add collections so each scope ends up with **`inventory`**, **`profile`**, and **`orders`**:
+   - In **`NYC-Store`**: add `profile` and `orders` (the `inventory` collection already exists from step 1).
+   - In **`AA-Store`**: add `inventory`, `profile`, and `orders`.
+
+At the end of these steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
 
 ## Importing Sample Data Set
 - Download and unzip sample dataset from [demo-dataset.zip](https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/demo-dataset.zip)
