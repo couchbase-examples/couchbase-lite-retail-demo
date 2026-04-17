@@ -17,18 +17,17 @@ enum StoreLocation: String, CaseIterable {
 struct AppConfig {
     
     // MARK: - Current Store Selection
-    // Change this value to switch between stores
-    static let currentStore: StoreLocation = .nyc
+    // Set at runtime after login based on authenticated user
+    static var currentStore: StoreLocation = .nyc
     
     // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
-    // Prefer Info.plist (via .xcconfig) or environment variables when running from Xcode
-    private static let env = ProcessInfo.processInfo.environment
-    private static let baseURL: String = env["CBL_BASE_URL"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_BASE_URL") as? String ?? "")
-    private static let aaDB: String = env["CBL_AA_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_DB") as? String ?? "")
-    private static let nycDB: String = env["CBL_NYC_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_DB") as? String ?? "")
-    private static let aaUser: String = env["CBL_AA_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_USER") as? String ?? "")
-    private static let nycUser: String = env["CBL_NYC_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_USER") as? String ?? "")
-    private static let passwordValue: String = env["CBL_PASSWORD"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_PASSWORD") as? String ?? "")
+    // Prefer environment variables, then Info.plist — computed each time to avoid lazy init caching empty values
+    private static var baseURL: String { ProcessInfo.processInfo.environment["CBL_BASE_URL"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_BASE_URL") as? String ?? "") }
+    private static var aaDB: String { ProcessInfo.processInfo.environment["CBL_AA_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_DB") as? String ?? "") }
+    private static var nycDB: String { ProcessInfo.processInfo.environment["CBL_NYC_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_DB") as? String ?? "") }
+    private static var aaUser: String { ProcessInfo.processInfo.environment["CBL_AA_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_USER") as? String ?? "") }
+    private static var nycUser: String { ProcessInfo.processInfo.environment["CBL_NYC_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_USER") as? String ?? "") }
+    private static var passwordValue: String { ProcessInfo.processInfo.environment["CBL_PASSWORD"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_PASSWORD") as? String ?? "") }
     
     static var syncGatewayURL: String {
         switch currentStore {

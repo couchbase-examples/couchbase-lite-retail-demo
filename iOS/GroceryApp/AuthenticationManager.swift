@@ -78,7 +78,10 @@ class AuthenticationManager: ObservableObject {
                 fullName: userCredentials.fullName,
                 role: userCredentials.role
             )
-            
+
+            // Set store before triggering UI update so views read from the correct scope
+            AppConfig.currentStore = username.contains("aa-store") ? .aa : .nyc
+
             // Update authentication state
             withAnimation(.easeInOut(duration: 0.3)) {
                 self.currentUser = user
@@ -150,21 +153,9 @@ class AuthenticationManager: ObservableObject {
             return
         }
         
-        // Validate that the stored session matches the current store configuration
-        let expectedUsername: String
-        switch AppConfig.currentStore {
-        case .aa:
-            expectedUsername = "aa-store-01@supermarket.com"
-        case .nyc:
-            expectedUsername = "nyc-store-01@supermarket.com"
-        }
-        
-        guard username == expectedUsername else {
-            print("⚠️ Stored session (\(username)) doesn't match current store (\(AppConfig.currentStore.displayName)), clearing session")
-            clearStoredLogin()
-            return
-        }
-        
+        // Set store before restoring session so views read from the correct scope
+        AppConfig.currentStore = username.contains("aa-store") ? .aa : .nyc
+
         // Restore user session
         let user = User(username: username, fullName: fullName, role: role)
         DispatchQueue.main.async {

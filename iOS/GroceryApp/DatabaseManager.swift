@@ -784,8 +784,29 @@ class DatabaseManager: ObservableObject {
         }
     }
     
+    // MARK: - Store Reconfiguration
+
+    func reconfigure(for store: StoreLocation) {
+        print("Reconfiguring DatabaseManager for store: \(store.displayName)")
+        AppConfig.currentStore = store
+
+        collectionChangeListenerToken?.remove()
+        collectionChangeListenerToken = nil
+        appServicesSyncManager = nil
+        isAppServicesEnabled = false
+
+        setupChangeListeners()
+        setupAppServicesIntegration()
+
+        if AppConfig.enableAppServicesSync {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.enableAppServices()
+            }
+        }
+    }
+
     // MARK: - App Services Integration
-    
+
     private func setupAppServicesIntegration() {
         guard let database = database else {
             print("❌ Database not ready for App Services integration")

@@ -49,6 +49,11 @@ struct GroceryAppApp: App {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
+            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+                guard isAuthenticated, let username = authManager.currentUser?.username else { return }
+                let store: StoreLocation = username.contains("aa-store") ? .aa : .nyc
+                databaseManager.reconfigure(for: store)
+            }
         }
     }
     
