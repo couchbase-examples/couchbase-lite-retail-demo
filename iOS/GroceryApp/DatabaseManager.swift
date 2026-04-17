@@ -788,20 +788,37 @@ class DatabaseManager: ObservableObject {
 
     func reconfigure(for store: StoreLocation) {
         print("Reconfiguring DatabaseManager for store: \(store.displayName)")
-        AppConfig.currentStore = store
 
-        collectionChangeListenerToken?.remove()
-        collectionChangeListenerToken = nil
+        // Explicitly stop the replicator before releasing the sync manager so the
+        // old WebSocket connection is closed before the new one starts
+        appServicesSyncManager?.disableAppServices()
         appServicesSyncManager = nil
         isAppServicesEnabled = false
 
+        // Remove change listener before closing the database
+        collectionChangeListenerToken?.remove()
+        collectionChangeListenerToken = nil
+
+        // Close the database so checkAndHandleStoreChange (called inside openDatabase)
+        // can delete old store data if the store has changed
+        do {
+            try database?.close()
+            database = nil
+        } catch {
+            print("Error closing database during reconfigure: \(error)")
+        }
+
+        // Update store then reopen — openDatabase runs checkAndHandleStoreChange
+        // internally, which purges old data when the store differs from last launch
+        AppConfig.currentStore = store
+        openDatabase()
+
+        // Rebuild listeners and sync — no delay needed after synchronous openDatabase()
         setupChangeListeners()
         setupAppServicesIntegration()
 
         if AppConfig.enableAppServicesSync {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.enableAppServices()
-            }
+            enableAppServices()
         }
     }
 
