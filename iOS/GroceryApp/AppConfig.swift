@@ -15,10 +15,42 @@ enum StoreLocation: String, CaseIterable {
 
 // MARK: - App Configuration
 struct AppConfig {
-    
+
     // MARK: - Current Store Selection
-    // Set at runtime after login based on authenticated user
-    static var currentStore: StoreLocation = .nyc
+    //
+    // Lazily initialized from UserDefaults on first access so cold starts
+    // with a persisted session see the correct scope BEFORE DatabaseManager
+    // opens the database. Without this, DatabaseManager.init() would spot
+    // a mismatch between the default (.nyc) and the store last used by the
+    // signed-in user, and spuriously purge the local data.
+    //
+    // The didSet re-persists to UserDefaults, so callers can simply write
+    // `AppConfig.currentStore = .aa` after login and be done.
+    private static let persistedStoreKey = "AppConfig.persistedCurrentStore"
+
+    static var currentStore: StoreLocation = {
+        if let raw = UserDefaults.standard.string(forKey: persistedStoreKey),
+           let loc = StoreLocation(rawValue: raw) {
+            return loc
+        }
+        return .nyc
+    }() {
+        didSet {
+            UserDefaults.standard.set(currentStore.rawValue, forKey: persistedStoreKey)
+        }
+    }
+
+    /// Maps an authenticated username to its corresponding store.
+    /// Credentials in this demo are prefixed with "aa-" or "nyc-";
+    /// callers get a single, consistent resolution rule instead of
+    /// copying the same `username.contains(...)` check in multiple places.
+    static func store(for username: String) -> StoreLocation {
+        let lowered = username.lowercased()
+        if lowered.contains("aa-store") {
+            return .aa
+        }
+        return .nyc
+    }
     
     // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
     // Prefer environment variables, then Info.plist — computed each time to avoid lazy init caching empty values

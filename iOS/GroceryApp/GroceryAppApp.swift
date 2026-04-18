@@ -15,13 +15,26 @@ import Network
 
 @main
 struct GroceryAppApp: App {
-    @StateObject private var databaseManager = DatabaseManager()
-    @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var databaseManager: DatabaseManager
+    @StateObject private var authManager: AuthenticationManager
     @State private var p2pSyncManager: GroceryMultipeerSyncManager?
-    
+
     init() {
         print("🚀 [MultipeerReplicator] Initializing new MultipeerReplicator-based P2P sync")
         print("🚀 [MultipeerReplicator] Using official Couchbase Lite 3.3+ API")
+
+        // Build the managers locally so we can wire them together and restore
+        // any persisted session BEFORE SwiftUI evaluates `body` for the first
+        // time. This closes the race where `.onChange(of: isAuthenticated)`
+        // was the only place that reconfigured the replicator — which fired
+        // AFTER views had already observed the auth flip and started reading
+        // from the (possibly wrong-store) database.
+        let db = DatabaseManager()
+        let auth = AuthenticationManager()
+        auth.databaseManager = db
+        auth.restoreSessionIfAny()
+        _databaseManager = StateObject(wrappedValue: db)
+        _authManager = StateObject(wrappedValue: auth)
     }
     
     var body: some Scene {
@@ -49,11 +62,11 @@ struct GroceryAppApp: App {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
-            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                guard isAuthenticated, let username = authManager.currentUser?.username else { return }
-                let store: StoreLocation = username.contains("aa-store") ? .aa : .nyc
-                databaseManager.reconfigure(for: store)
-            }
+            // NOTE: No `.onChange(of: isAuthenticated)` reconfigure here —
+            // `AuthenticationManager.login()` / `restoreSessionIfAny()`
+            // drive `databaseManager.reconfigure(for:)` synchronously before
+            // flipping `isAuthenticated`, so views never observe an auth
+            // flip while the replicator still points at the previous store.
         }
     }
     
