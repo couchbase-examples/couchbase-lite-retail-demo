@@ -705,10 +705,19 @@ class DatabaseManager: ObservableObject {
             for result in results {
                 guard let dict = result.dictionary(at: 0) else { continue }
                 
+                // `orderId` may be stored as either String (imported demo
+                // data) or Int (locally created). Read it defensively so
+                // both shapes decode to the same String representation.
+                let orderIdStr: String = {
+                    if let s = dict.string(forKey: "orderId"), !s.isEmpty { return s }
+                    let i = dict.int(forKey: "orderId")
+                    return i == 0 ? "" : String(i)
+                }()
+
                 let order = Order(
                     id: dict.string(forKey: "id") ?? "",
                     docType: dict.string(forKey: "docType") ?? "Order",
-                    orderId: dict.int(forKey: "orderId"),
+                    orderId: orderIdStr,
                     storeId: dict.string(forKey: "storeId") ?? "",
                     orderDate: dict.int64(forKey: "orderDate"),
                     orderStatus: dict.string(forKey: "orderStatus") ?? "Submitted",
@@ -746,14 +755,13 @@ class DatabaseManager: ObservableObject {
             let nanoId = generateNanoId()
             let documentId = "order-\(AppConfig.storeId)-\(nanoId)"
             
-            // Get next sequential order ID
-            let existingOrders = getAllOrders()
-            let nextOrderId = (existingOrders.map { $0.orderId }.max() ?? 0) + 1
-            
+            // New orders use the document ID as `orderId` so the field
+            // is consistently a String across both locally-created and
+            // imported docs — matching the shape the decoder now expects.
             let order = Order(
                 id: documentId,
                 docType: "Order",
-                orderId: nextOrderId,
+                orderId: documentId,
                 storeId: AppConfig.storeId,
                 orderDate: Int64(Date().timeIntervalSince1970 * 1000),
                 orderStatus: "In Review",  // New status for upcoming orders
@@ -762,7 +770,7 @@ class DatabaseManager: ObservableObject {
                 unit: item.unit ?? "unit",
                 orderQty: quantity
             )
-            
+
             let document = MutableDocument(id: documentId)
             document.setString(order.docType, forKey: "docType")
             document.setString(order.storeId, forKey: "storeId")
@@ -772,7 +780,7 @@ class DatabaseManager: ObservableObject {
             document.setString(order.sku, forKey: "sku")
             document.setString(order.unit, forKey: "unit")
             document.setInt(order.orderQty, forKey: "orderQty")
-            document.setInt(order.orderId, forKey: "orderId")
+            document.setString(order.orderId, forKey: "orderId")
             
             try collection.save(document: document)
             print("✅ Created order: \(documentId) (productId: \(order.productId), qty: \(quantity))")
