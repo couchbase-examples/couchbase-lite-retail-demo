@@ -27,14 +27,21 @@ cd /path/to/Android
 
 ## Requirements
 
+### macOS
+
 - **Android Studio**: Ladybug (2024.2.1) or later
-- **Android SDK**: 
+- **Android SDK**:
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
 - **JDK**: 17 or later
 - **Kotlin**: 2.0.21
 - **Homebrew**: For installing Java on macOS (optional but recommended)
+
+### Windows
+
+- [Android Studio Panda 3](https://developer.android.com/studio)
+- [Git for Windows](https://git-scm.com/install/windows)
 
 ## Dependencies
 
@@ -224,7 +231,7 @@ Android/
 
 - **Database Name**: `GroceryInventoryDB`
 - **Scopes**: `AA-Store`, `NYC-Store` (based on selected store)
-- **Collections**: 
+- **Collections**:
   - `inventory` - Product inventory items
   - `orders` - Customer orders
   - `profile` - Store profile information
@@ -377,7 +384,6 @@ dependencyResolutionManagement {
 - Verify the `P2P_PEER_GROUP_ID` is the same across all devices
 - Look for P2P-related logs in Logcat (filter by "MultipeerSyncManager")
 
-
 ## Debugging
 
 ### Enable Verbose Logging
@@ -401,7 +407,9 @@ You can use the Couchbase Lite command-line tool to inspect the database file:
 The following files were created or configured during the initial setup process:
 
 #### Global Configuration (`~/.gradle/gradle.properties`)
+
 Contains JVM arguments and Gradle settings, including SSL certificate handling:
+
 ```properties
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
 org.gradle.daemon=true
@@ -410,7 +418,9 @@ org.gradle.caching=true
 ```
 
 #### Project Configuration (`settings.gradle.kts`)
+
 Configured with `mavenLocal()` repository to use locally downloaded Couchbase Lite EE:
+
 ```kotlin
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -427,7 +437,9 @@ dependencyResolutionManagement {
 ```
 
 #### Environment Variables (`~/.zshrc`)
+
 Java configuration added to your shell profile:
+
 ```bash
 export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
@@ -457,7 +469,6 @@ You would also need to comment out or remove the P2P sync functionality in:
 - `MultipeerSyncComponents.kt`
 - References to MultipeerSyncManager in other screens
 
-
 ### Verification Commands
 
 To verify your setup:
@@ -482,4 +493,3 @@ ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 - [iOS App README](../iOS/README.md) - iOS version of this app
 - [Web App README](../web/README.md) - Web version of this app
 - [Couchbase Lite Android Documentation](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)
-
