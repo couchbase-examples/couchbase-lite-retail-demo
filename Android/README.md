@@ -205,7 +205,7 @@ We use Android Studio to clone the repository.
 - Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
 - Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
 
-Once project import has completed, **modify file `gradle.properties`** as described above at [Step 6: Configure Capella App Services -- Option B: Gradle Properties](https://github.com/couchbase-examples/couchbase-lite-retail-demo/tree/main/Android#option-b-gradle-properties). You find file `gradle.properties` after expanding `Gradle Scripts` on the left hand side.
+Once project import has completed, **modify file `gradle.properties`** as described above at [Step 6: Configure Capella App Services -- Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
 
 ## Build and Run
 
