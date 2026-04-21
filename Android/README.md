@@ -25,7 +25,7 @@ cd /path/to/Android
 
 **First time setup?** Continue reading below for complete installation instructions.
 
-## Requirements
+## Requirements and Dependencies
 
 ### macOS
 
@@ -38,13 +38,6 @@ cd /path/to/Android
 - **Kotlin**: 2.0.21
 - **Homebrew**: For installing Java on macOS (optional but recommended)
 
-### Windows
-
-- [Android Studio Panda 3](https://developer.android.com/studio)
-- [Git for Windows](https://git-scm.com/install/windows)
-
-## Dependencies
-
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
 - **Couchbase Lite Android**: 3.3.0 (Enterprise Edition with KTX extensions)
@@ -53,6 +46,13 @@ The project uses Gradle with Kotlin DSL for dependency management. Key dependenc
 - **Lifecycle Components**: ViewModel and LiveData
 
 All dependencies are declared in `gradle/libs.versions.toml` and automatically resolved by Gradle.
+
+### Windows
+
+- [Android Studio Panda 3](https://developer.android.com/studio)
+- [Git for Windows](https://git-scm.com/install/windows)
+
+Android Studio bundles all required binary dependencies and manages library dependencies.
 
 ## Initial Setup (macOS)
 
@@ -118,9 +118,7 @@ ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
 
 **Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
 
-## Getting Started
-
-### 1. Verify Prerequisites
+### Step 4: Verify Prerequisites
 
 Before opening the project, ensure:
 
@@ -136,7 +134,7 @@ ls -la gradlew  # Should exist and be executable
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 ```
 
-### 2. Open the Project
+### Step 5: Open the Project
 
 Open Android Studio and select **File** > **Open**, then navigate to the `Android` directory and open it.
 
@@ -147,7 +145,7 @@ Android Studio will automatically sync Gradle and resolve dependencies from:
 
 This may take a few minutes on first open.
 
-### 3. Configure Capella App Services
+### Step 6: Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
@@ -187,9 +185,47 @@ CBL_PASSWORD=P@ssword1
 
 **Note**: Do not commit `gradle.properties` with sensitive credentials to version control.
 
-### 4. Build and Run
+## Initial Setup (Windows)
 
-Select an emulator or connected device from the device dropdown and click **Run** (▶).
+### Step 1: Clone the Repository
+
+We use Android Studio to clone the repository.
+
+- Open Android Studio
+- On the Welcome screen, click **Clone Repository**
+- Enter URL `https://github.com/couchbase-examples/couchbase-lite-retail-demo.git`
+- Select a folder into which to clone the repository
+- Once the project has been cloned, **close the project** (File -> Close Project)
+- Remove the project from recent history (Click the three dots and select **Remove from recent projects**)
+
+### Step 2: Properly Import the Project into Android Studio
+
+- On the Welcome screen, click **Open**
+- Navigate to the folder into which you cloned the project
+- Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
+- Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
+
+Once project import has completed, **modify file `gradle.properties`** as described above at [Step 6: Configure Capella App Services -- Option B: Gradle Properties](https://github.com/couchbase-examples/couchbase-lite-retail-demo/tree/main/Android#option-b-gradle-properties). You find file `gradle.properties` after expanding `Gradle Scripts` on the left hand side.
+
+## Build and Run
+
+### Step 1: Create a Virtual Device
+
+Creating a virtual device is documented at [Create and manage virtual devices | Android Studio | Android Developers](https://developer.android.com/studio/run/managing-avds). In short:
+
+- Go to Tools -> Device Manager
+- Click **Add a new device**, then **Create virtual device**
+- Select, e.g., **Pixel 3a**
+- On the next screen, select, e.g.:
+    - API: **API 28 "Pie"**
+    - System image: **Google Play Intel X86 Atom System Image**
+- Click **Finish**
+
+### Step 2: Run the app on the Emulator
+
+At the top toolbar, ensure your virtual device emulator is selected. Click the **Green Run button (▶)**. The emulator comes up on the right hand side, running the application.
+
+Further documentation: [Run apps on the Android Emulator | Android Studio | Android Developers](https://developer.android.com/studio/run/emulator#runningapp)
 
 ## Project Structure
 
