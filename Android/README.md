@@ -54,10 +54,49 @@ All dependencies are declared in `gradle/libs.versions.toml` and automatically r
 
 - [Git for Windows](https://git-scm.com/install/windows)
 
-Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, follow the same local Maven setup described in the macOS section ([Step 2: Configure Gradle for SSL](#step-2-configure-gradle-for-ssl) and [Step 3: Install Couchbase Lite Enterprise Edition (Local Repository)](#step-3-install-couchbase-lite-enterprise-edition-local-repository)), adapted for Windows paths (`%USERPROFILE%\.gradle\gradle.properties` and `%USERPROFILE%\.m2\repository\...`).
+Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, complete the Windows equivalents of macOS [Step 2](#step-2-configure-gradle-for-ssl) and [Step 3](#step-3-install-couchbase-lite-enterprise-edition-local-repository) — concrete PowerShell commands are provided below.
 
 > [!WARNING]
 > Do **not** copy `-Djavax.net.ssl.trustStoreType=KeychainStore` verbatim on Windows. `KeychainStore` is macOS-only and the JVM on Windows will fail with a `KeyStoreException`. Either omit that JVM arg entirely (the JDK default trust store usually works), or replace it with `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to use the Windows certificate store.
+
+**Windows equivalent of Step 2 — global `gradle.properties` (PowerShell):**
+
+```powershell
+# Ensure the .gradle directory exists, then write global gradle.properties
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gradle" | Out-Null
+@'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+'@ | Set-Content -Encoding ASCII "$env:USERPROFILE\.gradle\gradle.properties"
+```
+
+**Windows equivalent of Step 3 — download Couchbase Lite EE into local Maven repo (PowerShell):**
+
+```powershell
+$repo = "$env:USERPROFILE\.m2\repository\com\couchbase\lite"
+$base = "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite"
+
+# Create target directories
+New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee-ktx\3.3.0" | Out-Null
+New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee\3.3.0"     | Out-Null
+
+# Download EE KTX (aar + pom)
+Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -OutFile "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
+Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -OutFile "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
+
+# Download EE core (aar + pom)
+Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -OutFile "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
+Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -OutFile "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
+
+# Verify
+Get-ChildItem "$repo\couchbase-lite-android-ee\3.3.0"
+Get-ChildItem "$repo\couchbase-lite-android-ee-ktx\3.3.0"
+```
+
+> [!NOTE]
+> If `Invoke-WebRequest` fails with an SSL/TLS error on older PowerShell versions, temporarily enable TLS 1.2 in the session with `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` before retrying. Once the files are in your local Maven repository, Gradle will resolve them directly without further downloads.
 
 ## Initial Setup (macOS)
 
@@ -162,11 +201,12 @@ Before opening the project, ensure the following. Commands below are shown for a
 java -version  # Should show 17.0.x
 
 # Check Gradle wrapper exists
-cd /path/to/Android
+cd <path-to-repo>/Android
 ls -la gradlew  # Should exist and be executable
 
-# Verify Couchbase EE is installed locally
+# Verify Couchbase EE (core + KTX) is installed locally
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
 ```
 
 **Windows Command Prompt / PowerShell:**
@@ -176,11 +216,12 @@ ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 java -version
 
 :: Check Gradle wrapper exists (use gradlew.bat on Windows, not gradlew)
-cd C:\path\to\Android
+cd <path-to-repo>\Android
 dir gradlew.bat
 
-:: Verify Couchbase EE is installed locally
+:: Verify Couchbase EE (core + KTX) is installed locally
 dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.3.0\*.aar
+dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee-ktx\3.3.0\*.aar
 ```
 
 > [!NOTE]
