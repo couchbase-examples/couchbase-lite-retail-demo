@@ -92,8 +92,11 @@ class AuthenticationManager: ObservableObject {
             // (rather than via a `.onChange` observer downstream) guarantees
             // views never observe the auth flip while the replicator is still
             // pointed at the previous store's scope.
+            // `reconfigure(for:)` is the single source of truth: it sets
+            // `AppConfig.currentStore` (which persists to UserDefaults),
+            // rebuilds the database, and restarts the replicator — all in
+            // one synchronous call before we flip `isAuthenticated`.
             let targetStore = AppConfig.store(for: username)
-            AppConfig.currentStore = targetStore
             self.databaseManager?.reconfigure(for: targetStore)
 
             // Update authentication state
@@ -179,22 +182,22 @@ class AuthenticationManager: ObservableObject {
             return
         }
 
-        // Reconcile store + replicator before announcing auth. `currentStore`
-        // was already lazy-loaded from UserDefaults by AppConfig, so in the
-        // common case this is a no-op; the reconfigure is defensive, covering
-        // the edge case where a session doc exists without a persisted store.
+        // Reconcile store + replicator before announcing auth. In the common
+        // case AppConfig.currentStore was already lazy-loaded from
+        // UserDefaults so reconfigure is idempotent here; it also covers the
+        // edge case of a session doc existing without a persisted store.
+        // reconfigure(for:) is the single source of truth — it persists
+        // AppConfig.currentStore itself, so we don't duplicate that write.
         let targetStore = AppConfig.store(for: username)
-        if AppConfig.currentStore != targetStore {
-            AppConfig.currentStore = targetStore
-        }
         databaseManager?.reconfigure(for: targetStore)
 
-        // Restore user session
+        // Restore user session. This runs synchronously on the main thread
+        // (called from App.init) so the authenticated view renders on the
+        // very first body evaluation — deferring via DispatchQueue.main.async
+        // would briefly show LoginView on cold start.
         let user = User(username: username, fullName: fullName, role: role)
-        DispatchQueue.main.async {
-            self.currentUser = user
-            self.isAuthenticated = true
-        }
+        self.currentUser = user
+        self.isAuthenticated = true
 
         print("🔄 Restored login session from Couchbase Lite: \(user.fullName)")
     }

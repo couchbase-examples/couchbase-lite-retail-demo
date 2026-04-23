@@ -809,12 +809,16 @@ class DatabaseManager: ObservableObject {
 
         // Close the database so checkAndHandleStoreChange (called inside openDatabase)
         // can delete old store data if the store has changed
+        // Clear the reference regardless of whether `close()` throws — a
+        // partially-closed handle left assigned would trip up the very next
+        // `openDatabase()` call (which may delete the DB file when the store
+        // changes) by operating on a locked/half-closed instance.
         do {
             try database?.close()
-            database = nil
         } catch {
             print("Error closing database during reconfigure: \(error)")
         }
+        database = nil
 
         // Update store then reopen — openDatabase runs checkAndHandleStoreChange
         // internally, which purges old data when the store differs from last launch
