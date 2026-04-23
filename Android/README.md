@@ -56,6 +56,9 @@ All dependencies are declared in `gradle/libs.versions.toml` and automatically r
 
 Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, follow the same local Maven setup described in the macOS section ([Step 2: Configure Gradle for SSL](#step-2-configure-gradle-for-ssl) and [Step 3: Install Couchbase Lite Enterprise Edition (Local Repository)](#step-3-install-couchbase-lite-enterprise-edition-local-repository)), adapted for Windows paths (`%USERPROFILE%\.gradle\gradle.properties` and `%USERPROFILE%\.m2\repository\...`).
 
+> [!WARNING]
+> Do **not** copy `-Djavax.net.ssl.trustStoreType=KeychainStore` verbatim on Windows. `KeychainStore` is macOS-only and the JVM on Windows will fail with a `KeyStoreException`. Either omit that JVM arg entirely (the JDK default trust store usually works), or replace it with `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to use the Windows certificate store.
+
 ## Initial Setup (macOS)
 
 ### Step 1: Install Java 17
@@ -150,7 +153,9 @@ The following steps apply to both macOS and Windows. Complete your platform-spec
 
 ### Step 1: Verify Prerequisites
 
-Before opening the project, ensure:
+Before opening the project, ensure the following. Commands below are shown for a Unix-like shell (macOS Terminal, Linux, or Git Bash on Windows); Windows Command Prompt / PowerShell equivalents are noted inline.
+
+**macOS / Linux / Git Bash:**
 
 ```bash
 # Check Java version
@@ -160,9 +165,26 @@ java -version  # Should show 17.0.x
 cd /path/to/Android
 ls -la gradlew  # Should exist and be executable
 
-# Verify Couchbase EE is installed locally (macOS path shown; on Windows use %USERPROFILE%\.m2\...)
+# Verify Couchbase EE is installed locally
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 ```
+
+**Windows Command Prompt / PowerShell:**
+
+```cmd
+:: Check Java version
+java -version
+
+:: Check Gradle wrapper exists (use gradlew.bat on Windows, not gradlew)
+cd C:\path\to\Android
+dir gradlew.bat
+
+:: Verify Couchbase EE is installed locally
+dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.3.0\*.aar
+```
+
+> [!NOTE]
+> On Windows, always invoke `gradlew.bat` (not `gradlew`) from Command Prompt or PowerShell. The `gradlew` script without the `.bat` extension is a Unix shell script and will not run natively on Windows outside of a POSIX shell like Git Bash.
 
 ### Step 2: Open the Project
 
