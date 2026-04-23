@@ -708,10 +708,15 @@ class DatabaseManager: ObservableObject {
                 // `orderId` may be stored as either String (imported demo
                 // data) or Int (locally created). Read it defensively so
                 // both shapes decode to the same String representation.
+                // - Check key presence via `value(forKey:)` so a legitimate
+                //   numeric 0 survives instead of being coerced to "" like
+                //   a missing key would be.
+                // - Use `int64` (not `int`) so 64-bit identifiers survive
+                //   without truncation on any platform.
                 let orderIdStr: String = {
                     if let s = dict.string(forKey: "orderId"), !s.isEmpty { return s }
-                    let i = dict.int(forKey: "orderId")
-                    return i == 0 ? "" : String(i)
+                    guard dict.value(forKey: "orderId") != nil else { return "" }
+                    return String(dict.int64(forKey: "orderId"))
                 }()
 
                 let order = Order(

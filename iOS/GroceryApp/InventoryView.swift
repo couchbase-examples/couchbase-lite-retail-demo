@@ -21,7 +21,6 @@ struct InventoryView: View {
     // App Services replicator reaches `idle` — the latter catches the
     // truly-empty-store case so the spinner never hangs forever.
     @State private var didCompleteInitialLoad = false
-    @State private var syncStatePoller: Timer?
     @Environment(\.dismiss) private var dismiss
     
     // Fixed 2-column layout to match Android
@@ -118,14 +117,19 @@ struct InventoryView: View {
             setupReactiveQuery()  // Setup Reactive API publisher
             // Load profile name from Capella
             profileName = databaseManager.getStoreProfile()?.name
-            startSyncStatePoller()
+        }
+        .task {
+            // Structured-concurrency replacement for the old Timer-based
+            // poller. A `.task` modifier is tied to view lifetime: SwiftUI
+            // cancels the task automatically when the view disappears, so
+            // no manual invalidation in `.onDisappear` is needed.
+            await pollSyncStateUntilIdle()
         }
         .onDisappear {
-            // Cancel all subscriptions when view disappears
+            // Cancel Combine subscriptions. The sync-state polling task
+            // cancels automatically via the `.task` modifier above.
             cancellables.forEach { $0.cancel() }
             cancellables.removeAll()
-            syncStatePoller?.invalidate()
-            syncStatePoller = nil
         }
     }
     
@@ -284,36 +288,44 @@ struct InventoryView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    /// Polls the App Services sync state every 0.5 s and clears the initial-
-    /// load flag the moment the replicator reaches idle. This covers the
-    /// edge case where a store is genuinely empty — otherwise the spinner
-    /// would hang forever waiting for a non-empty reactive emission.
-    /// Also acts as a hard timeout safety net.
-    private func startSyncStatePoller() {
+    /// Polls the App Services sync state and clears the initial-load flag
+    /// the moment the replicator reaches idle. Covers the truly-empty-store
+    /// case so the spinner never hangs forever waiting for a non-empty
+    /// reactive emission.
+    ///
+    /// Driven via `.task { await ... }` instead of `Timer.scheduledTimer`
+    /// so cancellation is automatic on view dismissal (structured
+    /// concurrency) and we don't have to retain/invalidate a Timer handle.
+    ///
+    /// A purely-Combine approach is technically feasible (observing
+    /// `DatabaseManager.$appServicesSyncManager` plus its inner state),
+    /// but the underlying sync state is surfaced today through a snapshot
+    /// accessor (`getAppServicesSyncState()`), not a Published chain —
+    /// so polling is the simplest honest implementation until that
+    /// accessor itself becomes observable.
+    private func pollSyncStateUntilIdle() async {
         guard !didCompleteInitialLoad else { return }
-        syncStatePoller?.invalidate()
 
         let startedAt = Date()
-        syncStatePoller = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
-            if didCompleteInitialLoad {
-                timer.invalidate()
-                return
-            }
+        // Hard cap at 20s so the user never sees an indefinite spinner,
+        // even if the replicator never surfaces an idle state (e.g. a
+        // persistent auth failure).
+        let timeoutSeconds: TimeInterval = 20
 
+        while !Task.isCancelled && !didCompleteInitialLoad {
             let state = databaseManager.getAppServicesSyncState()
             let reachedIdle = state?.status.lowercased().contains("idle") == true
             let replicatorDisabled = databaseManager.isAppServicesEnabled == false
-            // Hard cap at 20s so the user never sees an indefinite spinner,
-            // even if the replicator never surfaces an idle state (e.g. a
-            // persistent auth failure).
-            let timedOut = Date().timeIntervalSince(startedAt) > 20
+            let timedOut = Date().timeIntervalSince(startedAt) > timeoutSeconds
 
             if reachedIdle || replicatorDisabled || timedOut {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     didCompleteInitialLoad = true
                 }
-                timer.invalidate()
+                return
             }
+
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 s
         }
     }
 
