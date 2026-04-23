@@ -88,14 +88,22 @@ class AuthenticationManager: ObservableObject {
             )
 
             // Resolve the target store and reconfigure the database replicator
-            // BEFORE flipping `isAuthenticated`. Doing this synchronously here
-            // (rather than via a `.onChange` observer downstream) guarantees
-            // views never observe the auth flip while the replicator is still
-            // pointed at the previous store's scope.
-            // `reconfigure(for:)` is the single source of truth: it sets
-            // `AppConfig.currentStore` (which persists to UserDefaults),
-            // rebuilds the database, and restarts the replicator — all in
-            // one synchronous call before we flip `isAuthenticated`.
+            // BEFORE flipping `isAuthenticated`. `reconfigure(for:)` is the
+            // single source of truth: it sets `AppConfig.currentStore` (which
+            // persists to UserDefaults), rebuilds the database, and restarts
+            // the replicator — all in one synchronous call.
+            //
+            // Note: this IS a synchronous disk hit on the main thread. We
+            // keep it synchronous deliberately — any async variant would
+            // either (a) leak a brief window where views observe auth=true
+            // against the previous store's scope, or (b) require a new
+            // "logging in…" UI state with careful threading of @Published
+            // writes back to main. For the demo dataset size (low hundreds
+            // of docs) reconfigure completes in well under a frame and
+            // doesn't produce a perceptible hang. If the dataset grows such
+            // that this becomes noticeable, the right fix is to gate the
+            // auth flip on a completion handler rather than dispatch
+            // blindly to a background queue.
             let targetStore = AppConfig.store(for: username)
             self.databaseManager?.reconfigure(for: targetStore)
 

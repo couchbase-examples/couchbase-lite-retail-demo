@@ -53,13 +53,20 @@ struct AppConfig {
     }
     
     // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
-    // Prefer environment variables, then Info.plist — computed each time to avoid lazy init caching empty values
-    private static var baseURL: String { ProcessInfo.processInfo.environment["CBL_BASE_URL"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_BASE_URL") as? String ?? "") }
-    private static var aaDB: String { ProcessInfo.processInfo.environment["CBL_AA_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_DB") as? String ?? "") }
-    private static var nycDB: String { ProcessInfo.processInfo.environment["CBL_NYC_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_DB") as? String ?? "") }
-    private static var aaUser: String { ProcessInfo.processInfo.environment["CBL_AA_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_USER") as? String ?? "") }
-    private static var nycUser: String { ProcessInfo.processInfo.environment["CBL_NYC_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_USER") as? String ?? "") }
-    private static var passwordValue: String { ProcessInfo.processInfo.environment["CBL_PASSWORD"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_PASSWORD") as? String ?? "") }
+    // Prefer environment variables, then Info.plist. Computed each time
+    // (not lazy-stored) so an Info.plist populated after the first access
+    // during test setup still resolves correctly.
+    private static func configValue(for key: String) -> String {
+        ProcessInfo.processInfo.environment[key]
+            ?? (Bundle.main.object(forInfoDictionaryKey: key) as? String ?? "")
+    }
+
+    private static var baseURL: String       { configValue(for: "CBL_BASE_URL") }
+    private static var aaDB: String          { configValue(for: "CBL_AA_DB") }
+    private static var nycDB: String         { configValue(for: "CBL_NYC_DB") }
+    private static var aaUser: String        { configValue(for: "CBL_AA_USER") }
+    private static var nycUser: String       { configValue(for: "CBL_NYC_USER") }
+    private static var passwordValue: String { configValue(for: "CBL_PASSWORD") }
     
     static var syncGatewayURL: String {
         switch currentStore {
