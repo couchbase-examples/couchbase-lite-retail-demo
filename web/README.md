@@ -25,7 +25,9 @@ A modern retail inventory management application built with Couchbase Lite for w
 > [!IMPORTANT]
 > Before proceeding with the web app setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, recording the public connection URL, and configuring CORS for the web app. If you skip these steps, the app will fail to authenticate and sync.
 
-- **Node.js**: Version 18 or higher ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- **Node.js**
+    - **macOS**: Version 18 or higher ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+    - **Windows**: [Windows Installer](https://nodejs.org/en/download) (Version 24.15 was tested)
 - **npm**: Comes with Node.js
 - **Couchbase Capella Account**: For App Services sync functionality
 
@@ -44,6 +46,8 @@ cd couchbase-lite-retail-demo/web
 npm install
 ```
 
+Use the `--verbose` to troubleshoot any issues.
+
 ### 3. Configure Environment
 
 Copy the example environment file and configure it with your Couchbase Capella settings:
@@ -61,11 +65,12 @@ VITE_APP_SERVICES_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
 ```
 
 **Where to find your WebSocket URL:**
+
 1. Log into [Couchbase Capella](https://cloud.couchbase.com/)
 2. Navigate to App Services
 3. Select your App Services endpoint
 4. Copy the complete WebSocket URL **EXCLUDING** the database path ('/supermarket-aa' or "/supermarket-nyc' will be automatically added inside the code, based on the user selection)
-   - Example: `wss://xxxxx.apps.cloud.couchbase.com:4984`
+   - Example: `wss://xxxxx.apps.cloud.couchbase.com`
 
 ### 4. Start Development Server
 
@@ -73,7 +78,16 @@ VITE_APP_SERVICES_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173` (or another port if 5173 is in use).
+The output will look as follows. It indicates under which address/port the application is available, e.g. `http://localhost:8080`.
+
+```
+  VITE v5.4.21  ready in 832 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://169.254.83.107:8080/
+  ➜  Network: http://192.168.0.158:8080/
+  ➜  Network: http://172.19.160.1:8080/
+```
 
 ## Building for Production
 
@@ -91,6 +105,9 @@ Preview the production build locally:
 npm run preview
 ```
 
+> [!NOTE]
+> This command will run the application on port 4173. You will have to update the App Services endpoints' CORS settings to include `http://localhost:4173` in order to be able to authenticate. You might want to refrain from doing so and just run `npm run dev` as described above.
+
 ## Project Structure
 
 ```
@@ -107,7 +124,6 @@ web/
 └── package.json           # Dependencies and scripts
 ```
 
-
 ## Authentication
 
 The app uses email-based authentication with the following format:
@@ -115,6 +131,7 @@ The app uses email-based authentication with the following format:
 - **Password**: As configured in your Capella App Services
 
 The store ID is extracted from the email and determines:
+
 - Which data scope the user has access to
 - Store-specific inventory and orders
 
@@ -129,6 +146,7 @@ The store ID is extracted from the email and determines:
 ### Application Settings (Fixed)
 
 The following are defined in the application code and don't need to be configured:
+
 - **Database Name**: `retail-inventory` (defined in `src/lib/database/types.ts`)
 - **Database Version**: `4` (defined in `src/lib/database/types.ts`)
 - **Collections**: `inventory`, `orders`, `profile`
@@ -152,8 +170,13 @@ The following are defined in the application code and don't need to be configure
 
 ### Build Errors
 
-- Clear node_modules: `rm -rf node_modules && npm install`
-- Clear cache: `rm -rf dist .vite`
+- Verbose logging: `npm install --verbose`
+- Clear node_modules
+    - **macOS**: `rm -rf node_modules && npm install`
+    - **Windows**: `rd /s /q node_modules`
+- Clear cache
+    - **macOS**: `rm -rf dist .vite`
+    - **Windows**: `rd /s /q dist .vite`
 - Ensure Node.js version is 18 or higher: `node --version`
 
 ### TypeScript Errors

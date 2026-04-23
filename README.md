@@ -1,24 +1,30 @@
 # Couchbase Mobile Retail Demo Application
+
 A simple retail inventory management application built with [Couchbase Lite](https://docs.couchbase.com/couchbase-lite/current/index.html) for web and mobile (iOS and Android) featuring real-time sync capabilities with [Couchbase Capella App Services](https://docs.couchbase.com/cloud/app-services/deployment/creating-an-app-service.html).
 
 ## Demo App Features
-- 📱 **Offline-First**: Ability to operate in disconnected mode without an Internet connection with Couchbase Lite as a local database. 
+
+- 📱 **Offline-First**: Ability to operate in disconnected mode without an Internet connection with Couchbase Lite as a local database.
 - 🔄 **Real-Time Sync**: Opportunistically sync data, in uni-directional or bi-directional mode with backend Couchbase Capella clusters via Capella App Services. Data is synced across iOS, Android and JS app via App Services.
 - 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android apps over a local network
 - 🏪 **Multi-Platform Support**: Support for **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)** and **[web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
 
 ## Demo Video
+
 ### Peer-to-Peer Sync across iOS and Android
+
 A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P.
 
 https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
 ### Real time Data Sync via Capella App Services
+
 https://github.com/user-attachments/assets/781028cf-6f67-4ad9-abd5-a52daf4c83d6
 
 https://github.com/user-attachments/assets/72f61f2b-118f-4bc6-8f43-30dfac6e8f5e
 
 ## Demo Setup
+
 The complete setup of the demo would look like this:
 
 <img src="./common/assets/app-setup.png" height="400" alt="App Setup Diagram" />
@@ -27,9 +33,10 @@ The complete setup of the demo would look like this:
 > You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for just that app and functionality.
 
 ## Setting up Capella Cluster
+
 These are common set of instructions that you must follow to setup the cloud backend regardless of whether you are running iOS, Android and web versions of the app.
 
-Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
+Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well.
 
 - Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
@@ -59,11 +66,13 @@ Although instructions are specified for Capella App Services, equivalent instruc
 At the end of these steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
 
 ## Importing Sample Data Set
+
 - Download and unzip sample dataset from [demo-dataset.zip](https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/demo-dataset.zip)
 
-- Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode. 
+- Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode.
+
 > [!NOTE]
->  When importing data, Select the Field option to map doc Id. 
+>  When importing data, Select the Field option to map doc Id.
 
 ![](./common/assets/import-data.png)
 
@@ -73,12 +82,12 @@ By now your App Service deployment (started earlier) should be ready or close to
 
 - Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
 
-The configuration of App Endpoint should look like this: 
+The configuration of App Endpoint should look like this:
 ![](./common/assets/appendpoint.png)
 
 - Configure two App Users corresponding to the two stores (one in each App Endpoint) by following these [instructions](https://docs.couchbase.com/cloud/app-services/user-management/create-user.html).You can choose any password. If you would like to run the app with prefilled demo credentials, you must use the password mentioned below. This will make more sense when you setup the individual apps later.
    - **user**=nyc-store-01@supermarket.com / **password**=P@ssword1 (this is created in App Endpoint supermarket-nyc)
-   - **user**=aa-store-01@supermarket.com / **password**=P@ssword1 (this is created App Endpoint supermarket-aa) 
+   - **user**=aa-store-01@supermarket.com / **password**=P@ssword1 (this is created App Endpoint supermarket-aa)
 
 The configuration of App User should look something like this:
 ![](./common/assets/appuser.png)
@@ -88,6 +97,7 @@ The configuration of App User should look something like this:
 ![](./common/assets/connectapp.png)
 
 ### CORS Setup for Web Applications
+
 If you are trying out the web application, you will need to configure App Endpoints to enable CORS. Skip this section if you are only testing mobile apps.
 Repeat these steps for each of the App Endpoints
 
@@ -102,6 +112,7 @@ Repeat these steps for each of the App Endpoints
   ![](./common/assets/cors2.png)
 
 ## Repo Structure
+
 The repo is organized as follows
 
 - **iOS**: This folder includes source code corresponding to the iOS version of the retail application. Follow the instructions in the [README.md](./iOS/README.md) file in the folder to build and run the iOS app. That folder also includes instructions to run the app in peer-to-peer mode.
