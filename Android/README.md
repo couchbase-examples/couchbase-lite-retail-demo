@@ -72,7 +72,9 @@ org.gradle.caching=true
 '@ | Set-Content -Encoding ASCII "$env:USERPROFILE\.gradle\gradle.properties"
 ```
 
-**Windows equivalent of Step 3 — download Couchbase Lite EE into local Maven repo (PowerShell):**
+**Windows equivalent of Step 3 — download Couchbase Lite EE into local Maven repo.** We recommend `curl.exe` (ships with Windows 10 1803+ and Windows 11) because it mirrors the macOS instructions exactly and supports `-k` to bypass the SSL verification that triggers this step in the first place. PowerShell's `Invoke-WebRequest` has no simple `-k` equivalent.
+
+PowerShell:
 
 ```powershell
 $repo = "$env:USERPROFILE\.m2\repository\com\couchbase\lite"
@@ -82,21 +84,39 @@ $base = "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite"
 New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee-ktx\3.3.0" | Out-Null
 New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee\3.3.0"     | Out-Null
 
-# Download EE KTX (aar + pom)
-Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -OutFile "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
-Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -OutFile "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
+# Download EE KTX (aar + pom) — -k bypasses SSL verification, -L follows redirects
+curl.exe -kL "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
+curl.exe -kL "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
 
 # Download EE core (aar + pom)
-Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -OutFile "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
-Invoke-WebRequest -Uri "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -OutFile "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
+curl.exe -kL "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
+curl.exe -kL "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
 
 # Verify
 Get-ChildItem "$repo\couchbase-lite-android-ee\3.3.0"
 Get-ChildItem "$repo\couchbase-lite-android-ee-ktx\3.3.0"
 ```
 
+Command Prompt (CMD):
+
+```cmd
+set REPO=%USERPROFILE%\.m2\repository\com\couchbase\lite
+set BASE=https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite
+
+mkdir "%REPO%\couchbase-lite-android-ee-ktx\3.3.0" 2>nul
+mkdir "%REPO%\couchbase-lite-android-ee\3.3.0" 2>nul
+
+curl.exe -kL "%BASE%/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o "%REPO%\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o "%REPO%\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o "%REPO%\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o "%REPO%\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
+
+dir "%REPO%\couchbase-lite-android-ee\3.3.0"
+dir "%REPO%\couchbase-lite-android-ee-ktx\3.3.0"
+```
+
 > [!NOTE]
-> If `Invoke-WebRequest` fails with an SSL/TLS error on older PowerShell versions, temporarily enable TLS 1.2 in the session with `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` before retrying. Once the files are in your local Maven repository, Gradle will resolve them directly without further downloads.
+> The `-k` flag bypasses SSL certificate verification and is only needed for this one-time download. Once the files are in your local Maven repository, Gradle resolves them directly without further network access.
 
 ## Initial Setup (macOS)
 
@@ -209,7 +229,7 @@ ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
 ```
 
-**Windows Command Prompt / PowerShell:**
+**Windows — Command Prompt (CMD):**
 
 ```cmd
 :: Check Java version
@@ -224,8 +244,23 @@ dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.
 dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee-ktx\3.3.0\*.aar
 ```
 
+**Windows — PowerShell:**
+
+```powershell
+# Check Java version
+java -version
+
+# Check Gradle wrapper exists (use gradlew.bat on Windows, not gradlew)
+cd <path-to-repo>\Android
+Get-ChildItem gradlew.bat
+
+# Verify Couchbase EE (core + KTX) is installed locally
+Get-ChildItem "$env:USERPROFILE\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.3.0\*.aar"
+Get-ChildItem "$env:USERPROFILE\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee-ktx\3.3.0\*.aar"
+```
+
 > [!NOTE]
-> On Windows, always invoke `gradlew.bat` (not `gradlew`) from Command Prompt or PowerShell. The `gradlew` script without the `.bat` extension is a Unix shell script and will not run natively on Windows outside of a POSIX shell like Git Bash.
+> On Windows, always invoke `gradlew.bat` (not `gradlew`) from Command Prompt or PowerShell. The `gradlew` script without the `.bat` extension is a Unix shell script and will not run natively on Windows outside of a POSIX shell like Git Bash. Note also that `%USERPROFILE%` only works in CMD — PowerShell uses `$env:USERPROFILE`.
 
 ### Step 2: Open the Project
 
@@ -291,7 +326,7 @@ Creating a virtual device is documented at [Create and manage virtual devices | 
 - Select, e.g., **Pixel 3a**
 - On the next screen, select, e.g.:
     - API: **API 28 "Pie"**
-    - System image: **Google Play Intel X86 Atom System Image**
+    - System image: **Google Play Intel x86 Atom System Image** on Intel/AMD Macs and Windows PCs, or **Google Play ARM 64 v8a System Image** on Apple Silicon Macs (M1/M2/M3/M4). Choose the image matching your host architecture — emulating the wrong architecture is either unsupported or prohibitively slow.
 - Click **Finish**
 
 ### Step 2: Run the app on the Emulator
