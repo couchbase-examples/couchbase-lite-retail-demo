@@ -11,6 +11,16 @@ struct InventoryView: View {
     @State private var profileName: String?
     @State private var isRefreshing = false
     @State private var cancellables = Set<AnyCancellable>()  // For Combine publishers
+
+    // Initial-load gating. On cold start (or after a store switch) the
+    // reactive query fires immediately with 0 items against the empty
+    // local DB, then re-emits as App Services pulls docs down. Showing
+    // the raw empty grid during that gap feels broken on slow networks
+    // (tested on a cellular hotspot). We gate the grid behind a loader
+    // until either (a) the first non-empty result arrives, or (b) the
+    // App Services replicator reaches `idle` — the latter catches the
+    // truly-empty-store case so the spinner never hangs forever.
+    @State private var didCompleteInitialLoad = false
     @Environment(\.dismiss) private var dismiss
     
     // Fixed 2-column layout to match Android
@@ -41,34 +51,41 @@ struct InventoryView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
-                // Inventory grid with pull-to-refresh
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(filteredItems, id: \.self) { item in
-                            GroceryItemCard(
-                                item: item,
-                                storeId: AppConfig.storeId,
-                                onQuantityChanged: { newQuantity in
-                                    // Safely unwrap optional id
-                                    guard let itemId = item.id else { return }
-                                    databaseManager.updateQuantity(for: itemId, newQuantity: newQuantity)
-                                    // Reactive query will update UI automatically - no manual reload needed
-                                },
-                                onReorder: { item, quantity in
-                                    // Create order in database with specified quantity
-                                    if let order = databaseManager.createOrder(item: item, quantity: quantity) {
-                                        print("✅ Order created: \(order.id) with quantity: \(quantity)")
+                // Inventory grid with pull-to-refresh — or a loader /
+                // empty-state overlay when there's nothing to show yet.
+                if filteredItems.isEmpty && !didCompleteInitialLoad {
+                    inventoryLoadingView
+                } else if filteredItems.isEmpty {
+                    inventoryEmptyView
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(filteredItems, id: \.self) { item in
+                                GroceryItemCard(
+                                    item: item,
+                                    storeId: AppConfig.storeId,
+                                    onQuantityChanged: { newQuantity in
+                                        // Safely unwrap optional id
+                                        guard let itemId = item.id else { return }
+                                        databaseManager.updateQuantity(for: itemId, newQuantity: newQuantity)
+                                        // Reactive query will update UI automatically - no manual reload needed
+                                    },
+                                    onReorder: { item, quantity in
+                                        // Create order in database with specified quantity
+                                        if let order = databaseManager.createOrder(item: item, quantity: quantity) {
+                                            print("✅ Order created: \(order.id) with quantity: \(quantity)")
+                                        }
                                     }
-                                }
-                            )
-                            // Equatable compares id + quantity, so SwiftUI detects changes without forcing recreation
+                                )
+                                // Equatable compares id + quantity, so SwiftUI detects changes without forcing recreation
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
-                }
-                .refreshable {
-                    await refreshData()
+                    .refreshable {
+                        await refreshData()
+                    }
                 }
             }
             .background(Color(.systemGroupedBackground))
@@ -101,8 +118,16 @@ struct InventoryView: View {
             // Load profile name from Capella
             profileName = databaseManager.getStoreProfile()?.name
         }
+        .task {
+            // Structured-concurrency replacement for the old Timer-based
+            // poller. A `.task` modifier is tied to view lifetime: SwiftUI
+            // cancels the task automatically when the view disappears, so
+            // no manual invalidation in `.onDisappear` is needed.
+            await pollSyncStateUntilIdle()
+        }
         .onDisappear {
-            // Cancel all subscriptions when view disappears
+            // Cancel Combine subscriptions. The sync-state polling task
+            // cancels automatically via the `.task` modifier above.
             cancellables.forEach { $0.cancel() }
             cancellables.removeAll()
         }
@@ -205,6 +230,13 @@ struct InventoryView: View {
             .sink { items in
                 // Note: Can't use [weak self] with struct - structs are value types
                 groceryItems = items
+                // First non-empty emission means the replicator has
+                // started landing docs — safe to drop the loader.
+                if !items.isEmpty && !didCompleteInitialLoad {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        didCompleteInitialLoad = true
+                    }
+                }
                 print("🔄 [Reactive API] UI updated with \(items.count) items")
             }
             .store(in: &cancellables)
@@ -222,6 +254,81 @@ struct InventoryView: View {
     }
 
     
+    // MARK: - Loading / Empty States
+
+    /// Full-screen spinner shown while the initial Capella pull is in flight.
+    private var inventoryLoadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .scaleEffect(1.4)
+            Text("Loading inventory…")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Text("Fetching items from Capella")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    /// Shown once the replicator has reached idle but no matching items exist
+    /// (or the search filter matches nothing).
+    private var inventoryEmptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: searchText.isEmpty ? "tray" : "magnifyingglass")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text(searchText.isEmpty ? "No inventory items" : "No results for \"\(searchText)\"")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    /// Polls the App Services sync state and clears the initial-load flag
+    /// the moment the replicator reaches idle. Covers the truly-empty-store
+    /// case so the spinner never hangs forever waiting for a non-empty
+    /// reactive emission.
+    ///
+    /// Driven via `.task { await ... }` instead of `Timer.scheduledTimer`
+    /// so cancellation is automatic on view dismissal (structured
+    /// concurrency) and we don't have to retain/invalidate a Timer handle.
+    ///
+    /// A purely-Combine approach is technically feasible (observing
+    /// `DatabaseManager.$appServicesSyncManager` plus its inner state),
+    /// but the underlying sync state is surfaced today through a snapshot
+    /// accessor (`getAppServicesSyncState()`), not a Published chain —
+    /// so polling is the simplest honest implementation until that
+    /// accessor itself becomes observable.
+    private func pollSyncStateUntilIdle() async {
+        guard !didCompleteInitialLoad else { return }
+
+        let startedAt = Date()
+        // Hard cap at 20s so the user never sees an indefinite spinner,
+        // even if the replicator never surfaces an idle state (e.g. a
+        // persistent auth failure).
+        let timeoutSeconds: TimeInterval = 20
+
+        while !Task.isCancelled && !didCompleteInitialLoad {
+            let state = databaseManager.getAppServicesSyncState()
+            let reachedIdle = state?.status.lowercased().contains("idle") == true
+            let replicatorDisabled = databaseManager.isAppServicesEnabled == false
+            let timedOut = Date().timeIntervalSince(startedAt) > timeoutSeconds
+
+            if reachedIdle || replicatorDisabled || timedOut {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    didCompleteInitialLoad = true
+                }
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 s
+        }
+    }
+
     // MARK: - Fallback Methods
     
     /// Fallback method using old API (if Reactive API setup fails)
