@@ -27,7 +27,7 @@ cd /path/to/Android
 
 ## Requirements and Dependencies
 
-### macOS
+The following requirements apply to both macOS and Windows:
 
 - **Android Studio**: Ladybug (2024.2.1) or later
 - **Android SDK**:
@@ -36,7 +36,6 @@ cd /path/to/Android
   - Compile SDK: 35
 - **JDK**: 17 or later
 - **Kotlin**: 2.0.21
-- **Homebrew**: For installing Java on macOS (optional but recommended)
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
@@ -47,12 +46,15 @@ The project uses Gradle with Kotlin DSL for dependency management. Key dependenc
 
 All dependencies are declared in `gradle/libs.versions.toml` and automatically resolved by Gradle.
 
-### Windows
+### macOS-specific
 
-- [Android Studio Panda 3](https://developer.android.com/studio)
+- **Homebrew**: For installing Java on macOS (optional but recommended)
+
+### Windows-specific
+
 - [Git for Windows](https://git-scm.com/install/windows)
 
-Android Studio bundles all required binary dependencies and manages library dependencies.
+Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, follow the same local Maven setup described in the macOS section ([Step 2: Configure Gradle for SSL](#step-2-configure-gradle-for-ssl) and [Step 3: Install Couchbase Lite Enterprise Edition (Local Repository)](#step-3-install-couchbase-lite-enterprise-edition-local-repository)), adapted for Windows paths (`%USERPROFILE%\.gradle\gradle.properties` and `%USERPROFILE%\.m2\repository\...`).
 
 ## Initial Setup (macOS)
 
@@ -118,7 +120,35 @@ ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
 
 **Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
 
-### Step 4: Verify Prerequisites
+After completing the macOS-specific steps above, continue with the [Common Setup Steps](#common-setup-steps) that apply to both platforms.
+
+## Initial Setup (Windows)
+
+### Step 1: Clone the Repository
+
+We use Android Studio to clone the repository.
+
+- Open Android Studio
+- On the Welcome screen, click **Clone Repository**
+- Enter URL `https://github.com/couchbase-examples/couchbase-lite-retail-demo.git`
+- Select a folder into which to clone the repository
+- Once the project has been cloned, **close the project** (File -> Close Project)
+- Remove the project from recent history (Click the three dots and select **Remove from recent projects**)
+
+### Step 2: Properly Import the Project into Android Studio
+
+- On the Welcome screen, click **Open**
+- Navigate to the folder into which you cloned the project
+- Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
+- Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
+
+After import completes, proceed to the [Common Setup Steps](#common-setup-steps). In particular, modify the `gradle.properties` file as described in [Step 3: Configure Capella App Services — Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
+
+## Common Setup Steps
+
+The following steps apply to both macOS and Windows. Complete your platform-specific setup above before continuing.
+
+### Step 1: Verify Prerequisites
 
 Before opening the project, ensure:
 
@@ -130,22 +160,22 @@ java -version  # Should show 17.0.x
 cd /path/to/Android
 ls -la gradlew  # Should exist and be executable
 
-# Verify Couchbase EE is installed locally
+# Verify Couchbase EE is installed locally (macOS path shown; on Windows use %USERPROFILE%\.m2\...)
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 ```
 
-### Step 5: Open the Project
+### Step 2: Open the Project
 
 Open Android Studio and select **File** > **Open**, then navigate to the `Android` directory and open it.
 
 Android Studio will automatically sync Gradle and resolve dependencies from:
-1. Local Maven repository (`~/.m2/repository/`) for Couchbase Lite EE
-2. Google Maven for Android libraries  
+1. Local Maven repository (`~/.m2/repository/` on macOS, `%USERPROFILE%\.m2\repository\` on Windows) for Couchbase Lite EE
+2. Google Maven for Android libraries
 3. Maven Central for other dependencies
 
 This may take a few minutes on first open.
 
-### Step 6: Configure Capella App Services
+### Step 3: Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
@@ -170,6 +200,8 @@ Then launch Android Studio from the same terminal:
 studio.sh  # or open -a "Android Studio" on macOS
 ```
 
+On Windows, set the variables via **System Properties** > **Environment Variables**, or in a PowerShell session using `$env:CBL_BASE_URL = "..."`, then launch Android Studio from that same session.
+
 #### Option B: Gradle Properties
 
 Add these properties to your local `gradle.properties` file (create it in the `Android` directory if it doesn't exist):
@@ -184,28 +216,6 @@ CBL_PASSWORD=P@ssword1
 ```
 
 **Note**: Do not commit `gradle.properties` with sensitive credentials to version control.
-
-## Initial Setup (Windows)
-
-### Step 1: Clone the Repository
-
-We use Android Studio to clone the repository.
-
-- Open Android Studio
-- On the Welcome screen, click **Clone Repository**
-- Enter URL `https://github.com/couchbase-examples/couchbase-lite-retail-demo.git`
-- Select a folder into which to clone the repository
-- Once the project has been cloned, **close the project** (File -> Close Project)
-- Remove the project from recent history (Click the three dots and select **Remove from recent projects**)
-
-### Step 2: Properly Import the Project into Android Studio
-
-- On the Welcome screen, click **Open**
-- Navigate to the folder into which you cloned the project
-- Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
-- Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
-
-Once project import has completed, **modify file `gradle.properties`** as described above at [Step 6: Configure Capella App Services -- Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
 
 ## Build and Run
 
