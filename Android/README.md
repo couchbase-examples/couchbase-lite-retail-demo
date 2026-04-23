@@ -550,12 +550,26 @@ You can use the Couchbase Lite command-line tool to inspect the database file:
 
 The following files were created or configured during the initial setup process:
 
-#### Global Configuration (`~/.gradle/gradle.properties`)
+#### Global Configuration
 
-Contains JVM arguments and Gradle settings, including SSL certificate handling:
+Contains JVM arguments and Gradle settings, including SSL certificate handling. Location and `trustStoreType` value are platform-specific:
+
+- **macOS / Linux:** `~/.gradle/gradle.properties`
+- **Windows:** `%USERPROFILE%\.gradle\gradle.properties` (CMD) or `$env:USERPROFILE\.gradle\gradle.properties` (PowerShell)
+
+macOS:
 
 ```properties
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+```
+
+Windows (use `Windows-ROOT`, or omit the `trustStoreType` arg entirely — `KeychainStore` is macOS-only and will throw `KeyStoreException` on Windows):
+
+```properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
 org.gradle.daemon=true
 org.gradle.parallel=true
 org.gradle.caching=true
@@ -580,14 +594,25 @@ dependencyResolutionManagement {
 }
 ```
 
-#### Environment Variables (`~/.zshrc`)
+#### Environment Variables
 
-Java configuration added to your shell profile:
+Java configuration is set per-platform:
+
+**macOS (`~/.zshrc`):**
 
 ```bash
 export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
 ```
+
+**Windows — PowerShell (current session):**
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17"   # adjust to your JDK install path
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+```
+
+**Windows — persistent (System Properties):** open **System Properties** → **Advanced** → **Environment Variables**, set `JAVA_HOME` to your JDK 17 install directory, and prepend `%JAVA_HOME%\bin` to the `Path` variable. Launch Android Studio after applying the change so it inherits the new environment.
 
 ### Enterprise vs Community Edition
 
