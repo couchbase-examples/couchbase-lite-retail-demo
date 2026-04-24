@@ -61,16 +61,32 @@ Android Studio manages library dependencies via Gradle. Third-party libraries su
 
 **Windows equivalent of Step 2 — global `gradle.properties` (PowerShell):**
 
+> [!WARNING]
+> The global `gradle.properties` file is shared across **all** Gradle projects for your user account. If the file already exists, the snippet below **backs it up** to `gradle.properties.bak` and then writes the new contents so you do not silently lose existing settings from other projects. Review the backup afterwards and merge any project-specific values you still need.
+
 ```powershell
-# Ensure the .gradle directory exists, then write global gradle.properties
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gradle" | Out-Null
-@'
+$gradleDir   = "$env:USERPROFILE\.gradle"
+$propsFile   = "$gradleDir\gradle.properties"
+$desired     = @'
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
 org.gradle.daemon=true
 org.gradle.parallel=true
 org.gradle.caching=true
-'@ | Set-Content -Encoding ASCII "$env:USERPROFILE\.gradle\gradle.properties"
+'@
+
+# Ensure the .gradle directory exists
+New-Item -ItemType Directory -Force -Path $gradleDir | Out-Null
+
+# Back up any existing file before overwriting, so other projects' settings can be merged back in
+if (Test-Path $propsFile) {
+    Copy-Item $propsFile "$propsFile.bak" -Force
+    Write-Host "Existing gradle.properties backed up to $propsFile.bak — review and merge if needed."
+}
+
+Set-Content -Encoding ASCII -Path $propsFile -Value $desired
 ```
+
+If you prefer to append only the missing keys to an existing file (non-destructive), edit `$env:USERPROFILE\.gradle\gradle.properties` manually instead of running the snippet above.
 
 **Windows equivalent of Step 3 — download Couchbase Lite EE into local Maven repo.** We recommend `curl.exe` (ships with Windows 10 1803+ and Windows 11) because it mirrors the macOS instructions exactly and supports `-k` to bypass the SSL verification that triggers this step in the first place. PowerShell's `Invoke-WebRequest` has no simple `-k` equivalent.
 
@@ -100,8 +116,8 @@ Get-ChildItem "$repo\couchbase-lite-android-ee-ktx\3.3.0"
 Command Prompt (CMD):
 
 ```cmd
-set REPO=%USERPROFILE%\.m2\repository\com\couchbase\lite
-set BASE=https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite
+set "REPO=%USERPROFILE%\.m2\repository\com\couchbase\lite"
+set "BASE=https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite"
 
 mkdir "%REPO%\couchbase-lite-android-ee-ktx\3.3.0" 2>nul
 mkdir "%REPO%\couchbase-lite-android-ee\3.3.0" 2>nul
@@ -316,12 +332,12 @@ $env:CBL_PASSWORD = "P@ssword1"
 Command Prompt (CMD) equivalent:
 
 ```cmd
-set CBL_BASE_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
-set CBL_AA_DB=supermarket-aa
-set CBL_NYC_DB=supermarket-nyc
-set CBL_AA_USER=aa-store-01@supermarket.com
-set CBL_NYC_USER=nyc-store-01@supermarket.com
-set CBL_PASSWORD=P@ssword1
+set "CBL_BASE_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984"
+set "CBL_AA_DB=supermarket-aa"
+set "CBL_NYC_DB=supermarket-nyc"
+set "CBL_AA_USER=aa-store-01@supermarket.com"
+set "CBL_NYC_USER=nyc-store-01@supermarket.com"
+set "CBL_PASSWORD=P@ssword1"
 
 "C:\Program Files\Android\Android Studio\bin\studio64.exe"
 ```
