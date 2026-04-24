@@ -54,7 +54,7 @@ All dependencies are declared in `gradle/libs.versions.toml` and automatically r
 
 - [Git for Windows](https://git-scm.com/install/windows)
 
-Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, complete the Windows equivalents of macOS [Step 2](#step-2-configure-gradle-for-ssl) and [Step 3](#step-3-install-couchbase-lite-enterprise-edition-local-repository) — concrete PowerShell commands are provided below.
+Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, complete the Windows equivalents of macOS [Step 2](#step-2-configure-gradle-for-ssl) and [Step 3](#step-3-install-couchbase-lite-enterprise-edition-local-repository) — concrete PowerShell and Command Prompt (CMD) commands are provided below.
 
 > [!WARNING]
 > Do **not** copy `-Djavax.net.ssl.trustStoreType=KeychainStore` verbatim on Windows. `KeychainStore` is macOS-only and the JVM on Windows will fail with a `KeyStoreException`. Either omit that JVM arg entirely (the JDK default trust store usually works), or replace it with `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to use the Windows certificate store.
@@ -298,7 +298,35 @@ Then launch Android Studio from the same terminal:
 studio.sh  # or open -a "Android Studio" on macOS
 ```
 
-On Windows, set the variables via **System Properties** > **Environment Variables**, or in a PowerShell session using `$env:CBL_BASE_URL = "..."`, then launch Android Studio from that same session.
+On Windows, either set persistent values via **System Properties** > **Environment Variables**, or use a PowerShell session:
+
+```powershell
+$env:CBL_BASE_URL = "wss://your-endpoint.apps.cloud.couchbase.com:4984"
+$env:CBL_AA_DB    = "supermarket-aa"
+$env:CBL_NYC_DB   = "supermarket-nyc"
+$env:CBL_AA_USER  = "aa-store-01@supermarket.com"
+$env:CBL_NYC_USER = "nyc-store-01@supermarket.com"
+$env:CBL_PASSWORD = "P@ssword1"
+
+# Launch Android Studio from the same session so it inherits the variables.
+# Adjust the path if your install location differs.
+& "C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Command Prompt (CMD) equivalent:
+
+```cmd
+set CBL_BASE_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984
+set CBL_AA_DB=supermarket-aa
+set CBL_NYC_DB=supermarket-nyc
+set CBL_AA_USER=aa-store-01@supermarket.com
+set CBL_NYC_USER=nyc-store-01@supermarket.com
+set CBL_PASSWORD=P@ssword1
+
+"C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Variables set via `$env:` or `set` apply only to the current shell session; launching Android Studio from that same session is what lets the IDE inherit them.
 
 #### Option B: Gradle Properties
 
