@@ -25,18 +25,17 @@ cd /path/to/Android
 
 **First time setup?** Continue reading below for complete installation instructions.
 
-## Requirements
+## Requirements and Dependencies
+
+The following requirements apply to both macOS and Windows:
 
 - **Android Studio**: Ladybug (2024.2.1) or later
-- **Android SDK**: 
+- **Android SDK**:
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
 - **JDK**: 17 or later
 - **Kotlin**: 2.0.21
-- **Homebrew**: For installing Java on macOS (optional but recommended)
-
-## Dependencies
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
@@ -46,6 +45,94 @@ The project uses Gradle with Kotlin DSL for dependency management. Key dependenc
 - **Lifecycle Components**: ViewModel and LiveData
 
 All dependencies are declared in `gradle/libs.versions.toml` and automatically resolved by Gradle.
+
+### macOS-specific
+
+- **Homebrew**: For installing Java on macOS (optional but recommended)
+
+### Windows-specific
+
+- [Git for Windows](https://git-scm.com/install/windows)
+
+Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition are **not** bundled with the IDE and must be resolved from a Maven repository. If Gradle sync fails with SSL or certificate errors when fetching Couchbase Lite EE, complete the Windows equivalents of macOS [Step 2](#step-2-configure-gradle-for-ssl) and [Step 3](#step-3-install-couchbase-lite-enterprise-edition-local-repository) — concrete PowerShell and Command Prompt (CMD) commands are provided below.
+
+> [!WARNING]
+> Do **not** copy `-Djavax.net.ssl.trustStoreType=KeychainStore` verbatim on Windows. `KeychainStore` is macOS-only and the JVM on Windows will fail with a `KeyStoreException`. Either omit that JVM arg entirely (the JDK default trust store usually works), or replace it with `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to use the Windows certificate store.
+
+**Windows equivalent of Step 2 — global `gradle.properties` (PowerShell):**
+
+> [!WARNING]
+> The global `gradle.properties` file is shared across **all** Gradle projects for your user account. If the file already exists, the snippet below **backs it up** to `gradle.properties.bak` and then writes the new contents so you do not silently lose existing settings from other projects. Review the backup afterwards and merge any project-specific values you still need.
+
+```powershell
+$gradleDir   = "$env:USERPROFILE\.gradle"
+$propsFile   = "$gradleDir\gradle.properties"
+$desired     = @'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+'@
+
+# Ensure the .gradle directory exists
+New-Item -ItemType Directory -Force -Path $gradleDir | Out-Null
+
+# Back up any existing file before overwriting, so other projects' settings can be merged back in
+if (Test-Path $propsFile) {
+    Copy-Item $propsFile "$propsFile.bak" -Force
+    Write-Host "Existing gradle.properties backed up to $propsFile.bak — review and merge if needed."
+}
+
+Set-Content -Encoding ASCII -Path $propsFile -Value $desired
+```
+
+If you prefer to append only the missing keys to an existing file (non-destructive), edit `$env:USERPROFILE\.gradle\gradle.properties` manually instead of running the snippet above.
+
+**Windows equivalent of Step 3 — download Couchbase Lite EE into local Maven repo.** We recommend `curl.exe` (ships with Windows 10 1803+ and Windows 11) because it mirrors the macOS instructions exactly and supports `-k` to bypass the SSL verification that triggers this step in the first place. PowerShell's `Invoke-WebRequest` has no simple `-k` equivalent.
+
+PowerShell:
+
+```powershell
+$repo = "$env:USERPROFILE\.m2\repository\com\couchbase\lite"
+$base = "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite"
+
+# Create target directories
+New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee-ktx\3.3.0" | Out-Null
+New-Item -ItemType Directory -Force -Path "$repo\couchbase-lite-android-ee\3.3.0"     | Out-Null
+
+# Download EE KTX (aar + pom) — -k bypasses SSL verification, -L follows redirects
+curl.exe -kL "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
+curl.exe -kL "$base/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o "$repo\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
+
+# Download EE core (aar + pom)
+curl.exe -kL "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
+curl.exe -kL "$base/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o "$repo\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
+
+# Verify
+Get-ChildItem "$repo\couchbase-lite-android-ee\3.3.0"
+Get-ChildItem "$repo\couchbase-lite-android-ee-ktx\3.3.0"
+```
+
+Command Prompt (CMD):
+
+```cmd
+set "REPO=%USERPROFILE%\.m2\repository\com\couchbase\lite"
+set "BASE=https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite"
+
+mkdir "%REPO%\couchbase-lite-android-ee-ktx\3.3.0" 2>nul
+mkdir "%REPO%\couchbase-lite-android-ee\3.3.0" 2>nul
+
+curl.exe -kL "%BASE%/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o "%REPO%\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.aar"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o "%REPO%\couchbase-lite-android-ee-ktx\3.3.0\couchbase-lite-android-ee-ktx-3.3.0.pom"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o "%REPO%\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.aar"
+curl.exe -kL "%BASE%/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o "%REPO%\couchbase-lite-android-ee\3.3.0\couchbase-lite-android-ee-3.3.0.pom"
+
+dir "%REPO%\couchbase-lite-android-ee\3.3.0"
+dir "%REPO%\couchbase-lite-android-ee-ktx\3.3.0"
+```
+
+> [!NOTE]
+> The `-k` flag bypasses SSL certificate verification and is only needed for this one-time download. Once the files are in your local Maven repository, Gradle resolves them directly without further network access.
 
 ## Initial Setup (macOS)
 
@@ -111,36 +198,98 @@ ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
 
 **Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
 
-## Getting Started
+After completing the macOS-specific steps above, continue with the [Common Setup Steps](#common-setup-steps) that apply to both platforms.
 
-### 1. Verify Prerequisites
+## Initial Setup (Windows)
 
-Before opening the project, ensure:
+### Step 1: Clone the Repository
+
+We use Android Studio to clone the repository.
+
+- Open Android Studio
+- On the Welcome screen, click **Clone Repository**
+- Enter URL `https://github.com/couchbase-examples/couchbase-lite-retail-demo.git`
+- Select a folder into which to clone the repository
+- Once the project has been cloned, **close the project** (File -> Close Project)
+- Remove the project from recent history (Click the three dots and select **Remove from recent projects**)
+
+### Step 2: Properly Import the Project into Android Studio
+
+- On the Welcome screen, click **Open**
+- Navigate to the folder into which you cloned the project
+- Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
+- Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
+
+After import completes, proceed to the [Common Setup Steps](#common-setup-steps). In particular, modify the `gradle.properties` file as described in [Step 3: Configure Capella App Services — Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
+
+## Common Setup Steps
+
+The following steps apply to both macOS and Windows. Complete your platform-specific setup above before continuing.
+
+### Step 1: Verify Prerequisites
+
+Before opening the project, ensure the following. Commands below are shown for a Unix-like shell (macOS Terminal, Linux, or Git Bash on Windows); Windows Command Prompt / PowerShell equivalents are noted inline.
+
+**macOS / Linux / Git Bash:**
 
 ```bash
 # Check Java version
 java -version  # Should show 17.0.x
 
 # Check Gradle wrapper exists
-cd /path/to/Android
+cd <path-to-repo>/Android
 ls -la gradlew  # Should exist and be executable
 
-# Verify Couchbase EE is installed locally
+# Verify Couchbase EE (core + KTX) is installed locally
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
 ```
 
-### 2. Open the Project
+**Windows — Command Prompt (CMD):**
+
+```cmd
+:: Check Java version
+java -version
+
+:: Check Gradle wrapper exists (use gradlew.bat on Windows, not gradlew)
+cd <path-to-repo>\Android
+dir gradlew.bat
+
+:: Verify Couchbase EE (core + KTX) is installed locally
+dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.3.0\*.aar
+dir %USERPROFILE%\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee-ktx\3.3.0\*.aar
+```
+
+**Windows — PowerShell:**
+
+```powershell
+# Check Java version
+java -version
+
+# Check Gradle wrapper exists (use gradlew.bat on Windows, not gradlew)
+cd <path-to-repo>\Android
+Get-ChildItem gradlew.bat
+
+# Verify Couchbase EE (core + KTX) is installed locally
+Get-ChildItem "$env:USERPROFILE\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee\3.3.0\*.aar"
+Get-ChildItem "$env:USERPROFILE\.m2\repository\com\couchbase\lite\couchbase-lite-android-ee-ktx\3.3.0\*.aar"
+```
+
+> [!NOTE]
+> On Windows, always invoke `gradlew.bat` (not `gradlew`) from Command Prompt or PowerShell. The `gradlew` script without the `.bat` extension is a Unix shell script and will not run natively on Windows outside of a POSIX shell like Git Bash. Note also that `%USERPROFILE%` only works in CMD — PowerShell uses `$env:USERPROFILE`.
+
+### Step 2: Open the Project
 
 Open Android Studio and select **File** > **Open**, then navigate to the `Android` directory and open it.
 
 Android Studio will automatically sync Gradle and resolve dependencies from:
-1. Local Maven repository (`~/.m2/repository/`) for Couchbase Lite EE
-2. Google Maven for Android libraries  
+1. Local Maven repository (`~/.m2/repository/` on macOS, `%USERPROFILE%\.m2\repository\` on Windows) for Couchbase Lite EE
+2. Google Maven for Android libraries
 3. Maven Central for other dependencies
 
 This may take a few minutes on first open.
 
-### 3. Configure Capella App Services
+### Step 3: Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
@@ -165,6 +314,36 @@ Then launch Android Studio from the same terminal:
 studio.sh  # or open -a "Android Studio" on macOS
 ```
 
+On Windows, either set persistent values via **System Properties** > **Environment Variables**, or use a PowerShell session:
+
+```powershell
+$env:CBL_BASE_URL = "wss://your-endpoint.apps.cloud.couchbase.com:4984"
+$env:CBL_AA_DB    = "supermarket-aa"
+$env:CBL_NYC_DB   = "supermarket-nyc"
+$env:CBL_AA_USER  = "aa-store-01@supermarket.com"
+$env:CBL_NYC_USER = "nyc-store-01@supermarket.com"
+$env:CBL_PASSWORD = "P@ssword1"
+
+# Launch Android Studio from the same session so it inherits the variables.
+# Adjust the path if your install location differs.
+& "C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Command Prompt (CMD) equivalent:
+
+```cmd
+set "CBL_BASE_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984"
+set "CBL_AA_DB=supermarket-aa"
+set "CBL_NYC_DB=supermarket-nyc"
+set "CBL_AA_USER=aa-store-01@supermarket.com"
+set "CBL_NYC_USER=nyc-store-01@supermarket.com"
+set "CBL_PASSWORD=P@ssword1"
+
+"C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Variables set via `$env:` or `set` apply only to the current shell session; launching Android Studio from that same session is what lets the IDE inherit them.
+
 #### Option B: Gradle Properties
 
 Add these properties to your local `gradle.properties` file (create it in the `Android` directory if it doesn't exist):
@@ -180,9 +359,25 @@ CBL_PASSWORD=P@ssword1
 
 **Note**: Do not commit `gradle.properties` with sensitive credentials to version control.
 
-### 4. Build and Run
+## Build and Run
 
-Select an emulator or connected device from the device dropdown and click **Run** (▶).
+### Step 1: Create a Virtual Device
+
+Creating a virtual device is documented at [Create and manage virtual devices | Android Studio | Android Developers](https://developer.android.com/studio/run/managing-avds). In short:
+
+- Go to Tools -> Device Manager
+- Click **Add a new device**, then **Create virtual device**
+- Select, e.g., **Pixel 3a**
+- On the next screen, select, e.g.:
+    - API: **API 28 "Pie"**
+    - System image: **Google Play Intel x86 Atom System Image** on Intel/AMD Macs and Windows PCs, or **Google Play ARM 64 v8a System Image** on Apple Silicon Macs (M1/M2/M3/M4). Choose the image matching your host architecture — emulating the wrong architecture is either unsupported or prohibitively slow.
+- Click **Finish**
+
+### Step 2: Run the app on the Emulator
+
+At the top toolbar, ensure your virtual device emulator is selected. Click the **Green Run button (▶)**. The emulator comes up on the right hand side, running the application.
+
+Further documentation: [Run apps on the Android Emulator | Android Studio | Android Developers](https://developer.android.com/studio/run/emulator#runningapp)
 
 ## Project Structure
 
@@ -224,7 +419,7 @@ Android/
 
 - **Database Name**: `GroceryInventoryDB`
 - **Scopes**: `AA-Store`, `NYC-Store` (based on selected store)
-- **Collections**: 
+- **Collections**:
   - `inventory` - Product inventory items
   - `orders` - Customer orders
   - `profile` - Store profile information
@@ -377,7 +572,6 @@ dependencyResolutionManagement {
 - Verify the `P2P_PEER_GROUP_ID` is the same across all devices
 - Look for P2P-related logs in Logcat (filter by "MultipeerSyncManager")
 
-
 ## Debugging
 
 ### Enable Verbose Logging
@@ -400,8 +594,15 @@ You can use the Couchbase Lite command-line tool to inspect the database file:
 
 The following files were created or configured during the initial setup process:
 
-#### Global Configuration (`~/.gradle/gradle.properties`)
-Contains JVM arguments and Gradle settings, including SSL certificate handling:
+#### Global Configuration
+
+Contains JVM arguments and Gradle settings, including SSL certificate handling. Location and `trustStoreType` value are platform-specific:
+
+- **macOS / Linux:** `~/.gradle/gradle.properties`
+- **Windows:** `%USERPROFILE%\.gradle\gradle.properties` (CMD) or `$env:USERPROFILE\.gradle\gradle.properties` (PowerShell)
+
+macOS:
+
 ```properties
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
 org.gradle.daemon=true
@@ -409,8 +610,19 @@ org.gradle.parallel=true
 org.gradle.caching=true
 ```
 
+Windows (use `Windows-ROOT`, or omit the `trustStoreType` arg entirely — `KeychainStore` is macOS-only and will throw `KeyStoreException` on Windows):
+
+```properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+```
+
 #### Project Configuration (`settings.gradle.kts`)
+
 Configured with `mavenLocal()` repository to use locally downloaded Couchbase Lite EE:
+
 ```kotlin
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -426,12 +638,25 @@ dependencyResolutionManagement {
 }
 ```
 
-#### Environment Variables (`~/.zshrc`)
-Java configuration added to your shell profile:
+#### Environment Variables
+
+Java configuration is set per-platform:
+
+**macOS (`~/.zshrc`):**
+
 ```bash
 export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
 ```
+
+**Windows — PowerShell (current session):**
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17"   # adjust to your JDK install path
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+```
+
+**Windows — persistent (System Properties):** open **System Properties** → **Advanced** → **Environment Variables**, set `JAVA_HOME` to your JDK 17 install directory, and prepend `%JAVA_HOME%\bin` to the `Path` variable. Launch Android Studio after applying the change so it inherits the new environment.
 
 ### Enterprise vs Community Edition
 
@@ -457,7 +682,6 @@ You would also need to comment out or remove the P2P sync functionality in:
 - `MultipeerSyncComponents.kt`
 - References to MultipeerSyncManager in other screens
 
-
 ### Verification Commands
 
 To verify your setup:
@@ -482,4 +706,3 @@ ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 - [iOS App README](../iOS/README.md) - iOS version of this app
 - [Web App README](../web/README.md) - Web version of this app
 - [Couchbase Lite Android Documentation](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)
-
