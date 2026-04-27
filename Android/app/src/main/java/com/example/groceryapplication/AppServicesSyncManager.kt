@@ -68,7 +68,7 @@ class AppServicesSyncManager(
         try {
             // Stop and clean up any existing replicator before reconfiguring
             stopSync()
-            replicatorChangeToken?.let { replicator?.removeChangeListener(it) }
+            replicatorChangeToken?.remove()
             replicator = null
             replicatorChangeToken = null
             
@@ -92,24 +92,28 @@ class AppServicesSyncManager(
             val syncUrl = AppConfig.syncGatewayURL
             Log.d(TAG, "📡 Connecting to: $syncUrl")
             val target = URLEndpoint(URI(syncUrl))
-            
-            // Create replicator configuration
-            val config = ReplicatorConfiguration(target)
-            
+
+            // Build per-collection configurations (CBL 3.1+ replaces the deprecated
+            // ReplicatorConfiguration(endpoint) + addCollection() pattern with a
+            // collection-first constructor that takes a set of CollectionConfigurations).
+            val collectionConfigs = CollectionConfiguration.fromCollections(
+                listOf(inventoryCollection, profileCollection, ordersCollection)
+            )
+
+            // Create replicator configuration with collections and endpoint up-front
+            val config = ReplicatorConfiguration(collectionConfigs, target)
+
             // Configure authentication — read dynamically from AppConfig
             config.authenticator = BasicAuthenticator(AppConfig.username, AppConfig.password.toCharArray())
-            
+
             // Configure replication type and behavior
-            config.replicatorType = AbstractReplicatorConfiguration.ReplicatorType.PUSH_AND_PULL
+            // Use the modern top-level ReplicatorType (the AbstractReplicatorConfiguration.ReplicatorType
+            // enum and the replicatorType property are deprecated aliases).
+            config.type = ReplicatorType.PUSH_AND_PULL
             config.isContinuous = AppConfig.SYNC_CONTINUOUS
             config.heartbeat = AppConfig.SYNC_HEARTBEAT.toInt()
             config.maxAttempts = AppConfig.SYNC_MAX_ATTEMPTS
             config.maxAttemptWaitTime = AppConfig.SYNC_MAX_ATTEMPT_WAIT_TIME.toInt()
-            
-            // Add all collections to replication
-            config.addCollection(inventoryCollection, null)
-            config.addCollection(profileCollection, null)
-            config.addCollection(ordersCollection, null)
             
             // Create replicator
             replicator = Replicator(config)
@@ -540,10 +544,9 @@ class AppServicesSyncManager(
         
         stopSync()
         
-        replicatorChangeToken?.let { token ->
-            replicator?.removeChangeListener(token)
-        }
-        
+        replicatorChangeToken?.remove()
+        replicatorChangeToken = null
+
         replicator = null
     }
 }
