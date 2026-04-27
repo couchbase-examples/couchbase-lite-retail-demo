@@ -293,7 +293,7 @@ This may take a few minutes on first open.
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
-**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL** — it will look like `wss://<id>.apps.cloud.couchbase.com:4984`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
+**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL**, it will look like `wss://<id>.apps.cloud.couchbase.com`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
 
 #### Option A: Environment Variables (Recommended)
 
