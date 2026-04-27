@@ -5,7 +5,7 @@
         </marker>
     </defs>
     <rect width="1000" height="550" fill="#ffffff" />
-    <text x="500" y="40" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle" fill="#333">Sequence: Login &amp; Sync Setup (Optimized for Slide)</text>
+    <text x="500" y="40" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle" fill="#333">Sequence: Login &amp; Sync Setup</text>
 
     <line x1="100" y1="80" x2="100" y2="500" stroke="#333" stroke-width="2" stroke-dasharray="5,5" />
     <line x1="260" y1="80" x2="260" y2="500" stroke="#333" stroke-width="2" stroke-dasharray="5,5" />
