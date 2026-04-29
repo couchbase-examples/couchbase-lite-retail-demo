@@ -62,13 +62,20 @@ export default function InventoryScreen() {
             Alert.alert('Invalid', 'Please enter a valid order quantity');
             return;
         }
-        const ok = await createOrder(reorderItem, qty);
-        if (ok) {
+        const result = await createOrder(reorderItem, qty);
+        if (result.ok) {
             Alert.alert('Order Created', `Reorder for ${reorderItem.name} (qty: ${qty}) submitted.`);
             setReorderItem(null);
             setReorderQty('');
+            return;
         }
-        // On failure the hook surfaces the error via the ErrorBanner; keep the modal open.
+        // The reorder Modal sits on top of the screen, so the ErrorBanner
+        // would be hidden behind it. Surface the failure directly via an
+        // Alert — the native system dialog renders above the Modal — and
+        // clear the hook's error so the banner doesn't flash on screen
+        // the moment the modal eventually closes.
+        clearError();
+        Alert.alert('Order Failed', result.error.message);
     }
 
     const renderItem = ({ item }: { item: GroceryItem }) => (
