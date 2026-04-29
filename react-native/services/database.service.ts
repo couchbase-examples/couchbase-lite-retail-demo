@@ -229,25 +229,45 @@ export class DatabaseService {
     // ─── Inventory Queries ─────────────────────────────────────
 
     /**
-     * Returns all inventory items in the current store scope.
+     * Returns inventory items in the current store scope, ordered by name.
+     *
+     * Pagination is opt-in: when {@code limit} is undefined the query returns
+     * the full collection (legacy behaviour). When provided, the query uses
+     * SQL++ LIMIT/OFFSET so pages can be loaded incrementally.
      */
-    public async getInventoryItems(): Promise<GroceryItem[]> {
+    public async getInventoryItems(
+        limit?: number,
+        offset: number = 0,
+    ): Promise<GroceryItem[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\``;
+        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\` ORDER BY name`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+        }
         const results = await this.database.createQuery(queryStr).execute();
         return this.mapInventoryResults(results);
     }
 
     /**
      * Search inventory items by name, category, or brand using LIKE.
+     * Same pagination contract as {@link getInventoryItems}.
      */
-    public async searchInventory(searchTerm: string): Promise<GroceryItem[]> {
+    public async searchInventory(
+        searchTerm: string,
+        limit?: number,
+        offset: number = 0,
+    ): Promise<GroceryItem[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.inventory;
-        const term = searchTerm.toLowerCase();
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` WHERE LOWER(name) LIKE '%${term}%' OR LOWER(type) LIKE '%${term}%' OR LOWER(brand) LIKE '%${term}%'`;
+        // Escape single quotes to keep the LIKE pattern safe — SQL++ does not
+        // expose parameterised queries here, so we sanitize the user input.
+        const term = searchTerm.toLowerCase().replace(/'/g, "''");
+        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` WHERE LOWER(name) LIKE '%${term}%' OR LOWER(type) LIKE '%${term}%' OR LOWER(brand) LIKE '%${term}%' ORDER BY name`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+        }
         const results = await this.database.createQuery(queryStr).execute();
         return this.mapInventoryResults(results);
     }
@@ -313,13 +333,21 @@ export class DatabaseService {
     // ─── Orders Queries ────────────────────────────────────────
 
     /**
-     * Returns all orders in the current store scope, newest first.
+     * Returns orders in the current store scope, newest first.
+     *
+     * Pagination is opt-in (see {@link getInventoryItems}).
      */
-    public async getOrders(): Promise<Order[]> {
+    public async getOrders(
+        limit?: number,
+        offset: number = 0,
+    ): Promise<Order[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.orders;
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ORDER BY orderDate DESC`;
+        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ORDER BY orderDate DESC`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+        }
         const results = await this.database.createQuery(queryStr).execute();
         return this.mapOrderResults(results);
     }
@@ -424,6 +452,16 @@ export class DatabaseService {
      */
     public async addOrdersChangeListener(callback: () => void): Promise<any> {
         return this.ordersCollection?.addChangeListener(() => {
+            callback();
+        });
+    }
+
+    /**
+     * Add a change listener for the profile collection. Used by the profile
+     * screen so it refreshes when App Services pushes a new profile doc.
+     */
+    public async addProfileChangeListener(callback: () => void): Promise<any> {
+        return this.profileCollection?.addChangeListener(() => {
             callback();
         });
     }

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext } from 'react';
 import {
     ActivityIndicator,
     SafeAreaView,
@@ -6,39 +6,48 @@ import {
     StyleSheet,
     View,
     Text,
+    RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DatabaseContext from '@/providers/DatabaseContext';
 import { useAuth } from '@/providers/AuthContext';
-import { StoreProfile } from '@/models/StoreProfile';
+import { ErrorBanner } from '@/components/feedback/ErrorBanner';
+import { useStoreProfile } from '@/hooks/useStoreProfile';
 
 export default function ProfileScreen() {
     const dbContext = useContext(DatabaseContext);
-    const databaseService = dbContext?.databaseService;
-    const isDbReady = dbContext?.isDbReady ?? false;
-
     const { storeConfig } = useAuth();
-    const [profile, setProfile] = useState<StoreProfile | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        if (!databaseService || !isDbReady) return;
-        const load = async () => {
-            try {
-                const data = await databaseService.getStoreProfile();
-                setProfile(data);
-            } catch (e) {
-                console.error('[Profile] Load error:', e);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        load();
-    }, [databaseService, isDbReady]);
+    const { profile, isLoading, isRefreshing, error, clearError, refresh } =
+        useStoreProfile({
+            databaseService: dbContext?.databaseService,
+            isDbReady: dbContext?.isDbReady ?? false,
+        });
 
-    if (isLoading) {
+    const initError = dbContext?.initError ?? null;
+    const errorBannerProps = (() => {
+        if (initError) {
+            return {
+                title: 'Database failed to start',
+                message: initError.message,
+                onRetry: dbContext?.retryInit,
+            };
+        }
+        if (error) {
+            return {
+                title: 'Could not load store profile',
+                message: error.error.message,
+                onRetry: () => { clearError(); refresh(); },
+                onDismiss: clearError,
+            };
+        }
+        return null;
+    })();
+
+    if (isLoading && !profile) {
         return (
             <SafeAreaView style={styles.container}>
+                {errorBannerProps && <ErrorBanner {...errorBannerProps} />}
                 <View style={styles.spinnerContainer}>
                     <ActivityIndicator size="large" color="#FC9C0C" />
                 </View>
@@ -48,8 +57,13 @@ export default function ProfileScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Store Header */}
+            {errorBannerProps && <ErrorBanner {...errorBannerProps} />}
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#FC9C0C" />
+                }
+            >
                 <View style={styles.headerCard}>
                     <View style={styles.avatarContainer}>
                         <Ionicons name="storefront" size={40} color="#FC9C0C" />
@@ -63,7 +77,6 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Contact Info */}
                 {profile?.contact && (
                     <>
                         <Text style={styles.sectionHeader}>CONTACT</Text>
@@ -97,7 +110,6 @@ export default function ProfileScreen() {
                     </>
                 )}
 
-                {/* Location */}
                 {profile?.location && (
                     <>
                         <Text style={styles.sectionHeader}>LOCATION</Text>
@@ -121,7 +133,6 @@ export default function ProfileScreen() {
                     </>
                 )}
 
-                {/* Opening Hours */}
                 {profile?.openingHours && (
                     <>
                         <Text style={styles.sectionHeader}>HOURS</Text>
@@ -131,7 +142,6 @@ export default function ProfileScreen() {
                     </>
                 )}
 
-                {/* Account */}
                 <Text style={styles.sectionHeader}>ACCOUNT</Text>
                 <View style={styles.sectionCard}>
                     <InfoRow icon="person-circle-outline" label="Username" value={storeConfig?.username || '—'} />

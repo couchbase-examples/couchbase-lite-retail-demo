@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useContext, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -12,13 +12,15 @@ import {
     Modal,
     Dimensions,
     Image,
+    RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedSearchBar } from '@/components/searchBar/ThemedSearchBar';
+import { ErrorBanner } from '@/components/feedback/ErrorBanner';
 import DatabaseContext from '@/providers/DatabaseContext';
 import { useAuth } from '@/providers/AuthContext';
 import { GroceryItem, getQuantityColor } from '@/models/GroceryItem';
-import { debounce } from '@/util/debounce';
+import { useInventory } from '@/hooks/useInventory';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_GAP = 10;
@@ -27,145 +29,50 @@ const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
 export default function InventoryScreen() {
     const dbContext = useContext(DatabaseContext);
-    const databaseService = dbContext?.databaseService;
-    const isDbReady = dbContext?.isDbReady ?? false;
-
     const { storeConfig } = useAuth();
 
-    const [items, setItems] = useState<GroceryItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const {
+        items,
+        isLoading,
+        isRefreshing,
+        isLoadingMore,
+        hasMore,
+        search,
+        setSearch,
+        error,
+        clearError,
+        refresh,
+        loadMore,
+        incrementStock,
+        decrementStock,
+        createOrder,
+    } = useInventory({
+        databaseService: dbContext?.databaseService,
+        isDbReady: dbContext?.isDbReady ?? false,
+    });
 
-    // Reorder modal state
+    // Reorder modal state stays here — it's a screen-level UI concern.
     const [reorderItem, setReorderItem] = useState<GroceryItem | null>(null);
     const [reorderQty, setReorderQty] = useState('');
 
-    // Debounce timer for change listener to avoid rapid re-queries during sync
-    const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const isQueryingRef = useRef(false);
-    const listenerTokenRef = useRef<any>(null);
-
-    const loadItems = useCallback(async () => {
-        if (!databaseService || !isDbReady) return;
-        // Prevent concurrent queries
-        if (isQueryingRef.current) return;
-        isQueryingRef.current = true;
-        try {
-            const data = await databaseService.getInventoryItems();
-            setItems(data);
-        } catch (e) {
-            console.warn('[Inventory] Load error (may be transient during sync):', e);
-        } finally {
-            isQueryingRef.current = false;
-            setIsLoading(false);
-        }
-    }, [databaseService, isDbReady]);
-
-    // Keep a stable ref to loadItems so the listener effect doesn't re-register
-    const loadItemsRef = useRef(loadItems);
-    loadItemsRef.current = loadItems;
-
-    // Initial data load
-    useEffect(() => {
-        if (isDbReady) {
-            loadItems();
-        }
-    }, [isDbReady, loadItems]);
-
-    // Register change listener ONCE, remove on cleanup to avoid orphaned tokens
-    useEffect(() => {
-        if (!isDbReady || !databaseService) return;
-
-        let cancelled = false;
-
-        const register = async () => {
-            const token = await databaseService.addInventoryChangeListener(() => {
-                if (cancelled) return;
-                if (changeTimerRef.current) {
-                    clearTimeout(changeTimerRef.current);
-                }
-                changeTimerRef.current = setTimeout(() => {
-                    loadItemsRef.current();
-                }, 300);
-            });
-            if (!cancelled) {
-                listenerTokenRef.current = token;
-            } else if (token && typeof token.remove === 'function') {
-                // Effect was cleaned up before registration completed
-                await token.remove();
-            }
-        };
-        register();
-
-        return () => {
-            cancelled = true;
-            if (changeTimerRef.current) {
-                clearTimeout(changeTimerRef.current);
-            }
-            // Remove the listener token to prevent orphaned callbacks
-            const token = listenerTokenRef.current;
-            if (token && typeof token.remove === 'function') {
-                token.remove().catch((e: any) =>
-                    console.warn('[Inventory] Error removing listener:', e)
-                );
-            }
-            listenerTokenRef.current = null;
-        };
-    }, [isDbReady, databaseService]);
-
-    const searchItems = useCallback(async (term: string) => {
-        if (!databaseService || !isDbReady) return;
-        setIsLoading(true);
-        try {
-            if (term.length > 0) {
-                const data = await databaseService.searchInventory(term);
-                setItems(data);
-            } else {
-                const data = await databaseService.getInventoryItems();
-                setItems(data);
-            }
-        } catch (e) {
-            console.error('[Inventory] Search error:', e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [databaseService, isDbReady]);
-
-    const debouncedSearch = useCallback(debounce(searchItems, 400), [searchItems]);
-
-    function onSearch(text: string) {
-        setSearch(text);
-        debouncedSearch(text);
-    }
-
-    async function handleDecrement(item: GroceryItem) {
-        if (!databaseService || item.stockQty <= 0) return;
-        await databaseService.updateStockQuantity(item.id, item.stockQty - 1);
-        await loadItems();
-    }
-
-    async function handleIncrement(item: GroceryItem) {
-        if (!databaseService) return;
-        await databaseService.updateStockQuantity(item.id, item.stockQty + 1);
-        await loadItems();
-    }
-
     async function handleCreateOrder() {
-        if (!reorderItem || !databaseService) return;
+        if (!reorderItem) return;
         const qty = parseInt(reorderQty, 10);
         if (isNaN(qty) || qty <= 0) {
             Alert.alert('Invalid', 'Please enter a valid order quantity');
             return;
         }
-        await databaseService.createOrder(reorderItem, qty);
-        Alert.alert('Order Created', `Reorder for ${reorderItem.name} (qty: ${qty}) submitted.`);
-        setReorderItem(null);
-        setReorderQty('');
+        const ok = await createOrder(reorderItem, qty);
+        if (ok) {
+            Alert.alert('Order Created', `Reorder for ${reorderItem.name} (qty: ${qty}) submitted.`);
+            setReorderItem(null);
+            setReorderQty('');
+        }
+        // On failure the hook surfaces the error via the ErrorBanner; keep the modal open.
     }
 
     const renderItem = ({ item }: { item: GroceryItem }) => (
         <View style={styles.card}>
-            {/* Product Image */}
             <View style={styles.imageContainer}>
                 {item.imageURL ? (
                     <Image source={{ uri: item.imageURL }} style={styles.productImage} resizeMode="cover" />
@@ -176,33 +83,23 @@ export default function InventoryScreen() {
                 )}
             </View>
 
-            {/* Product Info */}
             <Text style={styles.productName} numberOfLines={2}>{item.name || 'Unknown'}</Text>
             <Text style={styles.productPrice}>${(Number(item.price) || 0).toFixed(2)}</Text>
 
-            {/* Inventory Count */}
             <Text style={styles.inventoryLabel}>Inventory Count</Text>
             <Text style={[styles.inventoryCount, { color: getQuantityColor(Number(item.stockQty) || 0) }]}>
                 {Number(item.stockQty) || 0}
             </Text>
 
-            {/* +/- Buttons */}
             <View style={styles.qtyButtons}>
-                <TouchableOpacity
-                    style={styles.qtyBtn}
-                    onPress={() => handleDecrement(item)}
-                >
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => decrementStock(item)}>
                     <Ionicons name="remove" size={20} color="#007AFF" />
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.qtyBtn}
-                    onPress={() => handleIncrement(item)}
-                >
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => incrementStock(item)}>
                     <Ionicons name="add" size={20} color="#007AFF" />
                 </TouchableOpacity>
             </View>
 
-            {/* Reorder Button */}
             <TouchableOpacity
                 style={styles.reorderBtn}
                 onPress={() => {
@@ -217,13 +114,39 @@ export default function InventoryScreen() {
         </View>
     );
 
-    // Welcome header with store name
     const storeName = storeConfig?.displayName || 'Store';
     const role = storeConfig?.role || 'Manager';
 
+    const initError = dbContext?.initError ?? null;
+    const errorBannerProps = (() => {
+        if (initError) {
+            return {
+                title: 'Database failed to start',
+                message: initError.message,
+                onRetry: dbContext?.retryInit,
+            };
+        }
+        if (error) {
+            const titleByOp = {
+                load: 'Could not load inventory',
+                search: 'Search failed',
+                updateStock: 'Could not update stock',
+                createOrder: 'Could not create order',
+            } as const;
+            return {
+                title: titleByOp[error.op],
+                message: error.error.message,
+                onRetry: error.op === 'load' || error.op === 'search'
+                    ? () => { clearError(); refresh(); }
+                    : undefined,
+                onDismiss: clearError,
+            };
+        }
+        return null;
+    })();
+
     return (
         <SafeAreaView style={styles.container}>
-            {/* Welcome Header */}
             <View style={styles.welcomeHeader}>
                 <View style={styles.welcomeRow}>
                     <Text style={styles.welcomeText} numberOfLines={1}>
@@ -236,9 +159,11 @@ export default function InventoryScreen() {
                 <Text style={styles.screenTitle}>Grocery Inventory</Text>
             </View>
 
+            {errorBannerProps && <ErrorBanner {...errorBannerProps} />}
+
             <ThemedSearchBar
                 placeholder="Search grocery..."
-                onChangeText={onSearch}
+                onChangeText={setSearch}
                 value={search}
             />
 
@@ -249,7 +174,11 @@ export default function InventoryScreen() {
             ) : items.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Ionicons name="cube-outline" size={64} color="#C7C7CC" />
-                    <Text style={styles.emptyText}>No inventory items found</Text>
+                    <Text style={styles.emptyText}>
+                        {search.length > 0
+                            ? `No results for "${search}"`
+                            : 'No inventory items found'}
+                    </Text>
                 </View>
             ) : (
                 <FlatList
@@ -259,10 +188,25 @@ export default function InventoryScreen() {
                     numColumns={2}
                     contentContainerStyle={styles.grid}
                     columnWrapperStyle={styles.gridRow}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={refresh}
+                            tintColor="#FC9C0C"
+                        />
+                    }
+                    onEndReached={hasMore ? loadMore : undefined}
+                    onEndReachedThreshold={0.4}
+                    ListFooterComponent={
+                        isLoadingMore ? (
+                            <View style={styles.footer}>
+                                <ActivityIndicator size="small" color="#FC9C0C" />
+                            </View>
+                        ) : null
+                    }
                 />
             )}
 
-            {/* Reorder Modal */}
             <Modal visible={reorderItem !== null} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -319,9 +263,10 @@ const styles = StyleSheet.create({
     screenTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E', marginTop: 2 },
     spinnerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-    emptyText: { fontSize: 16, color: '#8E8E93' },
+    emptyText: { fontSize: 16, color: '#8E8E93', paddingHorizontal: 24, textAlign: 'center' },
     grid: { paddingHorizontal: CARD_PADDING, paddingBottom: 20, paddingTop: 8 },
     gridRow: { justifyContent: 'space-between', marginBottom: CARD_GAP },
+    footer: { paddingVertical: 16, alignItems: 'center' },
     card: {
         width: CARD_WIDTH,
         backgroundColor: '#fff',
@@ -404,7 +349,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#fff',
     },
-    // Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.4)',

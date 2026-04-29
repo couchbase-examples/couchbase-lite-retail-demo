@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -7,101 +7,61 @@ import {
     View,
     Text,
     TouchableOpacity,
+    RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DatabaseContext from '@/providers/DatabaseContext';
+import { ErrorBanner } from '@/components/feedback/ErrorBanner';
 import { Order, formatOrderDate, getOrderStatusColor } from '@/models/Order';
+import { useOrders } from '@/hooks/useOrders';
 
 const FILTERS = ['All', 'In Review', 'Approved'] as const;
 type FilterType = typeof FILTERS[number];
 
 export default function OrdersScreen() {
     const dbContext = useContext(DatabaseContext);
-    const databaseService = dbContext?.databaseService;
-    const isDbReady = dbContext?.isDbReady ?? false;
 
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const {
+        orders,
+        isLoading,
+        isRefreshing,
+        isLoadingMore,
+        hasMore,
+        error,
+        clearError,
+        refresh,
+        loadMore,
+    } = useOrders({
+        databaseService: dbContext?.databaseService,
+        isDbReady: dbContext?.isDbReady ?? false,
+    });
+
     const [activeFilter, setActiveFilter] = useState<FilterType>('All');
-
-    const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const isQueryingRef = useRef(false);
-    const listenerTokenRef = useRef<any>(null);
-
-    const loadOrders = useCallback(async () => {
-        if (!databaseService || !isDbReady) return;
-        if (isQueryingRef.current) return;
-        isQueryingRef.current = true;
-        try {
-            const data = await databaseService.getOrders();
-            setOrders(data);
-        } catch (e) {
-            console.warn('[Orders] Load error (may be transient during sync):', e);
-        } finally {
-            isQueryingRef.current = false;
-            setIsLoading(false);
-        }
-    }, [databaseService, isDbReady]);
-
-    // Keep a stable ref to loadOrders so the listener effect doesn't re-register
-    const loadOrdersRef = useRef(loadOrders);
-    loadOrdersRef.current = loadOrders;
-
-    // Initial data load
-    useEffect(() => {
-        if (isDbReady) {
-            loadOrders();
-        }
-    }, [isDbReady, loadOrders]);
-
-    // Register change listener ONCE, remove on cleanup to avoid orphaned tokens
-    useEffect(() => {
-        if (!isDbReady || !databaseService) return;
-
-        let cancelled = false;
-
-        const register = async () => {
-            const token = await databaseService.addOrdersChangeListener(() => {
-                if (cancelled) return;
-                if (changeTimerRef.current) {
-                    clearTimeout(changeTimerRef.current);
-                }
-                changeTimerRef.current = setTimeout(() => {
-                    loadOrdersRef.current();
-                }, 300);
-            });
-            if (!cancelled) {
-                listenerTokenRef.current = token;
-            } else if (token && typeof token.remove === 'function') {
-                await token.remove();
-            }
-        };
-        register();
-
-        return () => {
-            cancelled = true;
-            if (changeTimerRef.current) {
-                clearTimeout(changeTimerRef.current);
-            }
-            const token = listenerTokenRef.current;
-            if (token && typeof token.remove === 'function') {
-                token.remove().catch((e: any) =>
-                    console.warn('[Orders] Error removing listener:', e)
-                );
-            }
-            listenerTokenRef.current = null;
-        };
-    }, [isDbReady, databaseService]);
 
     const filteredOrders = useMemo(() => {
         if (activeFilter === 'All') return orders;
         return orders.filter(o => o.orderStatus === activeFilter);
     }, [orders, activeFilter]);
 
-    const handleRefresh = () => {
-        setIsLoading(true);
-        loadOrders();
-    };
+    const initError = dbContext?.initError ?? null;
+    const errorBannerProps = (() => {
+        if (initError) {
+            return {
+                title: 'Database failed to start',
+                message: initError.message,
+                onRetry: dbContext?.retryInit,
+            };
+        }
+        if (error) {
+            return {
+                title: 'Could not load orders',
+                message: error.error.message,
+                onRetry: () => { clearError(); refresh(); },
+                onDismiss: clearError,
+            };
+        }
+        return null;
+    })();
 
     const renderOrder = ({ item }: { item: Order }) => (
         <View style={styles.card}>
@@ -127,16 +87,16 @@ export default function OrdersScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
             <View style={styles.headerBar}>
-                <TouchableOpacity onPress={handleRefresh} style={styles.headerBtn}>
+                <TouchableOpacity onPress={refresh} style={styles.headerBtn}>
                     <Ionicons name="refresh" size={20} color="#007AFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Orders</Text>
                 <View style={styles.headerBtn} />
             </View>
 
-            {/* Segmented Control */}
+            {errorBannerProps && <ErrorBanner {...errorBannerProps} />}
+
             <View style={styles.segmentContainer}>
                 {FILTERS.map(filter => (
                     <TouchableOpacity
@@ -179,6 +139,22 @@ export default function OrdersScreen() {
                     renderItem={renderOrder}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.list}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={refresh}
+                            tintColor="#FC9C0C"
+                        />
+                    }
+                    onEndReached={hasMore && activeFilter === 'All' ? loadMore : undefined}
+                    onEndReachedThreshold={0.4}
+                    ListFooterComponent={
+                        isLoadingMore ? (
+                            <View style={styles.footer}>
+                                <ActivityIndicator size="small" color="#FC9C0C" />
+                            </View>
+                        ) : null
+                    }
                 />
             )}
         </SafeAreaView>
@@ -234,6 +210,7 @@ const styles = StyleSheet.create({
     emptyTitle: { fontSize: 18, fontWeight: '600', color: '#8E8E93' },
     emptySubtitle: { fontSize: 14, color: '#AEAEB2', textAlign: 'center', paddingHorizontal: 40 },
     list: { paddingHorizontal: 16, paddingBottom: 20 },
+    footer: { paddingVertical: 16, alignItems: 'center' },
     card: {
         backgroundColor: '#fff',
         borderRadius: 12,
