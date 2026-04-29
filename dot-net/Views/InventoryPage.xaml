@@ -5,37 +5,64 @@
              xmlns:models="clr-namespace:GroceryApp.Models"
              x:Class="GroceryApp.Views.InventoryPage"
              x:DataType="vm:InventoryViewModel"
-             Title="Inventory"
-             BackgroundColor="#F8F8F8">
+             BackgroundColor="White"
+             Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto,*" Padding="0">
-        <!-- Search bar -->
-        <Border Grid.Row="0"
-                Margin="16,12"
-                Padding="12,4"
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Padding="20,16,20,0" Spacing="2">
+            <Label Text="Grocery Mart Inventory"
+                   FontSize="26"
+                   FontAttributes="Bold"
+                   TextColor="Black" />
+            <Label Text="Welcome!"
+                   FontSize="13"
+                   TextColor="#888" />
+        </VerticalStackLayout>
+
+        <!-- Search -->
+        <Border Grid.Row="1"
+                Margin="20,12,20,8"
+                Padding="14,4"
                 Stroke="#E5E5E5"
-                StrokeShape="RoundRectangle 10"
-                BackgroundColor="White">
-            <Grid ColumnDefinitions="Auto,*">
+                StrokeThickness="1"
+                BackgroundColor="White"
+                StrokeShape="RoundRectangle 12">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                 <Label Grid.Column="0"
                        Text="🔍"
                        VerticalOptions="Center"
-                       FontSize="16" />
+                       FontSize="14"
+                       TextColor="#888" />
                 <Entry Grid.Column="1"
-                       Placeholder="Search inventory..."
+                       Placeholder="Search products..."
                        Text="{Binding SearchText}"
                        ClearButtonVisibility="WhileEditing"
                        TextColor="Black" />
             </Grid>
         </Border>
 
-        <RefreshView Grid.Row="1"
+        <!-- 2-column inventory grid -->
+        <RefreshView Grid.Row="2"
                      IsRefreshing="{Binding IsBusy}"
                      Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Items}"
-                            SelectionMode="None">
+                            SelectionMode="None"
+                            VerticalScrollBarVisibility="Never">
+
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical"
+                                     Span="2"
+                                     HorizontalItemSpacing="12"
+                                     VerticalItemSpacing="12" />
+                </CollectionView.ItemsLayout>
+
                 <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="24" Spacing="10" VerticalOptions="Center" HorizontalOptions="Center">
+                    <VerticalStackLayout Padding="24,60" Spacing="10" VerticalOptions="Start" HorizontalOptions="Center">
+                        <Label Text="📦"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
                         <Label Text="No inventory yet"
                                FontSize="18"
                                FontAttributes="Bold"
@@ -46,84 +73,83 @@
                                HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
                 </CollectionView.EmptyView>
+
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:GroceryItem">
-                        <Border Margin="16,6"
-                                Padding="12"
+                        <Border Margin="0"
+                                Padding="0"
+                                BackgroundColor="White"
                                 Stroke="Transparent"
-                                StrokeShape="RoundRectangle 12"
-                                BackgroundColor="White">
-                            <Grid ColumnDefinitions="80,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14">
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.08" Radius="10" Offset="0,3" />
+                            </Border.Shadow>
 
-                                <Image Grid.RowSpan="2"
-                                       Grid.Column="0"
-                                       Source="{Binding ImageUrl}"
+                            <VerticalStackLayout Spacing="6" Padding="12">
+                                <!-- Product image -->
+                                <Image Source="{Binding ImageUrl}"
                                        Aspect="AspectFit"
-                                       HeightRequest="80"
-                                       WidthRequest="80" />
+                                       HeightRequest="100"
+                                       Margin="0,4,0,4" />
 
-                                <VerticalStackLayout Grid.Column="1" Grid.Row="0" Spacing="2">
-                                    <Label Text="{Binding Name}"
-                                           FontSize="16"
-                                           FontAttributes="Bold"
-                                           TextColor="Black"
-                                           LineBreakMode="TailTruncation" />
-                                    <Label Text="{Binding Type}"
-                                           FontSize="12"
-                                           TextColor="#666" />
-                                    <Label Text="{Binding Price, StringFormat='$ {0:F2}'}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#FC9C0C" />
-                                </VerticalStackLayout>
+                                <Label Text="{Binding Name}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       TextColor="Black"
+                                       LineBreakMode="TailTruncation" />
 
-                                <HorizontalStackLayout Grid.Column="2" Grid.Row="0" Spacing="6" VerticalOptions="Center">
+                                <Label Text="{Binding Price, StringFormat='Price: ${0:F2}'}"
+                                       FontSize="12"
+                                       TextColor="#666" />
+
+                                <Label Text="Inventory Count"
+                                       FontSize="12"
+                                       TextColor="#666"
+                                       Margin="0,6,0,0"
+                                       HorizontalOptions="Center" />
+
+                                <Label Text="{Binding Quantity}"
+                                       FontSize="38"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding Quantity, Converter={StaticResource QuantityToColorConverter}}"
+                                       HorizontalOptions="Center" />
+
+                                <HorizontalStackLayout Spacing="14" HorizontalOptions="Center" Margin="0,2,0,4">
                                     <Button Text="−"
-                                            FontSize="18"
-                                            FontAttributes="Bold"
-                                            WidthRequest="34"
-                                            HeightRequest="34"
-                                            Padding="0"
-                                            CornerRadius="17"
-                                            BackgroundColor="#EEE"
-                                            TextColor="Black"
+                                            Style="{StaticResource CircleButton}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=DecrementCommand}"
                                             CommandParameter="{Binding .}" />
-                                    <Label Text="{Binding Quantity}"
-                                           FontSize="16"
-                                           FontAttributes="Bold"
-                                           TextColor="Black"
-                                           VerticalOptions="Center"
-                                           WidthRequest="34"
-                                           HorizontalTextAlignment="Center" />
                                     <Button Text="+"
-                                            FontSize="18"
-                                            FontAttributes="Bold"
-                                            WidthRequest="34"
-                                            HeightRequest="34"
-                                            Padding="0"
-                                            CornerRadius="17"
-                                            BackgroundColor="#FC9C0C"
-                                            TextColor="White"
+                                            Style="{StaticResource CircleButton}"
+                                            BackgroundColor="#EFEFEF"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=IncrementCommand}"
                                             CommandParameter="{Binding .}" />
                                 </HorizontalStackLayout>
 
-                                <Button Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1"
-                                        Text="Order Stock"
-                                        FontSize="12"
-                                        HeightRequest="34"
-                                        HorizontalOptions="End"
-                                        Padding="14,0"
-                                        BackgroundColor="#3B82F6"
+                                <Button Text="Re-order now"
+                                        BackgroundColor="{StaticResource Primary}"
                                         TextColor="White"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=CreateOrderCommand}"
+                                        FontAttributes="Bold"
+                                        FontSize="13"
+                                        CornerRadius="10"
+                                        HeightRequest="40"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=OpenCreateOrderCommand}"
                                         CommandParameter="{Binding .}" />
-                            </Grid>
+                            </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </RefreshView>
     </Grid>
+
+    <ContentPage.Padding>
+        <OnPlatform x:TypeArguments="Thickness">
+            <On Platform="iOS" Value="0,40,0,0" />
+            <On Platform="MacCatalyst" Value="0,20,0,0" />
+            <On Platform="Android" Value="0,20,0,0" />
+            <On Platform="WinUI" Value="0,16,0,0" />
+        </OnPlatform>
+    </ContentPage.Padding>
 </ContentPage>

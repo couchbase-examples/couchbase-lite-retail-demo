@@ -5,88 +5,175 @@
              xmlns:models="clr-namespace:GroceryApp.Models"
              x:Class="GroceryApp.Views.OrdersPage"
              x:DataType="vm:OrdersViewModel"
-             Title="Orders"
-             BackgroundColor="#F8F8F8">
+             BackgroundColor="White"
+             Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*">
 
-        <!-- Filter chips -->
-        <ScrollView Grid.Row="0" Orientation="Horizontal" Padding="12,8">
-            <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Filters}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                        <Button Text="{Binding .}"
-                                FontSize="12"
-                                Padding="14,6"
-                                HeightRequest="34"
-                                CornerRadius="17"
-                                BackgroundColor="White"
-                                TextColor="Black"
-                                BorderColor="#FC9C0C"
-                                BorderWidth="1"
-                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}, Path=SetFilterCommand}"
-                                CommandParameter="{Binding .}" />
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </HorizontalStackLayout>
-        </ScrollView>
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20,16,20,12" ColumnDefinitions="*,Auto">
+            <Label Grid.Column="0"
+                   Text="Orders"
+                   FontSize="26"
+                   FontAttributes="Bold"
+                   TextColor="Black"
+                   VerticalOptions="Center" />
+            <Label Grid.Column="1"
+                   Text="↻"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Info}"
+                   VerticalOptions="Center"
+                   Padding="8,0">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding RefreshCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
+        </Grid>
+
+        <!-- Top tabs -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Padding="20,0,20,8" Margin="0">
+            <VerticalStackLayout Grid.Column="0" Spacing="6">
+                <Label Text="All"
+                       FontSize="14"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       TextColor="{Binding SelectedFilter, Converter={StaticResource TabSelectedTextColorConverter}, ConverterParameter=All}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="All" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <BoxView HeightRequest="2"
+                         Color="{Binding SelectedFilter, Converter={StaticResource TabSelectedUnderlineConverter}, ConverterParameter=All}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                <Label Text="In Review"
+                       FontSize="14"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       TextColor="{Binding SelectedFilter, Converter={StaticResource TabSelectedTextColorConverter}, ConverterParameter=In Review}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="In Review" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <BoxView HeightRequest="2"
+                         Color="{Binding SelectedFilter, Converter={StaticResource TabSelectedUnderlineConverter}, ConverterParameter=In Review}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Grid.Column="2" Spacing="6">
+                <Label Text="Approved"
+                       FontSize="14"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       TextColor="{Binding SelectedFilter, Converter={StaticResource TabSelectedTextColorConverter}, ConverterParameter=Approved}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="Approved" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <BoxView HeightRequest="2"
+                         Color="{Binding SelectedFilter, Converter={StaticResource TabSelectedUnderlineConverter}, ConverterParameter=Approved}" />
+            </VerticalStackLayout>
+        </Grid>
 
         <!-- Orders list -->
-        <RefreshView Grid.Row="1"
+        <RefreshView Grid.Row="2"
                      IsRefreshing="{Binding IsBusy}"
                      Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Orders}" SelectionMode="None">
                 <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="24" Spacing="10" VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="📋"
-                               FontSize="48"
-                               HorizontalOptions="Center" />
+                    <VerticalStackLayout Padding="24,60" Spacing="10" VerticalOptions="Start" HorizontalOptions="Center">
+                        <Label Text="📦" FontSize="48" HorizontalOptions="Center" />
                         <Label Text="No orders for this filter"
                                FontSize="16"
                                FontAttributes="Bold"
                                HorizontalOptions="Center" />
-                        <Label Text="Try a different status or pull to refresh."
+                        <Label Text="Tap 'Re-order now' on the Inventory tab to create one."
                                FontSize="13"
                                TextColor="#666"
                                HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
                 </CollectionView.EmptyView>
+
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Order">
-                        <Border Margin="16,6"
+                        <Border Margin="20,6"
                                 Padding="14"
+                                BackgroundColor="{StaticResource LightSection}"
                                 Stroke="Transparent"
-                                StrokeShape="RoundRectangle 12"
-                                BackgroundColor="White">
-                            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnDefinitions="*,Auto">
+                                StrokeShape="RoundRectangle 12">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnDefinitions="*,Auto">
+
+                                <!-- Header row: Order ID + status pill -->
                                 <Label Grid.Row="0" Grid.Column="0"
                                        Text="{Binding OrderId, StringFormat='Order #{0}'}"
+                                       FontSize="16"
                                        FontAttributes="Bold"
-                                       TextColor="Black" />
-                                <Label Grid.Row="0" Grid.Column="1"
-                                       Text="{Binding OrderStatus}"
-                                       FontSize="11"
-                                       FontAttributes="Bold"
-                                       TextColor="White"
-                                       BackgroundColor="#FC9C0C"
-                                       Padding="8,2"
-                                       VerticalOptions="Center"
-                                       HorizontalOptions="End" />
-                                <Label Grid.Row="1" Grid.ColumnSpan="2"
-                                       Text="{Binding OrderDateFormatted}"
-                                       FontSize="12"
-                                       TextColor="#666" />
-                                <Label Grid.Row="2" Grid.ColumnSpan="2"
-                                       FontSize="12"
-                                       TextColor="#444">
-                                    <Label.Text>
-                                        <MultiBinding StringFormat="{}SKU {0} • Qty {1} {2}">
-                                            <Binding Path="Sku" />
-                                            <Binding Path="OrderQty" />
-                                            <Binding Path="Unit" />
-                                        </MultiBinding>
-                                    </Label.Text>
+                                       TextColor="Black"
+                                       VerticalOptions="Center" />
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        BackgroundColor="{Binding OrderStatus, Converter={StaticResource StatusToBackgroundConverter}}"
+                                        Stroke="Transparent"
+                                        StrokeShape="RoundRectangle 12"
+                                        Padding="10,3"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding OrderStatus}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="{Binding OrderStatus, Converter={StaticResource StatusToForegroundConverter}}" />
+                                </Border>
+
+                                <!-- SKU + Quantity row -->
+                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" Margin="0,6,0,0">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                        <Label Text="SKU" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding Sku}"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               TextColor="Black" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                                        <Label Text="Quantity" Style="{StaticResource MutedLabel}" HorizontalOptions="End" />
+                                        <Label FontSize="14"
+                                               FontAttributes="Bold"
+                                               TextColor="Black"
+                                               HorizontalOptions="End">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding OrderQty}" />
+                                                    <Span Text=" " />
+                                                    <Span Text="{Binding Unit}" FontAttributes="None" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Product ID row -->
+                                <Label Grid.Row="2" Grid.ColumnSpan="2" FontSize="12" TextColor="#666" Margin="0,2,0,0">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Product ID: " />
+                                            <Span Text="{Binding ProductId}" FontAttributes="Bold" TextColor="Black" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
                                 </Label>
+
+                                <BoxView Grid.Row="3" Grid.ColumnSpan="2" HeightRequest="1" Color="#E5D9C0" Margin="0,6" />
+
+                                <!-- Date + doc id -->
+                                <Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding OrderDateFormatted}"
+                                           FontSize="11"
+                                           TextColor="#888" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Id}"
+                                           FontSize="10"
+                                           TextColor="#999"
+                                           HorizontalOptions="End"
+                                           LineBreakMode="MiddleTruncation" />
+                                </Grid>
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -94,4 +181,13 @@
             </CollectionView>
         </RefreshView>
     </Grid>
+
+    <ContentPage.Padding>
+        <OnPlatform x:TypeArguments="Thickness">
+            <On Platform="iOS" Value="0,40,0,0" />
+            <On Platform="MacCatalyst" Value="0,20,0,0" />
+            <On Platform="Android" Value="0,20,0,0" />
+            <On Platform="WinUI" Value="0,16,0,0" />
+        </OnPlatform>
+    </ContentPage.Padding>
 </ContentPage>

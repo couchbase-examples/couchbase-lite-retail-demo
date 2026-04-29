@@ -18,4 +18,9 @@ public partial class SettingsPage : ContentPage
     {
         await Shell.Current.GoToAsync("//login").ConfigureAwait(false);
     }
+
+    private void OnAppServicesToggled(object? sender, ToggledEventArgs e)
+    {
+        _viewModel.ToggleSyncCommand.Execute(null);
+    }
 }

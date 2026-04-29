@@ -2,135 +2,140 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:GroceryApp.ViewModels"
-             xmlns:models="clr-namespace:GroceryApp.Models"
              x:Class="GroceryApp.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
-             BackgroundColor="#FFF0DB"
-             NavigationPage.HasNavigationBar="False">
+             BackgroundColor="{StaticResource Light}"
+             Shell.NavBarIsVisible="False">
 
-    <ScrollView>
-        <Grid Padding="24" RowSpacing="20">
-            <VerticalStackLayout Spacing="20" VerticalOptions="Center">
+    <Grid RowDefinitions="*,Auto">
+
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="28,40,28,20" Spacing="24">
 
                 <!-- Logo + Title -->
-                <VerticalStackLayout Spacing="12" HorizontalOptions="Center" Margin="0,40,0,30">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,30,0,10">
                     <Label Text="🛒"
-                           FontSize="80"
+                           FontSize="78"
                            HorizontalOptions="Center" />
                     <Label Text="Grocery Inventory"
-                           FontSize="32"
+                           FontSize="30"
                            FontAttributes="Bold"
                            TextColor="Black"
                            HorizontalOptions="Center" />
                     <Label Text="Management System"
-                           FontSize="18"
+                           FontSize="16"
+                           FontAttributes="Bold"
                            TextColor="Black"
                            HorizontalOptions="Center" />
                 </VerticalStackLayout>
 
-                <!-- Login form -->
-                <Border Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        BackgroundColor="White"
-                        Padding="20">
-                    <VerticalStackLayout Spacing="16">
-
-                        <Label Text="Username" FontSize="14" FontAttributes="Bold" TextColor="Black" />
-                        <Border Stroke="#E5E5E5" StrokeShape="RoundRectangle 8" Padding="12,4">
-                            <Entry Placeholder="email@example.com"
+                <!-- Username -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Username" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource InputBorder}" HeightRequest="56">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Label Grid.Column="0"
+                                   Text="👤"
+                                   FontSize="18"
+                                   VerticalOptions="Center"
+                                   TextColor="#999" />
+                            <Entry Grid.Column="1"
+                                   Placeholder="Enter username"
                                    Keyboard="Email"
-                                   ClearButtonVisibility="WhileEditing"
                                    Text="{Binding Username}"
+                                   ReturnType="Next"
                                    TextColor="Black" />
-                        </Border>
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
 
-                        <Label Text="Password" FontSize="14" FontAttributes="Bold" TextColor="Black" />
-                        <Border Stroke="#E5E5E5" StrokeShape="RoundRectangle 8" Padding="12,4">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Entry Grid.Column="0"
-                                       Placeholder="Password"
-                                       IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}"
-                                       Text="{Binding Password}"
-                                       TextColor="Black" />
-                                <Button Grid.Column="1"
-                                        Text="{Binding IsPasswordVisible, Converter={StaticResource EyeIconConverter}}"
-                                        BackgroundColor="Transparent"
-                                        TextColor="#666"
-                                        FontSize="14"
-                                        Command="{Binding ToggleShowPasswordCommand}" />
-                            </Grid>
-                        </Border>
+                <!-- Password -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Password" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource InputBorder}" HeightRequest="56">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <Label Grid.Column="0"
+                                   Text="🔒"
+                                   FontSize="16"
+                                   VerticalOptions="Center"
+                                   TextColor="#999" />
+                            <Entry Grid.Column="1"
+                                   Placeholder="Enter password"
+                                   IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}"
+                                   Text="{Binding Password}"
+                                   ReturnType="Done"
+                                   ReturnCommand="{Binding LoginCommand}"
+                                   TextColor="Black" />
+                            <Label Grid.Column="2"
+                                   Text="{Binding IsPasswordVisible, Converter={StaticResource EyeIconConverter}}"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="#999"
+                                   VerticalOptions="Center"
+                                   Padding="6,0">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ToggleShowPasswordCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
 
-                        <Button Text="Login"
-                                Command="{Binding LoginCommand}"
-                                BackgroundColor="#FC9C0C"
-                                TextColor="White"
-                                FontAttributes="Bold"
-                                CornerRadius="8"
-                                HeightRequest="50"
-                                IsEnabled="{Binding CanSubmit}" />
+                <!-- Sign In Button -->
+                <Button Text="→ Sign In"
+                        Style="{StaticResource PrimaryButton}"
+                        Command="{Binding LoginCommand}"
+                        IsEnabled="{Binding CanSubmit}" />
 
-                        <ActivityIndicator IsRunning="{Binding IsBusy}"
-                                           IsVisible="{Binding IsBusy}"
-                                           Color="#FC9C0C" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   Color="{StaticResource Primary}" />
 
-                        <Label Text="{Binding ErrorMessage}"
-                               TextColor="#D32F2F"
-                               FontSize="13"
-                               IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+                <Label Text="{Binding ErrorMessage}"
+                       TextColor="{StaticResource Danger}"
+                       FontSize="13"
+                       HorizontalTextAlignment="Center"
+                       IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
 
-                        <Button Text="View Demo Credentials"
-                                Command="{Binding ToggleCredentialsCommand}"
-                                BackgroundColor="Transparent"
-                                TextColor="#FC9C0C"
-                                FontSize="13" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- Demo credentials list -->
-                <Border IsVisible="{Binding ShowingCredentials}"
-                        BackgroundColor="White"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        Padding="16">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="Demo Credentials" FontSize="16" FontAttributes="Bold" TextColor="Black" />
-                        <CollectionView ItemsSource="{Binding DemoUsers}">
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="models:DemoUser">
-                                    <Border Padding="12"
-                                            Margin="0,4"
-                                            Stroke="#E5E5E5"
-                                            StrokeShape="RoundRectangle 8">
-                                        <VerticalStackLayout Spacing="4">
-                                            <Label Text="{Binding FullName}" FontAttributes="Bold" TextColor="Black" />
-                                            <Label Text="{Binding Username}" FontSize="12" TextColor="#666" />
-                                            <Label FontSize="12" TextColor="#888">
-                                                <Label.Text>
-                                                    <MultiBinding StringFormat="{}{0} • {1}">
-                                                        <Binding Path="Role" />
-                                                        <Binding Path="Endpoint" />
-                                                    </MultiBinding>
-                                                </Label.Text>
-                                            </Label>
-                                            <Button Text="Use This"
-                                                    BackgroundColor="#FC9C0C"
-                                                    TextColor="White"
-                                                    FontSize="12"
-                                                    HeightRequest="34"
-                                                    HorizontalOptions="Start"
-                                                    Padding="14,0"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LoginViewModel}}, Path=UseCredentialCommand}"
-                                                    CommandParameter="{Binding .}" />
-                                        </VerticalStackLayout>
-                                    </Border>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                    </VerticalStackLayout>
-                </Border>
+                <!-- View Demo Credentials link -->
+                <Label HorizontalTextAlignment="Center"
+                       FontSize="14"
+                       TextColor="Black"
+                       FontAttributes="Bold">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="ⓘ  " TextColor="#999" />
+                            <Span Text="View Demo Credentials" TextColor="Black" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleCredentialsCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
 
             </VerticalStackLayout>
-        </Grid>
-    </ScrollView>
+        </ScrollView>
+
+        <!-- Couchbase footer -->
+        <VerticalStackLayout Grid.Row="1" Spacing="6" Padding="0,12,0,24" HorizontalOptions="Center">
+            <Border BackgroundColor="#D9342B"
+                    StrokeShape="RoundRectangle 22"
+                    Stroke="Transparent"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    HorizontalOptions="Center">
+                <Label Text="🛢"
+                       FontSize="20"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+            <Label Text="Powered by Couchbase"
+                   FontSize="12"
+                   FontAttributes="Bold"
+                   TextColor="Black"
+                   HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+    </Grid>
 </ContentPage>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             x:Class="GroceryApp.Views.CreateOrderPage"
+             x:DataType="vm:CreateOrderViewModel"
+             BackgroundColor="#80000000"
+             Shell.NavBarIsVisible="False">
+
+    <Grid Padding="24" RowDefinitions="*,Auto,*">
+
+        <BoxView Grid.RowSpan="3" Color="Transparent">
+            <BoxView.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnDismissTapped" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+
+        <Border Grid.Row="1"
+                BackgroundColor="White"
+                Stroke="Transparent"
+                StrokeShape="RoundRectangle 16"
+                Padding="22">
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.2" Radius="20" Offset="0,4" />
+            </Border.Shadow>
+
+            <VerticalStackLayout Spacing="14">
+
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Grid.Column="0"
+                           Text="Create Order"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="Black" />
+                    <Label Grid.Column="1"
+                           Text="✕"
+                           FontSize="20"
+                           TextColor="#888"
+                           VerticalOptions="Center">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnDismissTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
+
+                <BoxView HeightRequest="1" Color="#EEE" />
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Product Name" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding ProductName}" Style="{StaticResource FieldValue}" FontAttributes="Bold" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Product ID" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding ProductIdText}" Style="{StaticResource FieldValue}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="SKU" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding SkuText}" Style="{StaticResource FieldValue}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Store ID" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding StoreIdText}" Style="{StaticResource FieldValue}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Unit" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding UnitText}" Style="{StaticResource FieldValue}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Order Status" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding OrderStatus}" Style="{StaticResource FieldValue}" />
+                </VerticalStackLayout>
+
+                <!-- Order Quantity field -->
+                <Border Style="{StaticResource InputBorder}" Padding="14,8" Margin="0,4,0,0">
+                    <VerticalStackLayout>
+                        <Label Text="Order Quantity"
+                               FontSize="11"
+                               TextColor="{StaticResource Primary}"
+                               FontAttributes="Bold" />
+                        <Entry Text="{Binding OrderQty}"
+                               Keyboard="Numeric"
+                               FontSize="17"
+                               TextColor="Black" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="{Binding ErrorMessage}"
+                       TextColor="{StaticResource Danger}"
+                       FontSize="12"
+                       IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                    <Button Grid.Column="0"
+                            Text="Cancel"
+                            Style="{StaticResource SecondaryButton}"
+                            Command="{Binding CancelCommand}" />
+                    <Button Grid.Column="1"
+                            Text="Create Order"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="14"
+                            CornerRadius="10"
+                            HeightRequest="44"
+                            Command="{Binding CreateCommand}" />
+                </Grid>
+
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

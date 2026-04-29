@@ -4,81 +4,133 @@
              xmlns:vm="clr-namespace:GroceryApp.ViewModels"
              x:Class="GroceryApp.Views.ProfilePage"
              x:DataType="vm:ProfileViewModel"
-             Title="Profile"
-             BackgroundColor="#F8F8F8">
+             BackgroundColor="White"
+             Shell.NavBarIsVisible="False">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}"
-                 Command="{Binding RefreshCommand}">
-        <ScrollView>
-            <VerticalStackLayout Padding="16" Spacing="14">
+    <Grid RowDefinitions="Auto,*">
 
-                <Border Padding="16"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        BackgroundColor="White">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Store" FontSize="12" TextColor="#666" />
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Padding="20,16,20,8" Spacing="2">
+            <Label Text="Store Profile"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   TextColor="Black" />
+        </VerticalStackLayout>
+
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}">
+            <ScrollView>
+                <VerticalStackLayout Padding="20,8,20,28" Spacing="14">
+
+                    <!-- Title section -->
+                    <VerticalStackLayout Spacing="4" Margin="0,4,0,8">
                         <Label Text="{Binding Profile.Name, FallbackValue='No profile loaded'}"
-                               FontSize="22"
+                               FontSize="26"
                                FontAttributes="Bold"
                                TextColor="Black" />
                         <Label Text="{Binding Profile.StoreId, StringFormat='Store ID: {0}'}"
-                               FontSize="12"
-                               TextColor="#666" />
+                               FontSize="13"
+                               TextColor="#888" />
                     </VerticalStackLayout>
-                </Border>
 
-                <Border Padding="16"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        BackgroundColor="White">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Address" FontSize="12" TextColor="#666" />
-                        <Label Text="{Binding AddressLine}"
-                               FontSize="14"
-                               TextColor="Black" />
-                        <Label Text="{Binding CityRegion}"
-                               FontSize="14"
-                               TextColor="Black" />
-                        <Label Text="{Binding Profile.Location.Country}"
-                               FontSize="14"
-                               TextColor="Black" />
-                    </VerticalStackLayout>
-                </Border>
+                    <!-- Contact card -->
+                    <Border Style="{StaticResource CreamSectionBorder}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Contact Information"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="Black" />
+                            <Label FontSize="14" TextColor="Black">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Email: " FontAttributes="Bold" />
+                                        <Span Text="{Binding Profile.Contact.Email, FallbackValue='—'}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label FontSize="14" TextColor="Black">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Phone: " FontAttributes="Bold" />
+                                        <Span Text="{Binding Profile.Contact.Phone, FallbackValue='—'}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </Border>
 
-                <Border Padding="16"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        BackgroundColor="White">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Contact" FontSize="12" TextColor="#666" />
-                        <Label Text="{Binding Profile.Contact.Email}"
-                               FontSize="14"
-                               TextColor="Black" />
-                        <Label Text="{Binding Profile.Contact.Phone}"
-                               FontSize="14"
-                               TextColor="Black" />
-                    </VerticalStackLayout>
-                </Border>
+                    <!-- Location card -->
+                    <Border Style="{StaticResource CreamSectionBorder}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Location"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="Black" />
+                            <Label Text="{Binding AddressLine}" FontSize="14" TextColor="Black" />
+                            <Label Text="{Binding CityRegion}" FontSize="14" TextColor="Black" />
+                            <Label Text="{Binding Profile.Location.Country, FallbackValue=''}" FontSize="14" TextColor="Black" />
+                            <HorizontalStackLayout Spacing="6"
+                                                   Margin="0,4,0,0"
+                                                   IsVisible="{Binding Profile.Location.Coordinates, Converter={StaticResource NotNullConverter}}">
+                                <Label Text="📍" FontSize="14" />
+                                <Label FontSize="13"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource Primary}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding Profile.Location.Coordinates.Lat, FallbackValue=''}" />
+                                            <Span Text=", " />
+                                            <Span Text="{Binding Profile.Location.Coordinates.Lon, FallbackValue=''}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
 
-                <Border Padding="16"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 16"
-                        BackgroundColor="White"
-                        IsVisible="{Binding Profile, Converter={StaticResource NotNullConverter}}">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Manager" FontSize="12" TextColor="#666" />
-                        <Label Text="{Binding Profile.Manager, FallbackValue='—'}"
-                               FontSize="14"
-                               TextColor="Black" />
-                        <Label Text="Hours" FontSize="12" TextColor="#666" Margin="0,8,0,0" />
-                        <Label Text="{Binding Profile.OpeningHours, FallbackValue='—'}"
-                               FontSize="14"
-                               TextColor="Black" />
-                    </VerticalStackLayout>
-                </Border>
+                    <!-- Manager card -->
+                    <Border Style="{StaticResource CreamSectionBorder}"
+                            IsVisible="{Binding Profile.Manager, Converter={StaticResource StringNotEmptyConverter}}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Management"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="Black" />
+                            <Label FontSize="14" TextColor="Black">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Manager: " FontAttributes="Bold" />
+                                        <Span Text="{Binding Profile.Manager}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </Border>
 
-            </VerticalStackLayout>
-        </ScrollView>
-    </RefreshView>
+                    <!-- Hours card -->
+                    <Border Style="{StaticResource CreamSectionBorder}"
+                            IsVisible="{Binding Profile.OpeningHours, Converter={StaticResource StringNotEmptyConverter}}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Opening Hours"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="Black" />
+                            <Label Text="{Binding Profile.OpeningHours}" FontSize="14" TextColor="Black" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+    </Grid>
+
+    <ContentPage.Padding>
+        <OnPlatform x:TypeArguments="Thickness">
+            <On Platform="iOS" Value="0,40,0,0" />
+            <On Platform="MacCatalyst" Value="0,20,0,0" />
+            <On Platform="Android" Value="0,20,0,0" />
+            <On Platform="WinUI" Value="0,16,0,0" />
+        </OnPlatform>
+    </ContentPage.Padding>
 </ContentPage>

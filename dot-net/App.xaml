@@ -16,6 +16,13 @@
             <converters:NotNullConverter x:Key="NotNullConverter" />
             <converters:EyeIconConverter x:Key="EyeIconConverter" />
             <converters:SyncToggleLabelConverter x:Key="SyncToggleLabelConverter" />
+            <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
+            <converters:StatusToForegroundConverter x:Key="StatusToForegroundConverter" />
+            <converters:QuantityToColorConverter x:Key="QuantityToColorConverter" />
+            <converters:StringEqualsConverter x:Key="StringEqualsConverter" />
+            <converters:TabSelectedTextColorConverter x:Key="TabSelectedTextColorConverter" />
+            <converters:TabSelectedUnderlineConverter x:Key="TabSelectedUnderlineConverter" />
+            <converters:SyncStatusSubtextConverter x:Key="SyncStatusSubtextConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

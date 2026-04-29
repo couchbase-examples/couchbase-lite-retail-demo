@@ -4,14 +4,36 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="Light">#DFD8F7</Color>
+    <!-- Brand palette (matches iOS / Kotlin retail demo) -->
+    <Color x:Key="Primary">#FC9C0C</Color>             <!-- Orange used for primary CTAs -->
+    <Color x:Key="PrimaryDark">#E08800</Color>
+    <Color x:Key="Light">#FFF0DB</Color>               <!-- Cream - login bg + tab bar -->
+    <Color x:Key="LightSection">#FFF6E6</Color>        <!-- Cream section card -->
     <Color x:Key="Dark">#2B0B98</Color>
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
     <Color x:Key="LightGray">#E5E5E1</Color>
     <Color x:Key="MidGray">#969696</Color>
     <Color x:Key="DarkGray">#505050</Color>
+
+    <!-- Status pill colors -->
+    <Color x:Key="StatusOrangeBg">#FC9C0C</Color>      <!-- Submitted -->
+    <Color x:Key="StatusOrangeFg">#FFFFFF</Color>
+    <Color x:Key="StatusBlueBg">#DBEAFE</Color>        <!-- In Review -->
+    <Color x:Key="StatusBlueFg">#1E40AF</Color>
+    <Color x:Key="StatusGreenBg">#DCFCE7</Color>       <!-- Approved -->
+    <Color x:Key="StatusGreenFg">#166534</Color>
+
+    <!-- Quantity number colors -->
+    <Color x:Key="QtyHigh">#16A34A</Color>             <!-- > 30 -->
+    <Color x:Key="QtyMedium">#F59E0B</Color>           <!-- 11-30 -->
+    <Color x:Key="QtyLow">#DC2626</Color>              <!-- 0-10 -->
+
+    <!-- Helpers -->
+    <Color x:Key="Danger">#D32F2F</Color>
+    <Color x:Key="Info">#3B82F6</Color>
+    <Color x:Key="Subtle">#F8F8F8</Color>
+    <Color x:Key="Border">#E5E5E5</Color>
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="LightBrush" Color="{StaticResource Light}"/>
     <SolidColorBrush x:Key="DarkBrush" Color="{StaticResource Dark}"/>

@@ -83,4 +83,13 @@ public partial class InventoryViewModel : BaseViewModel
     {
         await _databaseManager.CreateOrderAsync(item).ConfigureAwait(true);
     }
+
+    /// <summary>Raised when the user taps "Re-order now" — the page opens a modal.</summary>
+    public event EventHandler<GroceryItem>? OpenCreateOrderRequested;
+
+    [RelayCommand]
+    private void OpenCreateOrder(GroceryItem item)
+    {
+        OpenCreateOrderRequested?.Invoke(this, item);
+    }
 }

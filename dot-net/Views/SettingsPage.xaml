@@ -4,74 +4,203 @@
              xmlns:vm="clr-namespace:GroceryApp.ViewModels"
              x:Class="GroceryApp.Views.SettingsPage"
              x:DataType="vm:SettingsViewModel"
-             Title="Settings"
-             BackgroundColor="#F8F8F8">
+             BackgroundColor="White"
+             Shell.NavBarIsVisible="False">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="14">
+    <Grid RowDefinitions="Auto,*">
 
-            <!-- User card -->
-            <Border Padding="16"
-                    Stroke="Transparent"
-                    StrokeShape="RoundRectangle 16"
-                    BackgroundColor="White">
-                <VerticalStackLayout Spacing="6">
-                    <Label Text="Signed in as" FontSize="12" TextColor="#666" />
-                    <Label Text="{Binding FullName}" FontSize="20" FontAttributes="Bold" TextColor="Black" />
-                    <Label Text="{Binding Username}" FontSize="13" TextColor="#666" />
-                    <Label Text="{Binding Role}" FontSize="13" TextColor="#666" />
-                </VerticalStackLayout>
-            </Border>
+        <!-- Header -->
+        <Label Grid.Row="0"
+               Text="Settings"
+               FontSize="22"
+               FontAttributes="Bold"
+               TextColor="Black"
+               Padding="20,16,20,12" />
 
-            <!-- Sync status -->
-            <Border Padding="16"
-                    Stroke="Transparent"
-                    StrokeShape="RoundRectangle 16"
-                    BackgroundColor="White">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Capella App Services" FontSize="12" TextColor="#666" />
-                    <Label Text="{Binding SyncStatus}" FontSize="16" FontAttributes="Bold" TextColor="Black" />
-                    <ProgressBar Progress="{Binding Progress}" ProgressColor="#FC9C0C" />
-                    <Label Text="{Binding LastSyncTime, StringFormat='Last sync: {0}'}"
-                           FontSize="12"
-                           TextColor="#666" />
-                    <Label Text="{Binding StoreDisplayName, StringFormat='Store: {0}'}"
-                           FontSize="12"
-                           TextColor="#666" />
-                    <Label Text="{Binding SyncUrl, StringFormat='Endpoint: {0}'}"
-                           FontSize="11"
-                           TextColor="#888"
-                           LineBreakMode="MiddleTruncation" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,4,20,28" Spacing="14">
 
-                    <HorizontalStackLayout Spacing="8" Margin="0,8,0,0">
-                        <Button Text="{Binding IsAppServicesEnabled, Converter={StaticResource SyncToggleLabelConverter}}"
-                                Command="{Binding ToggleSyncCommand}"
-                                BackgroundColor="#FC9C0C"
+                <!-- User Information -->
+                <Border Style="{StaticResource CreamSectionBorder}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="User Information"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="Black" />
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                            <!-- Avatar circle -->
+                            <Border Grid.Column="0"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    Stroke="Transparent"
+                                    StrokeShape="RoundRectangle 24"
+                                    WidthRequest="48"
+                                    HeightRequest="48"
+                                    VerticalOptions="Center">
+                                <Label Text="👤"
+                                       FontSize="24"
+                                       TextColor="White"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding FullName}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       TextColor="Black" />
+                                <Label FontSize="13" TextColor="#666">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="@" />
+                                            <Span Text="{Binding Username}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Border BackgroundColor="#FFE5C0"
+                                        Stroke="Transparent"
+                                        StrokeShape="RoundRectangle 10"
+                                        Padding="8,3"
+                                        HorizontalOptions="Start"
+                                        Margin="0,4,0,0">
+                                    <Label Text="{Binding Role}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Sync Controls -->
+                <Border Style="{StaticResource CreamSectionBorder}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Sync Controls"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="Black" />
+
+                        <Button Text="↻  Refresh Data"
+                                BackgroundColor="{StaticResource Primary}"
                                 TextColor="White"
-                                FontSize="13"
-                                CornerRadius="8"
-                                Padding="14,0"
-                                HeightRequest="38" />
-                        <Button Text="Reset"
-                                Command="{Binding ResetSyncCommand}"
-                                BackgroundColor="#3B82F6"
-                                TextColor="White"
-                                FontSize="13"
-                                CornerRadius="8"
-                                Padding="14,0"
-                                HeightRequest="38" />
-                    </HorizontalStackLayout>
-                </VerticalStackLayout>
-            </Border>
+                                FontAttributes="Bold"
+                                FontSize="14"
+                                CornerRadius="22"
+                                HeightRequest="44"
+                                Command="{Binding ResetSyncCommand}" />
 
-            <!-- Logout -->
-            <Button Text="Sign Out"
-                    Command="{Binding LogoutCommand}"
-                    BackgroundColor="#D32F2F"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    CornerRadius="10"
-                    HeightRequest="48" />
-        </VerticalStackLayout>
-    </ScrollView>
+                        <BoxView HeightRequest="1" Color="#E5D9C0" />
+
+                        <!-- App Services row -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="☁️" FontSize="22" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="App Services"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       TextColor="Black" />
+                                <Label Text="{Binding IsAppServicesEnabled, Converter={StaticResource SyncStatusSubtextConverter}}"
+                                       FontSize="11"
+                                       TextColor="#666" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="2"
+                                    IsToggled="{Binding IsAppServicesEnabled, Mode=TwoWay}"
+                                    OnColor="{StaticResource Primary}"
+                                    Toggled="OnAppServicesToggled" />
+                        </Grid>
+
+                        <!-- Sync status pill -->
+                        <Border BackgroundColor="White"
+                                Stroke="Transparent"
+                                StrokeShape="RoundRectangle 10"
+                                Padding="10,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <Label Grid.Column="0"
+                                       Text="●"
+                                       FontSize="14"
+                                       TextColor="#16A34A"
+                                       VerticalOptions="Center" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding SyncStatus}"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="Black"
+                                       VerticalOptions="Center" />
+                                <Label Grid.Column="2"
+                                       FontSize="11"
+                                       TextColor="#666"
+                                       VerticalOptions="Center">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Last: " />
+                                            <Span Text="{Binding LastSyncTime}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </Grid>
+                        </Border>
+
+                        <ProgressBar Progress="{Binding Progress}" ProgressColor="{StaticResource Primary}" />
+
+                        <Label FontSize="11" TextColor="#888" LineBreakMode="MiddleTruncation">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Endpoint: " FontAttributes="Bold" />
+                                    <Span Text="{Binding SyncUrl}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label FontSize="11" TextColor="#888">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Store: " FontAttributes="Bold" />
+                                    <Span Text="{Binding StoreDisplayName}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- App Information -->
+                <Border Style="{StaticResource CreamSectionBorder}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="App Information"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="Black" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Version" FontSize="14" TextColor="Black" />
+                            <Label Grid.Column="1" Text="1.0.0" FontSize="14" TextColor="Black" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Database" FontSize="14" TextColor="Black" />
+                            <Label Grid.Column="1" Text="Couchbase Lite 4.0.3" FontSize="14" TextColor="Black" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Framework" FontSize="14" TextColor="Black" />
+                            <Label Grid.Column="1" Text=".NET MAUI 10" FontSize="14" TextColor="Black" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Sign Out -->
+                <Button Text="Sign Out"
+                        Style="{StaticResource DangerButton}"
+                        Command="{Binding LogoutCommand}"
+                        Margin="0,8,0,0" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+    <ContentPage.Padding>
+        <OnPlatform x:TypeArguments="Thickness">
+            <On Platform="iOS" Value="0,40,0,0" />
+            <On Platform="MacCatalyst" Value="0,20,0,0" />
+            <On Platform="Android" Value="0,20,0,0" />
+            <On Platform="WinUI" Value="0,16,0,0" />
+        </OnPlatform>
+    </ContentPage.Padding>
 </ContentPage>
