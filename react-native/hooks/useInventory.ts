@@ -38,7 +38,15 @@ export type UseInventoryResult = {
     loadMore: () => Promise<void>;
     incrementStock: (item: GroceryItem) => Promise<void>;
     decrementStock: (item: GroceryItem) => Promise<void>;
-    createOrder: (item: GroceryItem, qty: number) => Promise<boolean>;
+    /**
+     * Resolves to `{ ok: true }` on success or `{ ok: false, error }` so the
+     * caller can surface the failure inline (e.g. inside a Modal where the
+     * top-level ErrorBanner would be hidden behind the modal overlay).
+     */
+    createOrder: (
+        item: GroceryItem,
+        qty: number,
+    ) => Promise<{ ok: true } | { ok: false; error: Error }>;
 };
 
 type Args = {
@@ -187,11 +195,16 @@ export function useInventory({
         }
     }, [ready, hasMore, fetchPage, pageSize, updateItems]);
 
-    // Initial load + reset whenever the database becomes ready.
+    // Initial load + reset whenever the database becomes ready. Use the
+    // current searchRef value rather than an empty string so a search
+    // term left in `setSearch` state (e.g. across a brief DB-not-ready
+    // window or a store switch) stays in sync with the rendered list —
+    // otherwise the search box would show a query while the list shows
+    // every item.
     useEffect(() => {
         if (ready) {
             setIsLoading(true);
-            reload('');
+            reload(searchRef.current);
         } else {
             replaceItems([]);
             offsetRef.current = 0;
@@ -301,15 +314,21 @@ export function useInventory({
         }
     }, [databaseService, updateItems]);
 
-    const createOrder = useCallback(async (item: GroceryItem, qty: number) => {
-        if (!databaseService) return false;
+    const createOrder = useCallback(async (
+        item: GroceryItem,
+        qty: number,
+    ): Promise<{ ok: true } | { ok: false; error: Error }> => {
+        if (!databaseService) {
+            return { ok: false, error: new Error('Database not ready') };
+        }
         try {
             await databaseService.createOrder(item, qty);
-            return true;
+            return { ok: true };
         } catch (e) {
             console.error('[useInventory] createOrder error', e);
-            setError({ op: 'createOrder', error: toError(e) });
-            return false;
+            const error = toError(e);
+            setError({ op: 'createOrder', error });
+            return { ok: false, error };
         }
     }, [databaseService]);
 
