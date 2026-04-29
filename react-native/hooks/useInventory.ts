@@ -58,6 +58,12 @@ type Args = {
  *   - `refresh()` re-fetches the first page and resets `hasMore`.
  *   - `loadMore()` appends the next page using LIMIT/OFFSET.
  *   - When the user types in the search box we always reset to page 0.
+ *
+ * Concurrency: `reload()` uses a "latest request" pattern — every call gets
+ * a unique request id; only the latest request's results are applied to
+ * state, so a slow query for the previous search term cannot clobber the UI
+ * after the user has typed something newer. `loadMore()` is serialized via
+ * its own flag so we never append the same page twice.
  */
 export function useInventory({
     databaseService,
@@ -74,7 +80,14 @@ export function useInventory({
 
     const offsetRef = useRef(0);
     const searchRef = useRef('');
-    const isQueryingRef = useRef(false);
+    /**
+     * Monotonic counter used to identify the most recent reload() call.
+     * Each call increments this and snapshots the value; only the call whose
+     * snapshot still matches when its query resolves is allowed to apply
+     * its results. Older in-flight queries silently drop their results.
+     */
+    const reloadIdRef = useRef(0);
+    const isLoadingMoreRef = useRef(false);
 
     const ready = isDbReady && !!databaseService;
 
@@ -91,47 +104,60 @@ export function useInventory({
     const reload = useCallback(
         async (term: string, opts: { manual?: boolean } = {}) => {
             if (!ready) return;
-            if (isQueryingRef.current) return;
-            isQueryingRef.current = true;
 
+            const requestId = ++reloadIdRef.current;
             if (opts.manual) setIsRefreshing(true);
             try {
                 const data = await fetchPage(0, term);
+                // If a newer reload has been issued in the meantime, drop these
+                // stale results — the newer call will paint authoritative state.
+                if (reloadIdRef.current !== requestId) return;
                 setItems(data);
                 offsetRef.current = data.length;
                 setHasMore(data.length >= pageSize);
                 setError(null);
             } catch (e) {
+                if (reloadIdRef.current !== requestId) return;
                 console.error('[useInventory] reload error', e);
                 setError({ op: term ? 'search' : 'load', error: toError(e) });
             } finally {
-                isQueryingRef.current = false;
-                setIsLoading(false);
-                if (opts.manual) setIsRefreshing(false);
+                if (reloadIdRef.current === requestId) {
+                    setIsLoading(false);
+                    if (opts.manual) setIsRefreshing(false);
+                }
             }
         },
         [ready, fetchPage, pageSize],
     );
 
     const loadMore = useCallback(async () => {
-        if (!ready || !hasMore || isLoadingMore || isQueryingRef.current) return;
-        isQueryingRef.current = true;
+        if (!ready || !hasMore || isLoadingMoreRef.current) return;
+        // Capture the request id at the moment loadMore was issued. If a
+        // reload() runs between now and when our query resolves, the page
+        // we fetched is for an outdated search/filter and must be discarded.
+        const issuedAtId = reloadIdRef.current;
+        const issuedAtOffset = offsetRef.current;
+        const issuedAtTerm = searchRef.current;
+
+        isLoadingMoreRef.current = true;
         setIsLoadingMore(true);
         try {
-            const next = await fetchPage(offsetRef.current, searchRef.current);
+            const next = await fetchPage(issuedAtOffset, issuedAtTerm);
+            if (reloadIdRef.current !== issuedAtId) return; // superseded
             if (next.length > 0) {
                 setItems(prev => prev.concat(next));
-                offsetRef.current += next.length;
+                offsetRef.current = issuedAtOffset + next.length;
             }
             setHasMore(next.length >= pageSize);
         } catch (e) {
+            if (reloadIdRef.current !== issuedAtId) return;
             console.error('[useInventory] loadMore error', e);
             setError({ op: 'load', error: toError(e) });
         } finally {
-            isQueryingRef.current = false;
+            isLoadingMoreRef.current = false;
             setIsLoadingMore(false);
         }
-    }, [ready, hasMore, isLoadingMore, fetchPage, pageSize]);
+    }, [ready, hasMore, fetchPage, pageSize]);
 
     // Initial load + reset whenever the database becomes ready.
     useEffect(() => {
@@ -181,14 +207,23 @@ export function useInventory({
         await reload(searchRef.current, { manual: true });
     }, [reload]);
 
+    /**
+     * Compute next quantity from the *latest* state inside the functional
+     * setItems updater. This avoids race conditions when the user taps the
+     * +/- button rapidly and the parent's `item` snapshot is stale.
+     */
     const incrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
+        let nextQty: number | null = null;
+        setItems(prev => {
+            const current = prev.find(i => i.id === item.id);
+            const baseline = current?.stockQty ?? item.stockQty;
+            nextQty = baseline + 1;
+            return prev.map(i => (i.id === item.id ? { ...i, stockQty: nextQty as number } : i));
+        });
+        if (nextQty === null) return;
         try {
-            await databaseService.updateStockQuantity(item.id, item.stockQty + 1);
-            // Optimistic update; sync listener will reconcile shortly.
-            setItems(prev =>
-                prev.map(i => (i.id === item.id ? { ...i, stockQty: i.stockQty + 1 } : i)),
-            );
+            await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
             console.error('[useInventory] increment error', e);
             setError({ op: 'updateStock', error: toError(e) });
@@ -196,12 +231,18 @@ export function useInventory({
     }, [databaseService]);
 
     const decrementStock = useCallback(async (item: GroceryItem) => {
-        if (!databaseService || item.stockQty <= 0) return;
+        if (!databaseService) return;
+        let nextQty: number | null = null;
+        setItems(prev => {
+            const current = prev.find(i => i.id === item.id);
+            const baseline = current?.stockQty ?? item.stockQty;
+            if (baseline <= 0) return prev;
+            nextQty = Math.max(0, baseline - 1);
+            return prev.map(i => (i.id === item.id ? { ...i, stockQty: nextQty as number } : i));
+        });
+        if (nextQty === null) return;
         try {
-            await databaseService.updateStockQuantity(item.id, item.stockQty - 1);
-            setItems(prev =>
-                prev.map(i => (i.id === item.id ? { ...i, stockQty: i.stockQty - 1 } : i)),
-            );
+            await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
             console.error('[useInventory] decrement error', e);
             setError({ op: 'updateStock', error: toError(e) });
