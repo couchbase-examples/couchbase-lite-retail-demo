@@ -1,0 +1,28 @@
+# .NET / MAUI
+bin/
+obj/
+*.user
+*.suo
+*.dll.config
+*.aps
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Generated
+*.dll
+*.pdb
+*.exe
+*.app/
+*.apk
+*.aab
+*.ipa
+
+# Local env
+.env
+*.env.local
+
+# Resources/Raw .env (use .env.example as template)
+Resources/Raw/.env

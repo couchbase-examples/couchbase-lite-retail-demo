@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             xmlns:models="clr-namespace:GroceryApp.Models"
+             x:Class="GroceryApp.Views.InventoryPage"
+             x:DataType="vm:InventoryViewModel"
+             Title="Inventory"
+             BackgroundColor="#F8F8F8">
+
+    <Grid RowDefinitions="Auto,*" Padding="0">
+        <!-- Search bar -->
+        <Border Grid.Row="0"
+                Margin="16,12"
+                Padding="12,4"
+                Stroke="#E5E5E5"
+                StrokeShape="RoundRectangle 10"
+                BackgroundColor="White">
+            <Grid ColumnDefinitions="Auto,*">
+                <Label Grid.Column="0"
+                       Text="🔍"
+                       VerticalOptions="Center"
+                       FontSize="16" />
+                <Entry Grid.Column="1"
+                       Placeholder="Search inventory..."
+                       Text="{Binding SearchText}"
+                       ClearButtonVisibility="WhileEditing"
+                       TextColor="Black" />
+            </Grid>
+        </Border>
+
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Items}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24" Spacing="10" VerticalOptions="Center" HorizontalOptions="Center">
+                        <Label Text="No inventory yet"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center" />
+                        <Label Text="Pull down to refresh once App Services has synced data."
+                               FontSize="13"
+                               TextColor="#666"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:GroceryItem">
+                        <Border Margin="16,6"
+                                Padding="12"
+                                Stroke="Transparent"
+                                StrokeShape="RoundRectangle 12"
+                                BackgroundColor="White">
+                            <Grid ColumnDefinitions="80,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+
+                                <Image Grid.RowSpan="2"
+                                       Grid.Column="0"
+                                       Source="{Binding ImageUrl}"
+                                       Aspect="AspectFit"
+                                       HeightRequest="80"
+                                       WidthRequest="80" />
+
+                                <VerticalStackLayout Grid.Column="1" Grid.Row="0" Spacing="2">
+                                    <Label Text="{Binding Name}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="Black"
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding Type}"
+                                           FontSize="12"
+                                           TextColor="#666" />
+                                    <Label Text="{Binding Price, StringFormat='$ {0:F2}'}"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           TextColor="#FC9C0C" />
+                                </VerticalStackLayout>
+
+                                <HorizontalStackLayout Grid.Column="2" Grid.Row="0" Spacing="6" VerticalOptions="Center">
+                                    <Button Text="−"
+                                            FontSize="18"
+                                            FontAttributes="Bold"
+                                            WidthRequest="34"
+                                            HeightRequest="34"
+                                            Padding="0"
+                                            CornerRadius="17"
+                                            BackgroundColor="#EEE"
+                                            TextColor="Black"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=DecrementCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Label Text="{Binding Quantity}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="Black"
+                                           VerticalOptions="Center"
+                                           WidthRequest="34"
+                                           HorizontalTextAlignment="Center" />
+                                    <Button Text="+"
+                                            FontSize="18"
+                                            FontAttributes="Bold"
+                                            WidthRequest="34"
+                                            HeightRequest="34"
+                                            Padding="0"
+                                            CornerRadius="17"
+                                            BackgroundColor="#FC9C0C"
+                                            TextColor="White"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=IncrementCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
+
+                                <Button Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1"
+                                        Text="Order Stock"
+                                        FontSize="12"
+                                        HeightRequest="34"
+                                        HorizontalOptions="End"
+                                        Padding="14,0"
+                                        BackgroundColor="#3B82F6"
+                                        TextColor="White"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=CreateOrderCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

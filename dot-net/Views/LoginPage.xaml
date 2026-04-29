@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             xmlns:models="clr-namespace:GroceryApp.Models"
+             x:Class="GroceryApp.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             BackgroundColor="#FFF0DB"
+             NavigationPage.HasNavigationBar="False">
+
+    <ScrollView>
+        <Grid Padding="24" RowSpacing="20">
+            <VerticalStackLayout Spacing="20" VerticalOptions="Center">
+
+                <!-- Logo + Title -->
+                <VerticalStackLayout Spacing="12" HorizontalOptions="Center" Margin="0,40,0,30">
+                    <Label Text="🛒"
+                           FontSize="80"
+                           HorizontalOptions="Center" />
+                    <Label Text="Grocery Inventory"
+                           FontSize="32"
+                           FontAttributes="Bold"
+                           TextColor="Black"
+                           HorizontalOptions="Center" />
+                    <Label Text="Management System"
+                           FontSize="18"
+                           TextColor="Black"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+                <!-- Login form -->
+                <Border Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="White"
+                        Padding="20">
+                    <VerticalStackLayout Spacing="16">
+
+                        <Label Text="Username" FontSize="14" FontAttributes="Bold" TextColor="Black" />
+                        <Border Stroke="#E5E5E5" StrokeShape="RoundRectangle 8" Padding="12,4">
+                            <Entry Placeholder="email@example.com"
+                                   Keyboard="Email"
+                                   ClearButtonVisibility="WhileEditing"
+                                   Text="{Binding Username}"
+                                   TextColor="Black" />
+                        </Border>
+
+                        <Label Text="Password" FontSize="14" FontAttributes="Bold" TextColor="Black" />
+                        <Border Stroke="#E5E5E5" StrokeShape="RoundRectangle 8" Padding="12,4">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Entry Grid.Column="0"
+                                       Placeholder="Password"
+                                       IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}"
+                                       Text="{Binding Password}"
+                                       TextColor="Black" />
+                                <Button Grid.Column="1"
+                                        Text="{Binding IsPasswordVisible, Converter={StaticResource EyeIconConverter}}"
+                                        BackgroundColor="Transparent"
+                                        TextColor="#666"
+                                        FontSize="14"
+                                        Command="{Binding ToggleShowPasswordCommand}" />
+                            </Grid>
+                        </Border>
+
+                        <Button Text="Login"
+                                Command="{Binding LoginCommand}"
+                                BackgroundColor="#FC9C0C"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                CornerRadius="8"
+                                HeightRequest="50"
+                                IsEnabled="{Binding CanSubmit}" />
+
+                        <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                           IsVisible="{Binding IsBusy}"
+                                           Color="#FC9C0C" />
+
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="#D32F2F"
+                               FontSize="13"
+                               IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                        <Button Text="View Demo Credentials"
+                                Command="{Binding ToggleCredentialsCommand}"
+                                BackgroundColor="Transparent"
+                                TextColor="#FC9C0C"
+                                FontSize="13" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Demo credentials list -->
+                <Border IsVisible="{Binding ShowingCredentials}"
+                        BackgroundColor="White"
+                        Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        Padding="16">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Demo Credentials" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                        <CollectionView ItemsSource="{Binding DemoUsers}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:DemoUser">
+                                    <Border Padding="12"
+                                            Margin="0,4"
+                                            Stroke="#E5E5E5"
+                                            StrokeShape="RoundRectangle 8">
+                                        <VerticalStackLayout Spacing="4">
+                                            <Label Text="{Binding FullName}" FontAttributes="Bold" TextColor="Black" />
+                                            <Label Text="{Binding Username}" FontSize="12" TextColor="#666" />
+                                            <Label FontSize="12" TextColor="#888">
+                                                <Label.Text>
+                                                    <MultiBinding StringFormat="{}{0} • {1}">
+                                                        <Binding Path="Role" />
+                                                        <Binding Path="Endpoint" />
+                                                    </MultiBinding>
+                                                </Label.Text>
+                                            </Label>
+                                            <Button Text="Use This"
+                                                    BackgroundColor="#FC9C0C"
+                                                    TextColor="White"
+                                                    FontSize="12"
+                                                    HeightRequest="34"
+                                                    HorizontalOptions="Start"
+                                                    Padding="14,0"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LoginViewModel}}, Path=UseCredentialCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+</ContentPage>

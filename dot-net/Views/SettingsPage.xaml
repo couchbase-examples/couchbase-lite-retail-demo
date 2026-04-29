@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             x:Class="GroceryApp.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="Settings"
+             BackgroundColor="#F8F8F8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="14">
+
+            <!-- User card -->
+            <Border Padding="16"
+                    Stroke="Transparent"
+                    StrokeShape="RoundRectangle 16"
+                    BackgroundColor="White">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Signed in as" FontSize="12" TextColor="#666" />
+                    <Label Text="{Binding FullName}" FontSize="20" FontAttributes="Bold" TextColor="Black" />
+                    <Label Text="{Binding Username}" FontSize="13" TextColor="#666" />
+                    <Label Text="{Binding Role}" FontSize="13" TextColor="#666" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Sync status -->
+            <Border Padding="16"
+                    Stroke="Transparent"
+                    StrokeShape="RoundRectangle 16"
+                    BackgroundColor="White">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Capella App Services" FontSize="12" TextColor="#666" />
+                    <Label Text="{Binding SyncStatus}" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                    <ProgressBar Progress="{Binding Progress}" ProgressColor="#FC9C0C" />
+                    <Label Text="{Binding LastSyncTime, StringFormat='Last sync: {0}'}"
+                           FontSize="12"
+                           TextColor="#666" />
+                    <Label Text="{Binding StoreDisplayName, StringFormat='Store: {0}'}"
+                           FontSize="12"
+                           TextColor="#666" />
+                    <Label Text="{Binding SyncUrl, StringFormat='Endpoint: {0}'}"
+                           FontSize="11"
+                           TextColor="#888"
+                           LineBreakMode="MiddleTruncation" />
+
+                    <HorizontalStackLayout Spacing="8" Margin="0,8,0,0">
+                        <Button Text="{Binding IsAppServicesEnabled, Converter={StaticResource SyncToggleLabelConverter}}"
+                                Command="{Binding ToggleSyncCommand}"
+                                BackgroundColor="#FC9C0C"
+                                TextColor="White"
+                                FontSize="13"
+                                CornerRadius="8"
+                                Padding="14,0"
+                                HeightRequest="38" />
+                        <Button Text="Reset"
+                                Command="{Binding ResetSyncCommand}"
+                                BackgroundColor="#3B82F6"
+                                TextColor="White"
+                                FontSize="13"
+                                CornerRadius="8"
+                                Padding="14,0"
+                                HeightRequest="38" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Logout -->
+            <Button Text="Sign Out"
+                    Command="{Binding LogoutCommand}"
+                    BackgroundColor="#D32F2F"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    CornerRadius="10"
+                    HeightRequest="48" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

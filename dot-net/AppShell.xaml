@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="GroceryApp.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:GroceryApp.Views"
+    Shell.FlyoutBehavior="Disabled">
+
+    <!-- Login route (no chrome) -->
+    <ShellContent
+        Title="Login"
+        Route="login"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        ContentTemplate="{DataTemplate views:LoginPage}" />
+
+    <!-- Authenticated tabs -->
+    <TabBar Route="main">
+        <Tab Title="Inventory" Icon="🛒">
+            <ShellContent Route="inventory" ContentTemplate="{DataTemplate views:InventoryPage}" />
+        </Tab>
+        <Tab Title="Orders" Icon="📋">
+            <ShellContent Route="orders" ContentTemplate="{DataTemplate views:OrdersPage}" />
+        </Tab>
+        <Tab Title="Profile" Icon="👤">
+            <ShellContent Route="profile" ContentTemplate="{DataTemplate views:ProfilePage}" />
+        </Tab>
+        <Tab Title="Settings" Icon="⚙️">
+            <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
+        </Tab>
+    </TabBar>
+
+</Shell>

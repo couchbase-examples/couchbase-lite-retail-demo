@@ -1,0 +1,21 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:GroceryApp"
+             xmlns:converters="clr-namespace:GroceryApp.Converters"
+             x:Class="GroceryApp.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:NotNullConverter x:Key="NotNullConverter" />
+            <converters:EyeIconConverter x:Key="EyeIconConverter" />
+            <converters:SyncToggleLabelConverter x:Key="SyncToggleLabelConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

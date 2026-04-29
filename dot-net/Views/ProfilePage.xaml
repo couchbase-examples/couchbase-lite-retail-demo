@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             x:Class="GroceryApp.Views.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             Title="Profile"
+             BackgroundColor="#F8F8F8">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding RefreshCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <Border Padding="16"
+                        Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="White">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Store" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding Profile.Name, FallbackValue='No profile loaded'}"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="Black" />
+                        <Label Text="{Binding Profile.StoreId, StringFormat='Store ID: {0}'}"
+                               FontSize="12"
+                               TextColor="#666" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="16"
+                        Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="White">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Address" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding AddressLine}"
+                               FontSize="14"
+                               TextColor="Black" />
+                        <Label Text="{Binding CityRegion}"
+                               FontSize="14"
+                               TextColor="Black" />
+                        <Label Text="{Binding Profile.Location.Country}"
+                               FontSize="14"
+                               TextColor="Black" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="16"
+                        Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="White">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Contact" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding Profile.Contact.Email}"
+                               FontSize="14"
+                               TextColor="Black" />
+                        <Label Text="{Binding Profile.Contact.Phone}"
+                               FontSize="14"
+                               TextColor="Black" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="16"
+                        Stroke="Transparent"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="White"
+                        IsVisible="{Binding Profile, Converter={StaticResource NotNullConverter}}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Manager" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding Profile.Manager, FallbackValue='—'}"
+                               FontSize="14"
+                               TextColor="Black" />
+                        <Label Text="Hours" FontSize="12" TextColor="#666" Margin="0,8,0,0" />
+                        <Label Text="{Binding Profile.OpeningHours, FallbackValue='—'}"
+                               FontSize="14"
+                               TextColor="Black" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

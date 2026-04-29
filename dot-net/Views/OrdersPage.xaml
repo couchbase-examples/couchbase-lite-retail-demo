@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GroceryApp.ViewModels"
+             xmlns:models="clr-namespace:GroceryApp.Models"
+             x:Class="GroceryApp.Views.OrdersPage"
+             x:DataType="vm:OrdersViewModel"
+             Title="Orders"
+             BackgroundColor="#F8F8F8">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Filter chips -->
+        <ScrollView Grid.Row="0" Orientation="Horizontal" Padding="12,8">
+            <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Filters}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <Button Text="{Binding .}"
+                                FontSize="12"
+                                Padding="14,6"
+                                HeightRequest="34"
+                                CornerRadius="17"
+                                BackgroundColor="White"
+                                TextColor="Black"
+                                BorderColor="#FC9C0C"
+                                BorderWidth="1"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}, Path=SetFilterCommand}"
+                                CommandParameter="{Binding .}" />
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- Orders list -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Orders}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24" Spacing="10" VerticalOptions="Center" HorizontalOptions="Center">
+                        <Label Text="📋"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
+                        <Label Text="No orders for this filter"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center" />
+                        <Label Text="Try a different status or pull to refresh."
+                               FontSize="13"
+                               TextColor="#666"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Order">
+                        <Border Margin="16,6"
+                                Padding="14"
+                                Stroke="Transparent"
+                                StrokeShape="RoundRectangle 12"
+                                BackgroundColor="White">
+                            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnDefinitions="*,Auto">
+                                <Label Grid.Row="0" Grid.Column="0"
+                                       Text="{Binding OrderId, StringFormat='Order #{0}'}"
+                                       FontAttributes="Bold"
+                                       TextColor="Black" />
+                                <Label Grid.Row="0" Grid.Column="1"
+                                       Text="{Binding OrderStatus}"
+                                       FontSize="11"
+                                       FontAttributes="Bold"
+                                       TextColor="White"
+                                       BackgroundColor="#FC9C0C"
+                                       Padding="8,2"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="End" />
+                                <Label Grid.Row="1" Grid.ColumnSpan="2"
+                                       Text="{Binding OrderDateFormatted}"
+                                       FontSize="12"
+                                       TextColor="#666" />
+                                <Label Grid.Row="2" Grid.ColumnSpan="2"
+                                       FontSize="12"
+                                       TextColor="#444">
+                                    <Label.Text>
+                                        <MultiBinding StringFormat="{}SKU {0} • Qty {1} {2}">
+                                            <Binding Path="Sku" />
+                                            <Binding Path="OrderQty" />
+                                            <Binding Path="Unit" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

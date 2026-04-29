@@ -1,0 +1,25 @@
+using Android.App;
+using Android.Content.PM;
+using Android.OS;
+
+namespace GroceryApp;
+
+[Activity(
+    Theme = "@style/Maui.SplashTheme",
+    MainLauncher = true,
+    ConfigurationChanges = ConfigChanges.ScreenSize
+        | ConfigChanges.Orientation
+        | ConfigChanges.UiMode
+        | ConfigChanges.ScreenLayout
+        | ConfigChanges.SmallestScreenSize
+        | ConfigChanges.Density)]
+public class MainActivity : MauiAppCompatActivity
+{
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+        // REQUIRED by Couchbase Lite on Android. Without this, opening the
+        // database throws "Couchbase Lite has not been initialized".
+        Couchbase.Lite.Support.Droid.Activate(this);
+    }
+}
