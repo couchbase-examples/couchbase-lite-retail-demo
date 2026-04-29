@@ -211,6 +211,11 @@ export function useInventory({
      * Compute next quantity from the *latest* state inside the functional
      * setItems updater. This avoids race conditions when the user taps the
      * +/- button rapidly and the parent's `item` snapshot is stale.
+     *
+     * On DB failure we roll back the optimistic delta (not to a captured
+     * absolute) using another functional update — this stays correct even
+     * if a second successful tap landed in between, because we only undo
+     * our own +1 contribution.
      */
     const incrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
@@ -225,6 +230,10 @@ export function useInventory({
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
+            // Rollback the optimistic +1 so the UI reconverges with DB truth.
+            setItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, stockQty: Math.max(0, i.stockQty - 1) } : i,
+            ));
             console.error('[useInventory] increment error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
@@ -233,17 +242,26 @@ export function useInventory({
     const decrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
         let nextQty: number | null = null;
+        let appliedDelta = 0;
         setItems(prev => {
             const current = prev.find(i => i.id === item.id);
             const baseline = current?.stockQty ?? item.stockQty;
             if (baseline <= 0) return prev;
             nextQty = Math.max(0, baseline - 1);
+            appliedDelta = baseline - nextQty; // 1 unless baseline was already 0
             return prev.map(i => (i.id === item.id ? { ...i, stockQty: nextQty as number } : i));
         });
         if (nextQty === null) return;
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
+            // Rollback the optimistic decrement so the UI reconverges with DB truth.
+            const delta = appliedDelta;
+            if (delta > 0) {
+                setItems(prev => prev.map(i =>
+                    i.id === item.id ? { ...i, stockQty: i.stockQty + delta } : i,
+                ));
+            }
             console.error('[useInventory] decrement error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
