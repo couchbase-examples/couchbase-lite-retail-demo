@@ -29,6 +29,17 @@ import uuid from 'react-native-uuid';
 export type SyncStatus = 'idle' | 'busy' | 'connecting' | 'offline' | 'stopped';
 
 /**
+ * FTS index schema version. The index name embeds this so we can roll out a
+ * new field set (e.g. adding `type`) by bumping the suffix — devices that
+ * already have the previous version will see the new name is missing,
+ * create it, and the obsolete index will be removed once on first run.
+ *
+ * Bump this whenever the FTS index's covered fields or options change.
+ */
+const INVENTORY_FTS_INDEX_VERSION = 2;
+const INVENTORY_FTS_INDEX_NAME = `idxInventoryFTSv${INVENTORY_FTS_INDEX_VERSION}`;
+
+/**
  * Safely converts a value to a number. Returns 0 for null/undefined/NaN/non-numeric.
  */
 function safeNumber(val: any): number {
@@ -195,20 +206,40 @@ export class DatabaseService {
         // searches like "dairy" or "bakery" still light up the FTS index
         // instead of falling back to a full table scan.
         //
-        // The original index only covered `name` and `brand`. Drop it first
-        // so existing local databases get rebuilt with the new schema —
-        // createIndex on its own won't update an existing index definition.
-        try {
-            await this.inventoryCollection.deleteIndex('idxInventoryFTS');
-        } catch (e) {
-            // No-op: index didn't exist on this device yet.
+        // We embed a schema version in the index name so we don't have to
+        // pay the drop-and-rebuild cost on every launch — `createIndex` is
+        // idempotent for the *same* index name, but it cannot detect a
+        // changed definition. The version bump approach lets us roll out
+        // schema changes safely:
+        //
+        //   1. Read the current set of index names from the collection.
+        //   2. If the versioned name is already present, leave it alone.
+        //   3. Otherwise create it (cheap on a fresh DB, one-time cost on
+        //      upgrades).
+        //   4. Sweep up any older versions / the legacy unversioned index
+        //      so they don't keep consuming write amplification.
+        const existingIndexes = await this.inventoryCollection.indexes();
+        if (!existingIndexes.includes(INVENTORY_FTS_INDEX_NAME)) {
+            const ftsName = FullTextIndexItem.property('name');
+            const ftsBrand = FullTextIndexItem.property('brand');
+            const ftsType = FullTextIndexItem.property('type');
+            const ftsIndex = IndexBuilder.fullTextIndex(ftsName, ftsBrand, ftsType)
+                .setIgnoreAccents(true);
+            await this.inventoryCollection.createIndex(INVENTORY_FTS_INDEX_NAME, ftsIndex);
+            console.debug(`[GroceryDB] Created FTS index: ${INVENTORY_FTS_INDEX_NAME}`);
         }
-        const ftsName = FullTextIndexItem.property('name');
-        const ftsBrand = FullTextIndexItem.property('brand');
-        const ftsType = FullTextIndexItem.property('type');
-        const ftsIndex = IndexBuilder.fullTextIndex(ftsName, ftsBrand, ftsType)
-            .setIgnoreAccents(true);
-        await this.inventoryCollection.createIndex('idxInventoryFTS', ftsIndex);
+        // One-time cleanup of legacy / superseded FTS indexes.
+        for (const stale of existingIndexes) {
+            if (stale === INVENTORY_FTS_INDEX_NAME) continue;
+            if (stale === 'idxInventoryFTS' || /^idxInventoryFTSv\d+$/.test(stale)) {
+                try {
+                    await this.inventoryCollection.deleteIndex(stale);
+                    console.debug(`[GroceryDB] Removed stale FTS index: ${stale}`);
+                } catch (e) {
+                    console.warn(`[GroceryDB] Failed to delete stale index ${stale}`, e);
+                }
+            }
+        }
 
         // Orders index
         const orderIndex = IndexBuilder.valueIndex(
@@ -286,10 +317,18 @@ export class DatabaseService {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\` ORDER BY name`;
-        if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+        const usePagination = typeof limit === 'number' && limit > 0;
+        if (usePagination) {
+            queryStr += ` LIMIT $limit OFFSET $offset`;
         }
-        const results = await this.database.createQuery(queryStr).execute();
+        const query = this.database.createQuery(queryStr);
+        if (usePagination) {
+            const params = new Parameters();
+            params.setInt('limit', Math.floor(limit as number));
+            params.setInt('offset', Math.max(0, Math.floor(offset)));
+            query.parameters = params;
+        }
+        const results = await query.execute();
         return this.mapInventoryResults(results);
     }
 
@@ -327,14 +366,18 @@ export class DatabaseService {
         const col = APP_CONFIG.collections.inventory;
         let queryStr =
             `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ` +
-            `WHERE MATCH(idxInventoryFTS, $term) ` +
-            `ORDER BY RANK(idxInventoryFTS), name`;
+            `WHERE MATCH(${INVENTORY_FTS_INDEX_NAME}, $term) ` +
+            `ORDER BY RANK(${INVENTORY_FTS_INDEX_NAME}), name`;
         if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+            queryStr += ` LIMIT $limit OFFSET $offset`;
         }
         const query = this.database.createQuery(queryStr);
         const params = new Parameters();
         params.setString('term', ftsExpression);
+        if (typeof limit === 'number' && limit > 0) {
+            params.setInt('limit', Math.floor(limit));
+            params.setInt('offset', Math.max(0, Math.floor(offset)));
+        }
         query.parameters = params;
         const results = await query.execute();
         return this.mapInventoryResults(results);
@@ -423,13 +466,20 @@ export class DatabaseService {
             queryStr += ` WHERE orderStatus = $status`;
         }
         queryStr += ` ORDER BY orderDate DESC`;
-        if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
+        const usePagination = typeof limit === 'number' && limit > 0;
+        if (usePagination) {
+            queryStr += ` LIMIT $limit OFFSET $offset`;
         }
         const query = this.database.createQuery(queryStr);
-        if (useStatus) {
+        if (useStatus || usePagination) {
             const params = new Parameters();
-            params.setString('status', status as string);
+            if (useStatus) {
+                params.setString('status', status as string);
+            }
+            if (usePagination) {
+                params.setInt('limit', Math.floor(limit as number));
+                params.setInt('offset', Math.max(0, Math.floor(offset)));
+            }
             query.parameters = params;
         }
         const results = await query.execute();
