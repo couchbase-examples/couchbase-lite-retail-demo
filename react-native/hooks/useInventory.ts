@@ -246,9 +246,14 @@ export function useInventory({
      * the most recent {@link itemsRef.current}, and we update that ref in
      * lockstep with `setItems` via {@link updateItems}.
      *
-     * On DB failure we roll back the optimistic delta — not the captured
-     * baseline — so a concurrent successful tap on the same row is not
-     * trampled by our undo.
+     * Rollback strategy: a sync write from another device can land between
+     * our optimistic update and a failed DB write. The change listener
+     * pipes those writes back through `reload()`, which replaces items
+     * entirely. So when we hit the catch block we don't blindly subtract
+     * our delta — we check whether the item still shows the value we
+     * optimistically wrote. If it does, we revert to the captured baseline.
+     * If it doesn't, sync has already authoritative truth in the row and
+     * we leave it alone (touching it would just re-introduce drift).
      */
     const incrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
@@ -261,9 +266,13 @@ export function useInventory({
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
-            updateItems(prev => prev.map(i =>
-                i.id === item.id ? { ...i, stockQty: Math.max(0, i.stockQty - 1) } : i,
-            ));
+            updateItems(prev => prev.map(i => {
+                if (i.id !== item.id) return i;
+                // Only undo if our optimistic write is still the current
+                // value — otherwise a concurrent sync update has taken over.
+                if (i.stockQty !== nextQty) return i;
+                return { ...i, stockQty: Math.max(0, baseline) };
+            }));
             console.error('[useInventory] increment error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
@@ -275,17 +284,18 @@ export function useInventory({
         const baseline = current?.stockQty ?? item.stockQty;
         if (baseline <= 0) return;
         const nextQty = Math.max(0, baseline - 1);
-        const appliedDelta = baseline - nextQty; // always 1 here, kept explicit for clarity
-        if (appliedDelta === 0) return;
+        if (nextQty === baseline) return;
         updateItems(prev => prev.map(i =>
             i.id === item.id ? { ...i, stockQty: nextQty } : i,
         ));
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
-            updateItems(prev => prev.map(i =>
-                i.id === item.id ? { ...i, stockQty: i.stockQty + appliedDelta } : i,
-            ));
+            updateItems(prev => prev.map(i => {
+                if (i.id !== item.id) return i;
+                if (i.stockQty !== nextQty) return i;
+                return { ...i, stockQty: baseline };
+            }));
             console.error('[useInventory] decrement error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
