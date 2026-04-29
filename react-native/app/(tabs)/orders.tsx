@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -21,6 +21,8 @@ type FilterType = typeof FILTERS[number];
 export default function OrdersScreen() {
     const dbContext = useContext(DatabaseContext);
 
+    const [activeFilter, setActiveFilter] = useState<FilterType>('All');
+
     const {
         orders,
         isLoading,
@@ -34,14 +36,10 @@ export default function OrdersScreen() {
     } = useOrders({
         databaseService: dbContext?.databaseService,
         isDbReady: dbContext?.isDbReady ?? false,
+        // The filter is applied at the database level so that pagination
+        // works correctly regardless of which tab is active.
+        status: activeFilter === 'All' ? undefined : activeFilter,
     });
-
-    const [activeFilter, setActiveFilter] = useState<FilterType>('All');
-
-    const filteredOrders = useMemo(() => {
-        if (activeFilter === 'All') return orders;
-        return orders.filter(o => o.orderStatus === activeFilter);
-    }, [orders, activeFilter]);
 
     const initError = dbContext?.initError ?? null;
     const errorBannerProps = (() => {
@@ -123,7 +121,7 @@ export default function OrdersScreen() {
                 <View style={styles.spinnerContainer}>
                     <ActivityIndicator size="large" color="#FC9C0C" />
                 </View>
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Ionicons name="receipt-outline" size={64} color="#C7C7CC" />
                     <Text style={styles.emptyTitle}>No Orders</Text>
@@ -135,7 +133,7 @@ export default function OrdersScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={filteredOrders}
+                    data={orders}
                     renderItem={renderOrder}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.list}
@@ -146,7 +144,7 @@ export default function OrdersScreen() {
                             tintColor="#FC9C0C"
                         />
                     }
-                    onEndReached={hasMore && activeFilter === 'All' ? loadMore : undefined}
+                    onEndReached={hasMore ? loadMore : undefined}
                     onEndReachedThreshold={0.4}
                     ListFooterComponent={
                         isLoadingMore ? (
