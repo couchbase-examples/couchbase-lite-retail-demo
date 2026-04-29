@@ -320,14 +320,13 @@ export class DatabaseService {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\` ORDER BY name`;
-        const usePagination = typeof limit === 'number' && limit > 0;
-        if (usePagination) {
+        if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }
         const query = this.database.createQuery(queryStr);
-        if (usePagination) {
+        if (typeof limit === 'number' && limit > 0) {
             const params = new Parameters();
-            params.setInt('limit', Math.floor(limit as number));
+            params.setInt('limit', Math.floor(limit));
             params.setInt('offset', Math.max(0, Math.floor(offset)));
             query.parameters = params;
         }
@@ -464,23 +463,23 @@ export class DatabaseService {
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.orders;
         let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\``;
-        const useStatus = typeof status === 'string' && status.length > 0;
-        if (useStatus) {
+        if (typeof status === 'string' && status.length > 0) {
             queryStr += ` WHERE orderStatus = $status`;
         }
         queryStr += ` ORDER BY orderDate DESC`;
-        const usePagination = typeof limit === 'number' && limit > 0;
-        if (usePagination) {
+        if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }
         const query = this.database.createQuery(queryStr);
-        if (useStatus || usePagination) {
+        const hasStatus = typeof status === 'string' && status.length > 0;
+        const hasPagination = typeof limit === 'number' && limit > 0;
+        if (hasStatus || hasPagination) {
             const params = new Parameters();
-            if (useStatus) {
-                params.setString('status', status as string);
+            if (typeof status === 'string' && status.length > 0) {
+                params.setString('status', status);
             }
-            if (usePagination) {
-                params.setInt('limit', Math.floor(limit as number));
+            if (typeof limit === 'number' && limit > 0) {
+                params.setInt('limit', Math.floor(limit));
                 params.setInt('offset', Math.max(0, Math.floor(offset)));
             }
             query.parameters = params;
