@@ -39,11 +39,15 @@ type UseCollectionListenerOptions = {
  *
  * The hook accepts a `register` callback rather than the collection itself so
  * each screen can stay decoupled from the {@link DatabaseService} internals.
+ *
+ * `onChange` is read through a ref, so callers don't need to memoise it; the
+ * hook only re-subscribes when `register` (the function that creates the
+ * listener) actually changes. If a caller needs the subscription to restart
+ * for some other reason, they can vary the `register` reference itself.
  */
 export function useCollectionListener(
     register: RegisterFn | undefined | null,
     onChange: () => void,
-    deps: ReadonlyArray<unknown>,
     options: UseCollectionListenerOptions = {},
 ): void {
     const { enabled = true, debounceMs = 300, label = 'collection' } = options;
@@ -99,6 +103,5 @@ export function useCollectionListener(
             }
             token = null;
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, register, debounceMs, label, ...deps]);
+    }, [enabled, register, debounceMs, label]);
 }

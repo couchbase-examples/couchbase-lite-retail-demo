@@ -73,9 +73,13 @@ function buildFtsExpression(input: string): string | null {
 
     const tokens = cleaned.split(/\s+/).filter(t => t.length > 0);
     if (tokens.length === 0) return null;
-    // Each token gets a prefix-wildcard match. Tokens are space-separated,
-    // which CBL FTS treats as an OR of the individual matches by default.
-    return tokens.map(t => `${t}*`).join(' ');
+    // Each token gets a prefix-wildcard match. Couchbase Lite FTS treats
+    // adjacent tokens as an implicit AND (a row must match every token),
+    // which feels too strict for an inventory search box where the user
+    // is typing free text. Join with an explicit `OR` so partial inputs
+    // like "milk bread" still surface rows that match either word — the
+    // RANK() ordering in the caller pushes multi-token matches to the top.
+    return tokens.map(t => `${t}*`).join(' OR ');
 }
 
 /**

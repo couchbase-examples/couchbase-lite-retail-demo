@@ -72,7 +72,6 @@ export function useStoreProfile({ databaseService, isDbReady }: Args): UseStoreP
     useCollectionListener(
         registerProfileListener,
         () => { load(); },
-        [],
         { enabled: ready, debounceMs: 300, label: 'profile' },
     );
 
