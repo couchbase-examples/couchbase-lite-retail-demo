@@ -89,6 +89,34 @@ export function useInventory({
     const reloadIdRef = useRef(0);
     const isLoadingMoreRef = useRef(false);
 
+    /**
+     * Mirror of `items` that we update alongside `setItems`. Stock-update
+     * handlers read the latest baseline from this ref synchronously instead
+     * of doing it inside a `setItems` updater (which is async, may be
+     * deferred under concurrent rendering, and must not produce side
+     * effects on outer-scope variables).
+     */
+    const itemsRef = useRef<GroceryItem[]>([]);
+    /**
+     * Apply a transform to the items state and keep `itemsRef` in lockstep.
+     * This is the only place that should call `setItems` for in-place edits
+     * so the ref always matches the most recent state we asked React to
+     * commit.
+     */
+    const updateItems = useCallback(
+        (transform: (current: GroceryItem[]) => GroceryItem[]) => {
+            const next = transform(itemsRef.current);
+            itemsRef.current = next;
+            setItems(next);
+        },
+        [],
+    );
+    /** Replace items wholesale (used by reload/loadMore). */
+    const replaceItems = useCallback((next: GroceryItem[]) => {
+        itemsRef.current = next;
+        setItems(next);
+    }, []);
+
     const ready = isDbReady && !!databaseService;
 
     const fetchPage = useCallback(
@@ -112,7 +140,7 @@ export function useInventory({
                 // If a newer reload has been issued in the meantime, drop these
                 // stale results — the newer call will paint authoritative state.
                 if (reloadIdRef.current !== requestId) return;
-                setItems(data);
+                replaceItems(data);
                 offsetRef.current = data.length;
                 setHasMore(data.length >= pageSize);
                 setError(null);
@@ -127,7 +155,7 @@ export function useInventory({
                 }
             }
         },
-        [ready, fetchPage, pageSize],
+        [ready, fetchPage, pageSize, replaceItems],
     );
 
     const loadMore = useCallback(async () => {
@@ -145,7 +173,7 @@ export function useInventory({
             const next = await fetchPage(issuedAtOffset, issuedAtTerm);
             if (reloadIdRef.current !== issuedAtId) return; // superseded
             if (next.length > 0) {
-                setItems(prev => prev.concat(next));
+                updateItems(prev => prev.concat(next));
                 offsetRef.current = issuedAtOffset + next.length;
             }
             setHasMore(next.length >= pageSize);
@@ -157,7 +185,7 @@ export function useInventory({
             isLoadingMoreRef.current = false;
             setIsLoadingMore(false);
         }
-    }, [ready, hasMore, fetchPage, pageSize]);
+    }, [ready, hasMore, fetchPage, pageSize, updateItems]);
 
     // Initial load + reset whenever the database becomes ready.
     useEffect(() => {
@@ -165,11 +193,11 @@ export function useInventory({
             setIsLoading(true);
             reload('');
         } else {
-            setItems([]);
+            replaceItems([]);
             offsetRef.current = 0;
             setHasMore(true);
         }
-    }, [ready, reload]);
+    }, [ready, reload, replaceItems]);
 
     // Debounced search. We wrap reload in a debounced helper that fires on
     // the trailing edge — fast typing won't queue a query per keystroke.
@@ -193,7 +221,6 @@ export function useInventory({
     useCollectionListener(
         registerInventoryListener,
         () => { reload(searchRef.current); },
-        [],
         { enabled: ready, debounceMs: 300, label: 'inventory' },
     );
 
@@ -208,64 +235,61 @@ export function useInventory({
     }, [reload]);
 
     /**
-     * Compute next quantity from the *latest* state inside the functional
-     * setItems updater. This avoids race conditions when the user taps the
-     * +/- button rapidly and the parent's `item` snapshot is stale.
+     * Read the latest baseline quantity from `itemsRef` *before* mutating
+     * state, then apply a pure transform via {@link updateItems}. Doing the
+     * read synchronously (instead of inside a setItems updater) means the
+     * computed `nextQty` is available immediately for the database call —
+     * setItems is asynchronous and React may defer or replay the updater
+     * under concurrent rendering, so it must not produce side effects.
      *
-     * On DB failure we roll back the optimistic delta (not to a captured
-     * absolute) using another functional update — this stays correct even
-     * if a second successful tap landed in between, because we only undo
-     * our own +1 contribution.
+     * Rapid double-tap is still handled correctly because every click reads
+     * the most recent {@link itemsRef.current}, and we update that ref in
+     * lockstep with `setItems` via {@link updateItems}.
+     *
+     * On DB failure we roll back the optimistic delta — not the captured
+     * baseline — so a concurrent successful tap on the same row is not
+     * trampled by our undo.
      */
     const incrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
-        let nextQty: number | null = null;
-        setItems(prev => {
-            const current = prev.find(i => i.id === item.id);
-            const baseline = current?.stockQty ?? item.stockQty;
-            nextQty = baseline + 1;
-            return prev.map(i => (i.id === item.id ? { ...i, stockQty: nextQty as number } : i));
-        });
-        if (nextQty === null) return;
+        const current = itemsRef.current.find(i => i.id === item.id);
+        const baseline = current?.stockQty ?? item.stockQty;
+        const nextQty = baseline + 1;
+        updateItems(prev => prev.map(i =>
+            i.id === item.id ? { ...i, stockQty: nextQty } : i,
+        ));
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
-            // Rollback the optimistic +1 so the UI reconverges with DB truth.
-            setItems(prev => prev.map(i =>
+            updateItems(prev => prev.map(i =>
                 i.id === item.id ? { ...i, stockQty: Math.max(0, i.stockQty - 1) } : i,
             ));
             console.error('[useInventory] increment error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
-    }, [databaseService]);
+    }, [databaseService, updateItems]);
 
     const decrementStock = useCallback(async (item: GroceryItem) => {
         if (!databaseService) return;
-        let nextQty: number | null = null;
-        let appliedDelta = 0;
-        setItems(prev => {
-            const current = prev.find(i => i.id === item.id);
-            const baseline = current?.stockQty ?? item.stockQty;
-            if (baseline <= 0) return prev;
-            nextQty = Math.max(0, baseline - 1);
-            appliedDelta = baseline - nextQty; // 1 unless baseline was already 0
-            return prev.map(i => (i.id === item.id ? { ...i, stockQty: nextQty as number } : i));
-        });
-        if (nextQty === null) return;
+        const current = itemsRef.current.find(i => i.id === item.id);
+        const baseline = current?.stockQty ?? item.stockQty;
+        if (baseline <= 0) return;
+        const nextQty = Math.max(0, baseline - 1);
+        const appliedDelta = baseline - nextQty; // always 1 here, kept explicit for clarity
+        if (appliedDelta === 0) return;
+        updateItems(prev => prev.map(i =>
+            i.id === item.id ? { ...i, stockQty: nextQty } : i,
+        ));
         try {
             await databaseService.updateStockQuantity(item.id, nextQty);
         } catch (e) {
-            // Rollback the optimistic decrement so the UI reconverges with DB truth.
-            const delta = appliedDelta;
-            if (delta > 0) {
-                setItems(prev => prev.map(i =>
-                    i.id === item.id ? { ...i, stockQty: i.stockQty + delta } : i,
-                ));
-            }
+            updateItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, stockQty: i.stockQty + appliedDelta } : i,
+            ));
             console.error('[useInventory] decrement error', e);
             setError({ op: 'updateStock', error: toError(e) });
         }
-    }, [databaseService]);
+    }, [databaseService, updateItems]);
 
     const createOrder = useCallback(async (item: GroceryItem, qty: number) => {
         if (!databaseService) return false;

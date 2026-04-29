@@ -150,7 +150,6 @@ export function useOrders({
     useCollectionListener(
         registerOrdersListener,
         () => { reload(statusRef.current); },
-        [],
         { enabled: ready, debounceMs: 300, label: 'orders' },
     );
 
