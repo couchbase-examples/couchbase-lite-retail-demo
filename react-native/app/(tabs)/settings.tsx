@@ -13,11 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import DatabaseContext from '@/providers/DatabaseContext';
 import { useAuth } from '@/providers/AuthContext';
 import { APP_CONFIG } from '@/models/AppConfig';
+import { ErrorBanner } from '@/components/feedback/ErrorBanner';
 
 export default function SettingsScreen() {
     const dbContext = useContext(DatabaseContext);
     const syncStatus = dbContext?.syncStatus ?? 'stopped';
     const isDbReady = dbContext?.isDbReady ?? false;
+    const initError = dbContext?.initError ?? null;
     const { storeConfig, logout } = useAuth();
 
     const syncColor = syncStatus === 'idle' ? '#34C759'
@@ -37,6 +39,13 @@ export default function SettingsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {initError && (
+                <ErrorBanner
+                    title="Database failed to start"
+                    message={initError.message}
+                    onRetry={dbContext?.retryInit}
+                />
+            )}
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* User Info Header */}
                 <View style={styles.userCard}>
