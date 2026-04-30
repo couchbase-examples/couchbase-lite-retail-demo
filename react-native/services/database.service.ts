@@ -12,6 +12,7 @@ import {
     LogLevel,
     LogSinks,
     MutableDocument,
+    Parameters,
     Replicator,
     ReplicatorActivityLevel,
     ReplicatorConfiguration,
@@ -28,12 +29,56 @@ import uuid from 'react-native-uuid';
 export type SyncStatus = 'idle' | 'busy' | 'connecting' | 'offline' | 'stopped';
 
 /**
+ * FTS index schema version. The index name embeds this so we can roll out a
+ * new field set (e.g. adding `type`) by bumping the suffix — devices that
+ * already have the previous version will see the new name is missing,
+ * create it, and the obsolete index will be removed once on first run.
+ *
+ * Bump this whenever the FTS index's covered fields or options change.
+ */
+const INVENTORY_FTS_INDEX_VERSION = 2;
+const INVENTORY_FTS_INDEX_NAME = `idxInventoryFTSv${INVENTORY_FTS_INDEX_VERSION}`;
+
+/**
  * Safely converts a value to a number. Returns 0 for null/undefined/NaN/non-numeric.
  */
 function safeNumber(val: any): number {
     if (val === null || val === undefined) return 0;
     const n = Number(val);
     return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Convert a free-text search input into a Couchbase Lite FTS query
+ * expression. Each whitespace-delimited token becomes a prefix match so
+ * partial typing matches as you go ("mil" -> "milk*"). FTS operator
+ * characters (quote, parentheses, asterisk, colon, AND/OR/NOT keywords,
+ * etc.) are stripped from the user input before the prefix is appended,
+ * so user-supplied text can never escape into the FTS grammar.
+ *
+ * Returns `null` when the cleaned input has no usable tokens — the caller
+ * should treat that the same as "no search filter applied".
+ */
+function buildFtsExpression(input: string): string | null {
+    if (typeof input !== 'string') return null;
+    const cleaned = input
+        .toLowerCase()
+        // Replace anything that isn't a letter, digit, or whitespace with a
+        // space. This handily strips ASCII FTS operators ('"*?:()[]') and
+        // also keeps the rule simple enough to be safe against unexpected
+        // characters in user input.
+        .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+        .trim();
+    if (cleaned.length === 0) return null;
+
+    const tokens = cleaned.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return null;
+    // Each token gets a prefix-wildcard match. Tokens are space-separated,
+    // which Couchbase Lite FTS interprets as an implicit AND — every token
+    // must match. For an inventory search box that's the more useful
+    // semantic: typing "red apple" should narrow the list to red apples
+    // rather than returning every red item plus every apple.
+    return tokens.map(t => `${t}*`).join(' ');
 }
 
 /**
@@ -160,11 +205,44 @@ export class DatabaseService {
         );
         await this.inventoryCollection.createIndex('idxInventoryNameType', nameIndex);
 
-        // Full-text search index on name for search functionality
-        const ftsName = FullTextIndexItem.property('name');
-        const ftsBrand = FullTextIndexItem.property('brand');
-        const ftsIndex = IndexBuilder.fullTextIndex(ftsName, ftsBrand).setIgnoreAccents(true);
-        await this.inventoryCollection.createIndex('idxInventoryFTS', ftsIndex);
+        // Full-text search index. We include `type` (the category field) so
+        // searches like "dairy" or "bakery" still light up the FTS index
+        // instead of falling back to a full table scan.
+        //
+        // We embed a schema version in the index name so we don't have to
+        // pay the drop-and-rebuild cost on every launch — `createIndex` is
+        // idempotent for the *same* index name, but it cannot detect a
+        // changed definition. The version bump approach lets us roll out
+        // schema changes safely:
+        //
+        //   1. Read the current set of index names from the collection.
+        //   2. If the versioned name is already present, leave it alone.
+        //   3. Otherwise create it (cheap on a fresh DB, one-time cost on
+        //      upgrades).
+        //   4. Sweep up any older versions / the legacy unversioned index
+        //      so they don't keep consuming write amplification.
+        const existingIndexes = await this.inventoryCollection.indexes();
+        if (!existingIndexes.includes(INVENTORY_FTS_INDEX_NAME)) {
+            const ftsName = FullTextIndexItem.property('name');
+            const ftsBrand = FullTextIndexItem.property('brand');
+            const ftsType = FullTextIndexItem.property('type');
+            const ftsIndex = IndexBuilder.fullTextIndex(ftsName, ftsBrand, ftsType)
+                .setIgnoreAccents(true);
+            await this.inventoryCollection.createIndex(INVENTORY_FTS_INDEX_NAME, ftsIndex);
+            console.debug(`[GroceryDB] Created FTS index: ${INVENTORY_FTS_INDEX_NAME}`);
+        }
+        // One-time cleanup of legacy / superseded FTS indexes.
+        for (const stale of existingIndexes) {
+            if (stale === INVENTORY_FTS_INDEX_NAME) continue;
+            if (stale === 'idxInventoryFTS' || /^idxInventoryFTSv\d+$/.test(stale)) {
+                try {
+                    await this.inventoryCollection.deleteIndex(stale);
+                    console.debug(`[GroceryDB] Removed stale FTS index: ${stale}`);
+                } catch (e) {
+                    console.warn(`[GroceryDB] Failed to delete stale index ${stale}`, e);
+                }
+            }
+        }
 
         // Orders index
         const orderIndex = IndexBuilder.valueIndex(
@@ -229,26 +307,81 @@ export class DatabaseService {
     // ─── Inventory Queries ─────────────────────────────────────
 
     /**
-     * Returns all inventory items in the current store scope.
+     * Returns inventory items in the current store scope, ordered by name.
+     *
+     * Pagination is opt-in: when {@code limit} is undefined the query returns
+     * the full collection (legacy behaviour). When provided, the query uses
+     * SQL++ LIMIT/OFFSET so pages can be loaded incrementally.
      */
-    public async getInventoryItems(): Promise<GroceryItem[]> {
+    public async getInventoryItems(
+        limit?: number,
+        offset: number = 0,
+    ): Promise<GroceryItem[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\``;
-        const results = await this.database.createQuery(queryStr).execute();
+        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\` ORDER BY name`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT $limit OFFSET $offset`;
+        }
+        const query = this.database.createQuery(queryStr);
+        if (typeof limit === 'number' && limit > 0) {
+            const params = new Parameters();
+            params.setInt('limit', Math.floor(limit));
+            params.setInt('offset', Math.max(0, Math.floor(offset)));
+            query.parameters = params;
+        }
+        const results = await query.execute();
         return this.mapInventoryResults(results);
     }
 
     /**
-     * Search inventory items by name, category, or brand using LIKE.
+     * Search inventory items by name, brand, or category. Uses the
+     * `idxInventoryFTS` Full-Text Search index via the `MATCH` operator so
+     * the query is index-backed instead of doing a full table scan, and
+     * passes the user input as a bound `$term` parameter to avoid string
+     * interpolation entirely.
+     *
+     * The user's input is tokenised on whitespace and each token is
+     * suffixed with `*` so prefix matching feels familiar (typing "mil"
+     * matches "milk", "milkshake", "milky way"). Special FTS operator
+     * characters are stripped so we don't accidentally feed the user's
+     * `AND`/`OR`/quote characters straight into the FTS expression parser.
+     *
+     * Same pagination contract as {@link getInventoryItems}.
      */
-    public async searchInventory(searchTerm: string): Promise<GroceryItem[]> {
+    public async searchInventory(
+        searchTerm: string,
+        limit?: number,
+        offset: number = 0,
+    ): Promise<GroceryItem[]> {
         if (!this.database || !this.storeConfig) return [];
+
+        const ftsExpression = buildFtsExpression(searchTerm);
+        // An empty/all-punctuation search term shouldn't return everything —
+        // fall back to the unfiltered paginated query so callers still get
+        // sensible results.
+        if (ftsExpression === null) {
+            return this.getInventoryItems(limit, offset);
+        }
+
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.inventory;
-        const term = searchTerm.toLowerCase();
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` WHERE LOWER(name) LIKE '%${term}%' OR LOWER(type) LIKE '%${term}%' OR LOWER(brand) LIKE '%${term}%'`;
-        const results = await this.database.createQuery(queryStr).execute();
+        let queryStr =
+            `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ` +
+            `WHERE MATCH(${INVENTORY_FTS_INDEX_NAME}, $term) ` +
+            `ORDER BY RANK(${INVENTORY_FTS_INDEX_NAME}), name`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT $limit OFFSET $offset`;
+        }
+        const query = this.database.createQuery(queryStr);
+        const params = new Parameters();
+        params.setString('term', ftsExpression);
+        if (typeof limit === 'number' && limit > 0) {
+            params.setInt('limit', Math.floor(limit));
+            params.setInt('offset', Math.max(0, Math.floor(offset)));
+        }
+        query.parameters = params;
+        const results = await query.execute();
         return this.mapInventoryResults(results);
     }
 
@@ -313,14 +446,45 @@ export class DatabaseService {
     // ─── Orders Queries ────────────────────────────────────────
 
     /**
-     * Returns all orders in the current store scope, newest first.
+     * Returns orders in the current store scope, newest first.
+     *
+     * Pagination is opt-in (see {@link getInventoryItems}). When `status` is
+     * provided the filter is applied at the SQL++ level so that LIMIT/OFFSET
+     * paginates the *filtered* result set — without it, an "In Review" filter
+     * applied client-side on a single page would falsely show "no orders" if
+     * none of the first {@code limit} orders happened to match.
      */
-    public async getOrders(): Promise<Order[]> {
+    public async getOrders(
+        limit?: number,
+        offset: number = 0,
+        status?: string,
+    ): Promise<Order[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.orders;
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ORDER BY orderDate DESC`;
-        const results = await this.database.createQuery(queryStr).execute();
+        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\``;
+        if (typeof status === 'string' && status.length > 0) {
+            queryStr += ` WHERE orderStatus = $status`;
+        }
+        queryStr += ` ORDER BY orderDate DESC`;
+        if (typeof limit === 'number' && limit > 0) {
+            queryStr += ` LIMIT $limit OFFSET $offset`;
+        }
+        const query = this.database.createQuery(queryStr);
+        const hasStatus = typeof status === 'string' && status.length > 0;
+        const hasPagination = typeof limit === 'number' && limit > 0;
+        if (hasStatus || hasPagination) {
+            const params = new Parameters();
+            if (typeof status === 'string' && status.length > 0) {
+                params.setString('status', status);
+            }
+            if (typeof limit === 'number' && limit > 0) {
+                params.setInt('limit', Math.floor(limit));
+                params.setInt('offset', Math.max(0, Math.floor(offset)));
+            }
+            query.parameters = params;
+        }
+        const results = await query.execute();
         return this.mapOrderResults(results);
     }
 
@@ -424,6 +588,16 @@ export class DatabaseService {
      */
     public async addOrdersChangeListener(callback: () => void): Promise<any> {
         return this.ordersCollection?.addChangeListener(() => {
+            callback();
+        });
+    }
+
+    /**
+     * Add a change listener for the profile collection. Used by the profile
+     * screen so it refreshes when App Services pushes a new profile doc.
+     */
+    public async addProfileChangeListener(callback: () => void): Promise<any> {
+        return this.profileCollection?.addChangeListener(() => {
             callback();
         });
     }
