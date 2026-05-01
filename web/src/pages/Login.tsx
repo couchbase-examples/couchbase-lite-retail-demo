@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ShoppingCart, AlertCircle, Loader2, Eye, EyeOff, Info, User, Lock, ArrowRight } from "lucide-react";
 import { initializeDatabase } from "@/lib/database/initDatabase";
 import { setupOneShotSync } from "@/lib/database/sync";
-import { storeCredentials, extractStoreIdFromEmail, getAppServicesUrl, getScopeNameFromStoreId } from "@/lib/auth";
+import { storeCredentials, extractStoreIdFromEmail, extractAppEndpointFromEmail, getAppServicesUrl, getScopeNameFromStoreId } from "@/lib/auth";
 import { toast } from "sonner";
 
 interface DemoCredential {
@@ -39,29 +39,33 @@ const Login = () => {
   useEffect(() => {
     const originalBackground = document.body.style.backgroundColor;
     document.body.style.backgroundColor = '#FFF0DB';
-    
+
     return () => {
       document.body.style.backgroundColor = originalBackground;
     };
   }, []);
 
-  const performLogin = async (loginEmail: string, loginPassword: string) => {
+  const performLogin = async (loginEmail: string, loginPassword: string, appEndpoint: string | null) => {
     setError("");
     setLoading(true);
     setShowDemoDialog(false);
 
     try {
+      if (null == appEndpoint) { // in case of manual login, extract app endpoint from email
+        appEndpoint = extractAppEndpointFromEmail(loginEmail);
+      }
+
       // Extract store ID from email
       const storeId = extractStoreIdFromEmail(loginEmail);
       console.log('📧 Extracted store ID:', storeId);
-      
+
       // Initialize database for this store
       console.log('💾 Initializing database...');
       const db = await initializeDatabase(storeId);
       console.log('✅ Database initialized');
-      
+
       // Get App Services URL from environment
-      const syncUrl = getAppServicesUrl();
+      const syncUrl = `${getAppServicesUrl().replace(/\/+$/, '')}/${appEndpoint}`;
       console.log('🌐 App Services URL:', syncUrl);
 
       // Set up one-shot profile sync
@@ -80,12 +84,12 @@ const Login = () => {
         profileReplicator.onStatusChange = (status: any) => {
           const activity = status.activity || status.status;
           console.log('🔄 Profile sync status:', activity, status);
-          
+
           if (status.error) {
             hasError = true;
             const errorMsg = status.error.message || 'Authentication failed';
             console.error('❌ Profile sync error:', errorMsg);
-            
+
             // Check for auth error
             if (errorMsg.includes('401') || errorMsg.includes('auth')) {
               reject(new Error('Invalid email or password'));
@@ -93,8 +97,8 @@ const Login = () => {
               reject(new Error(`Sync failed: ${errorMsg}`));
             }
           }
-          
-          if ((activity === 'stopped' || activity === 'idle') && !hasError) { 
+
+          if ((activity === 'stopped' || activity === 'idle') && !hasError) {
             console.log('✅ Profile sync complete');
             resolve(true);
           }
@@ -109,7 +113,7 @@ const Login = () => {
       const profileCollectionName = `${scopeName}.profile` as any;
       const profileCount = await db.collections[profileCollectionName].count();
       console.log(`📊 Profile collection has ${profileCount} documents`);
-      
+
       if (profileCount === 0) {
         throw new Error('No profile found for this store. Please contact support.');
       }
@@ -125,7 +129,7 @@ const Login = () => {
 
       // Reload page to reinitialize app with database context
       window.location.href = '/dashboard';
-      
+
     } catch (err: any) {
       console.error('❌ Login failed:', err);
       const errorMessage = err.message || 'Login failed. Please try again.';
@@ -140,11 +144,11 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await performLogin(email, password);
+    await performLogin(email, password, null);
   };
 
   const handleDemoCredentialSelect = async (credential: DemoCredential) => {
-    await performLogin(credential.email, credential.password);
+    await performLogin(credential.email, credential.password, credential.appEndpoint);
   };
 
   return (
@@ -157,7 +161,7 @@ const Login = () => {
               <ShoppingCart className="h-12 w-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          
+
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-black mb-2">
               Grocery Inventory

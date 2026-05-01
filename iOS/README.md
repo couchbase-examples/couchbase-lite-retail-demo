@@ -2,6 +2,11 @@
 
 A retail inventory management app for iOS demonstrating Couchbase Lite's offline-first capabilities, real-time sync with Capella App Services, and peer-to-peer sync between devices.
 
+## Prerequisites
+
+> [!IMPORTANT]
+> Before proceeding with the iOS setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
+
 ## Requirements
 
 - **Xcode**: 16.4 or later
@@ -17,7 +22,40 @@ The project uses Swift Package Manager (SPM) for dependency management. Dependen
 
 ## Getting Started
 
-### 1. Open the Project
+### 1. Create Info.plist (Required Before Building)
+
+> [!IMPORTANT]
+> `Info.plist` is **not** included in the repository but is required by the Xcode project. You must create it before attempting to build, or the build will fail with:
+> ```
+> unable to read input file '.../GroceryApp/Info.plist': Operation not permitted
+> ```
+
+Create the file at `GroceryApp/Info.plist` with your Capella App Services credentials:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CBL_BASE_URL</key>
+    <string>wss://your-endpoint.apps.cloud.couchbase.com:4984</string>
+    <key>CBL_AA_DB</key>
+    <string>supermarket-aa</string>
+    <key>CBL_NYC_DB</key>
+    <string>supermarket-nyc</string>
+    <key>CBL_AA_USER</key>
+    <string>aa-store-01@supermarket.com</string>
+    <key>CBL_NYC_USER</key>
+    <string>nyc-store-01@supermarket.com</string>
+    <key>CBL_PASSWORD</key>
+    <string>P@ssword1</string>
+</dict>
+</plist>
+```
+
+**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL** — it will look like `wss://<id>.apps.cloud.couchbase.com:4984`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
+
+### 2. Open the Project
 
 Open the Xcode project:
 
@@ -28,26 +66,11 @@ open GroceryApp.xcodeproj
 
 Xcode will automatically resolve and download the required Swift packages when you first open the project.
 
-### 2. Configure Capella App Services
+### 3. Configure Capella App Services (Alternative Methods)
 
-Before running the app, you need to configure your Capella App Services connection. You have three options:
+If you prefer not to use `Info.plist` for configuration, you have two other options. The app checks environment variables first, then falls back to Info.plist.
 
-#### Option A: Info.plist (Recommended)
-
-Add the configuration values to your `Info.plist` file:
-
-1. Open `GroceryApp/Info.plist` in Xcode
-2. Add the following keys and values:
-   - `CBL_BASE_URL`: `wss://your-endpoint.apps.cloud.couchbase.com:4984`
-   - `CBL_AA_DB`: `supermarket-aa`
-   - `CBL_NYC_DB`: `supermarket-nyc`
-   - `CBL_AA_USER`: `aa-store-01@supermarket.com`
-   - `CBL_NYC_USER`: `nyc-store-01@supermarket.com`
-   - `CBL_PASSWORD`: `P@ssword1`
-
-This is the most common approach for iOS projects and keeps configuration in a standard location.
-
-#### Option B: Environment Variables (Terminal Launch)
+#### Option A: Environment Variables (Terminal Launch)
 
 Set environment variables in your shell:
 
@@ -66,7 +89,7 @@ Then launch Xcode from the terminal to inherit these variables:
 open GroceryApp.xcodeproj
 ```
 
-#### Option C: Xcode Scheme Configuration
+#### Option B: Xcode Scheme Configuration
 
 1. In Xcode, select **Product** > **Scheme** > **Edit Scheme**
 2. Go to **Run** > **Arguments** tab
@@ -78,10 +101,10 @@ open GroceryApp.xcodeproj
    - `CBL_NYC_USER`: `nyc-store-01@supermarket.com`
    - `CBL_PASSWORD`: `P@ssword1`
 
-**Note**: The app checks environment variables first, then falls back to Info.plist. Choose whichever method works best for your workflow.
+> [!NOTE]
+> An `Info.plist` file is still required for the build to succeed, even when using environment variables. You can create a minimal **valid** plist (containing a root dict) if you prefer to configure credentials via environment variables only.
 
-
-### 3. Build and Run
+### 4. Build and Run
 
 Select a simulator or connected device and click **Run** (⌘R).
 
@@ -90,7 +113,8 @@ Select a simulator or connected device and click **Run** (⌘R).
 ```
 iOS/
 ├── GroceryApp/
-│   ├── App.swift                        # Main app entry point
+│   ├── GroceryAppApp.swift              # Main app entry point (@main)
+│   ├── App.swift                        # P2P sync helper (GrocerySyncApp, Network Framework)
 │   ├── AppConfig.swift                  # Configuration (database, sync, stores)
 │   ├── DatabaseManager.swift            # Couchbase Lite database operations
 │   ├── AppServicesSyncManager.swift     # Sync with Capella App Services
