@@ -6,7 +6,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.couchbase.lite.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -18,13 +25,25 @@ class DatabaseManager(private val context: Context) {
     private var database: Database? = null
     private val databaseName = AppConfig.DATABASE_NAME
     private val collectionName = AppConfig.COLLECTION_NAME
-    
+
+    // Background scope for post-login sync setup. Using SupervisorJob so that
+    // a failure in one launch doesn't cancel the whole scope.
+    private val backgroundScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Tracks the in-flight sync setup coroutine so we can cancel it if
+    // startSyncAfterLogin() is invoked again (e.g. rapid logout/login) or
+    // if the DatabaseManager is closed mid-setup. Guards against a race
+    // where a stale setup completes after logout and leaves the replicator
+    // active for the logged-out session.
+    @Volatile
+    private var syncSetupJob: Job? = null
+
     // App Services Integration
     var appServicesSyncManager: AppServicesSyncManager? = null
         private set
     var isAppServicesEnabled by mutableStateOf(false)
         private set
-    
+
     // P2P Sync Integration
     var multipeerSyncManager: MultipeerSyncManager? = null
         private set
@@ -42,14 +61,63 @@ class DatabaseManager(private val context: Context) {
         setupAppServicesIntegration()
         setupP2PIntegration()
         
-        // Auto-enable App Services if configured
-        if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
-            enableAppServices()
+        // NOTE: Sync is NOT started here — it must wait until after login
+        // so that AppConfig.currentStore is set to the correct user's store.
+        // Call startSyncAfterLogin() after AuthenticationManager.login() completes.
+    }
+    
+    /**
+     * Called after login to set up indexes for the correct scope
+     * and start App Services / P2P sync with the correct endpoint.
+     *
+     * Dispatches the heavy work (index creation, collection lookup,
+     * Replicator construction) onto Dispatchers.IO so it is safe to
+     * invoke from the main thread (e.g. from AuthenticationManager
+     * init via checkStoredLogin()) without risking an ANR.
+     *
+     * Fire-and-forget: callers should not rely on sync being fully
+     * configured by the time this returns. UI that depends on profile
+     * data should observe it reactively (see InventoryScreen).
+     */
+    @Synchronized
+    fun startSyncAfterLogin() {
+        // Cancel any in-flight sync setup from a previous login/restore to
+        // avoid two setup coroutines racing (e.g. rapid logout→login), which
+        // could otherwise let a stale setup start the replicator after
+        // disableAppServices() has already run.
+        syncSetupJob?.let { existing ->
+            if (existing.isActive) {
+                Log.d("DatabaseManager", "⏹️ Cancelling in-flight sync setup before starting a new one")
+                existing.cancel()
+            }
         }
-        
-        // Auto-enable P2P if configured
-        if (AppConfig.P2P_AUTO_START && AppConfig.ENABLE_P2P_SYNC) {
-            enableP2P()
+
+        syncSetupJob = backgroundScope.launch {
+            Log.d("DatabaseManager", "🔄 Starting sync after login for store: ${AppConfig.currentStore.displayName}")
+            Log.d("DatabaseManager", "🔄 Sync URL: ${AppConfig.syncGatewayURL}")
+            Log.d("DatabaseManager", "🔄 Scope: ${AppConfig.scopeName}")
+            Log.d("DatabaseManager", "🔄 Username: ${AppConfig.username}")
+
+            // Recreate indexes in the correct scope for this user
+            setupIndexes()
+
+            // Reconfigure and start App Services sync with correct endpoint.
+            // setupAndStartSync() guarantees: stop old → create replicator → start new.
+            // Only mark as enabled if setup actually succeeded (no exception thrown).
+            if (AppConfig.ENABLE_APP_SERVICES_SYNC) {
+                try {
+                    appServicesSyncManager?.setupAndStartSync()
+                    isAppServicesEnabled = true
+                } catch (e: Exception) {
+                    isAppServicesEnabled = false
+                    Log.e("DatabaseManager", "❌ App Services sync setup failed, not marking as enabled", e)
+                }
+            }
+
+            // Auto-enable P2P if configured
+            if (AppConfig.P2P_AUTO_START && AppConfig.ENABLE_P2P_SYNC) {
+                enableP2P()
+            }
         }
     }
     
@@ -816,4 +884,48 @@ class DatabaseManager(private val context: Context) {
     
     // MARK: - Database Access
     fun getDatabase(): Database? = database
-} 
+
+    // MARK: - Cleanup
+    /**
+     * Centralized cleanup: stops all active sync processes (App Services
+     * and P2P), cancels any in-flight sync-setup coroutine, and cancels
+     * the background scope. Safe to call multiple times. Callers
+     * (e.g. GroceryApplication.onTerminate()) may also call disableAppServices()
+     * beforehand — the underlying @Synchronized guards make the second call a no-op.
+     */
+    fun close() {
+        Log.d("DatabaseManager", "🧹 DatabaseManager.close(): shutting down sync and releasing resources")
+
+        // Stop any in-flight sync setup first so it doesn't race past the
+        // teardown below and restart the replicator after we've disabled it.
+        syncSetupJob?.let { job ->
+            if (job.isActive) {
+                Log.d("DatabaseManager", "⏹️ Cancelling in-flight sync setup during close()")
+                try {
+                    runBlocking { job.cancelAndJoin() }
+                } catch (e: Exception) {
+                    Log.w("DatabaseManager", "⚠️ Error awaiting sync-setup cancellation", e)
+                }
+            }
+        }
+        syncSetupJob = null
+
+        // Tear down App Services replicator (idempotent via @Synchronized).
+        try {
+            appServicesSyncManager?.disableAppServices()
+            isAppServicesEnabled = false
+        } catch (e: Exception) {
+            Log.w("DatabaseManager", "⚠️ Error disabling App Services during close()", e)
+        }
+
+        // Tear down P2P multipeer replicator so it stops advertising/browsing.
+        try {
+            disableP2P()
+        } catch (e: Exception) {
+            Log.w("DatabaseManager", "⚠️ Error disabling P2P during close()", e)
+        }
+
+        backgroundScope.cancel()
+        Log.d("DatabaseManager", "🧹 Background scope cancelled")
+    }
+}
