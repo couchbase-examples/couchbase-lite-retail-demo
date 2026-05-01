@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Grocery Inventory",
+    "slug": "grocery-inventory",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "groceryapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.couchbase.grocery.rn",
+      "deploymentTarget": "16.0"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.couchbase.grocery.rn"
+    },
+    "plugins": [
+      "expo-router",
+      "./plugin.config.js"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "cblBaseUrl": "wss://d91glcpey3egweng.apps.cloud.couchbase.com:4984",
+      "cblAADB": "supermarket-aa",
+      "cblNYCDB": "supermarket-nyc",
+      "cblAAUser": "aa-store-01@supermarket.com",
+      "cblNYCUser": "nyc-store-01@supermarket.com",
+      "cblPassword": "P@ssword1"
+    }
+  }
+}
