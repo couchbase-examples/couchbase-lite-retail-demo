@@ -1,13 +1,50 @@
 # Couchbase Mobile Retail Demo Application
 
-A simple retail inventory management application built with [Couchbase Lite](https://docs.couchbase.com/couchbase-lite/current/index.html) for web and mobile (iOS and Android) featuring real-time sync capabilities with [Couchbase Capella App Services](https://docs.couchbase.com/cloud/app-services/deployment/creating-an-app-service.html).
+A retail inventory management application built with [Couchbase Lite](https://docs.couchbase.com/couchbase-lite/current/index.html) for web and mobile (iOS, Android, and React Native), featuring real-time sync with [Couchbase Capella App Services](https://docs.couchbase.com/cloud/app-services/deployment/creating-an-app-service.html).
+
+## New to Couchbase? Start Here
+
+If you've never worked with Couchbase before, read this section first. It explains what this demo is doing and why, so the setup instructions will make sense.
+
+**Couchbase Lite** is an embedded NoSQL database that runs directly inside a mobile or web app — similar to SQLite, but built for sync. It stores data locally so the app works even with no internet connection.
+
+**Capella App Services** is the cloud sync layer. It sits between the app and a Couchbase Capella cloud cluster, routing data changes between all connected devices in real time. When a device comes back online after being offline, it automatically syncs any changes it missed.
+
+This demo simulates two supermarket stores — an Ann Arbor store and a NYC store — each running the same app on different devices. Inventory, orders, and store profiles sync to a shared cloud cluster via App Services, so a change on one device appears on all others.
+
+```
+[Mobile / Web App]
+       ↕  (local reads & writes — works fully offline)
+[Couchbase Lite — embedded on-device database]
+       ↕  (WebSocket replication — when online)
+[Capella App Services — cloud sync gateway]
+       ↕
+[Couchbase Capella — cloud database cluster]
+```
+
+## Key Concepts
+
+These terms appear throughout the setup instructions and individual app READMEs. Read this once and the rest will make sense.
+
+| Term | What it means |
+|------|---------------|
+| **Couchbase Lite** | The embedded database library inside each app. All data is saved here first. Works offline. |
+| **Capella** | Couchbase's managed cloud database platform — the cloud backend where all device data lands. |
+| **App Services** | A layer on top of Capella that handles sync, authentication, and access control for mobile/web clients. Your app connects to an App Services *endpoint URL*, not directly to the database. |
+| **Bucket** | Top-level data container in Capella — like a database. This demo uses a bucket named `supermarket`. |
+| **Scope** | A namespace inside a bucket — like a schema in SQL. This demo has two: `AA-Store` (Ann Arbor) and `NYC-Store`. |
+| **Collection** | A group of JSON documents inside a scope — like a table in SQL. Each scope has three: `inventory`, `orders`, `profile`. |
+| **Replicator** | The sync engine built into Couchbase Lite. Runs in the background and continuously pushes local changes to App Services and pulls remote changes down. |
+| **App Endpoint** | A named entry point in App Services that maps to a specific scope. Apps connect to an endpoint (e.g., `supermarket-nyc`) rather than directly to the bucket. |
+| **App User** | A credential registered in App Services. The app authenticates with a username/password to access a specific endpoint. |
+| **Continuous Replication** | A mode where the replicator keeps a persistent WebSocket connection open and syncs changes immediately in both directions, rather than on a schedule. |
 
 ## Demo App Features
 
-- 📱 **Offline-First**: Ability to operate in disconnected mode without an Internet connection with Couchbase Lite as a local database. 
-- 🔄 **Real-Time Sync**: Opportunistically sync data, in uni-directional or bi-directional mode with backend Couchbase Capella clusters via Capella App Services. Data is synced across iOS, Android and JS app via App Services.
-- 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android apps over a local network
-- 🏪 **Multi-Platform Support**: Support for **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)** and **[web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Note that Couchbase Lite supports a broader range of platforms including C, Java, .NET, React Native, Ionic, Flutter etc.
+- 📱 **Offline-First**: Operates fully without an internet connection. Couchbase Lite stores all data locally, and changes sync automatically when connectivity is restored.
+- 🔄 **Real-Time Sync**: Bidirectional sync with Couchbase Capella via App Services. Changes appear instantly across iOS, Android, React Native, and web.
+- 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android devices over a local network, without going through the cloud.
+- 🏪 **Multi-Platform Support**: A single backend supports **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)**, **[React Native](https://www.npmjs.com/package/cbl-reactnative)**, and **[Web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Couchbase Lite also supports C, Java, .NET, Ionic, Flutter, and more.
 
 ## Demo Video
 ### Peer-to-Peer Sync across iOS and Android
@@ -99,13 +136,14 @@ Repeat these steps for each of the App Endpoints
 
 ## Repo Structure
 
-The repo is organized as follows
+The repo is organized as follows:
 
-- **iOS**: This folder includes source code corresponding to the iOS version of the retail application. Follow the instructions in the [README.md](./iOS/README.md) file in the folder to build and run the iOS app. That folder also includes instructions to run the app in peer-to-peer mode.
+- **iOS** — Swift/SwiftUI app for iPhone and iPad. Supports cloud sync and peer-to-peer sync. Follow the [iOS README](./iOS/README.md) to build and run.
 
-- **Android**: This folder includes source code corresponding to the Android version of the retail application. Follow the instructions in the [README.md](./Android/README.md) file in that folder to build and run the Android app. That folder also includes instructions to run the app in peer-to-peer mode.
+- **Android** — Kotlin/Jetpack Compose app for Android. Supports cloud sync and peer-to-peer sync. Follow the [Android README](./Android/README.md) to build and run.
 
-- **web**: This folder includes source code corresponding to the web version of the retail application. Follow the instructions in the [README.md](./web/README.md) file in that folder to build and run the web app.
+- **react-native** — Cross-platform app built with React Native (Expo) that runs on both iOS and Android from a single codebase. Supports cloud sync. Follow the [React Native README](./react-native/README.md) to build and run.
 
+- **web** — Browser-based app built with React and TypeScript. Supports cloud sync. Follow the [Web README](./web/README.md) to build and run.
 
-
+All four apps connect to the same Capella backend, so you can mix platforms and watch data sync across them in real time.
