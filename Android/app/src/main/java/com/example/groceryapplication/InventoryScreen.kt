@@ -71,6 +71,11 @@ fun InventoryScreen(
                 }
             }
             android.util.Log.d("InventoryScreen", "✅ [Reactive API] Flow emitted: ${items.size} items")
+            
+            // Re-fetch profile when data arrives (handles fresh sync where profile wasn't available yet)
+            if (profileName == null) {
+                profileName = databaseManager.getStoreProfile()?.name
+            }
         }
     }
     

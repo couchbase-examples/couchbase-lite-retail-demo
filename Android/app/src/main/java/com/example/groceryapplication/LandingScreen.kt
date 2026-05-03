@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Home
@@ -39,7 +39,7 @@ fun LandingScreen(
     val databaseManager = GroceryApplication.databaseManager
     
     val navigationItems = listOf(
-        NavigationItem("inventory", Icons.Default.List, "Inventory"),
+        NavigationItem("inventory", Icons.AutoMirrored.Filled.List, "Inventory"),
         NavigationItem("profile", Icons.Default.Store, "Profile"),
         NavigationItem("orders", Icons.Default.ShoppingCart, "Orders"),
         NavigationItem("settings", Icons.Default.Settings, "Settings")

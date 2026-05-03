@@ -705,10 +705,24 @@ class DatabaseManager: ObservableObject {
             for result in results {
                 guard let dict = result.dictionary(at: 0) else { continue }
                 
+                // `orderId` may be stored as either String (imported demo
+                // data) or Int (locally created). Read it defensively so
+                // both shapes decode to the same String representation.
+                // - Check key presence via `value(forKey:)` so a legitimate
+                //   numeric 0 survives instead of being coerced to "" like
+                //   a missing key would be.
+                // - Use `int64` (not `int`) so 64-bit identifiers survive
+                //   without truncation on any platform.
+                let orderIdStr: String = {
+                    if let s = dict.string(forKey: "orderId"), !s.isEmpty { return s }
+                    guard dict.value(forKey: "orderId") != nil else { return "" }
+                    return String(dict.int64(forKey: "orderId"))
+                }()
+
                 let order = Order(
                     id: dict.string(forKey: "id") ?? "",
                     docType: dict.string(forKey: "docType") ?? "Order",
-                    orderId: dict.int(forKey: "orderId"),
+                    orderId: orderIdStr,
                     storeId: dict.string(forKey: "storeId") ?? "",
                     orderDate: dict.int64(forKey: "orderDate"),
                     orderStatus: dict.string(forKey: "orderStatus") ?? "Submitted",
@@ -746,14 +760,13 @@ class DatabaseManager: ObservableObject {
             let nanoId = generateNanoId()
             let documentId = "order-\(AppConfig.storeId)-\(nanoId)"
             
-            // Get next sequential order ID
-            let existingOrders = getAllOrders()
-            let nextOrderId = (existingOrders.map { $0.orderId }.max() ?? 0) + 1
-            
+            // New orders use the document ID as `orderId` so the field
+            // is consistently a String across both locally-created and
+            // imported docs — matching the shape the decoder now expects.
             let order = Order(
                 id: documentId,
                 docType: "Order",
-                orderId: nextOrderId,
+                orderId: documentId,
                 storeId: AppConfig.storeId,
                 orderDate: Int64(Date().timeIntervalSince1970 * 1000),
                 orderStatus: "In Review",  // New status for upcoming orders
@@ -762,7 +775,7 @@ class DatabaseManager: ObservableObject {
                 unit: item.unit ?? "unit",
                 orderQty: quantity
             )
-            
+
             let document = MutableDocument(id: documentId)
             document.setString(order.docType, forKey: "docType")
             document.setString(order.storeId, forKey: "storeId")
@@ -772,7 +785,7 @@ class DatabaseManager: ObservableObject {
             document.setString(order.sku, forKey: "sku")
             document.setString(order.unit, forKey: "unit")
             document.setInt(order.orderQty, forKey: "orderQty")
-            document.setInt(order.orderId, forKey: "orderId")
+            document.setString(order.orderId, forKey: "orderId")
             
             try collection.save(document: document)
             print("✅ Created order: \(documentId) (productId: \(order.productId), qty: \(quantity))")
@@ -784,8 +797,50 @@ class DatabaseManager: ObservableObject {
         }
     }
     
+    // MARK: - Store Reconfiguration
+
+    func reconfigure(for store: StoreLocation) {
+        print("Reconfiguring DatabaseManager for store: \(store.displayName)")
+
+        // Explicitly stop the replicator before releasing the sync manager so the
+        // old WebSocket connection is closed before the new one starts
+        appServicesSyncManager?.disableAppServices()
+        appServicesSyncManager = nil
+        isAppServicesEnabled = false
+
+        // Remove change listener before closing the database
+        collectionChangeListenerToken?.remove()
+        collectionChangeListenerToken = nil
+
+        // Close the database so checkAndHandleStoreChange (called inside openDatabase)
+        // can delete old store data if the store has changed
+        // Clear the reference regardless of whether `close()` throws — a
+        // partially-closed handle left assigned would trip up the very next
+        // `openDatabase()` call (which may delete the DB file when the store
+        // changes) by operating on a locked/half-closed instance.
+        do {
+            try database?.close()
+        } catch {
+            print("Error closing database during reconfigure: \(error)")
+        }
+        database = nil
+
+        // Update store then reopen — openDatabase runs checkAndHandleStoreChange
+        // internally, which purges old data when the store differs from last launch
+        AppConfig.currentStore = store
+        openDatabase()
+
+        // Rebuild listeners and sync — no delay needed after synchronous openDatabase()
+        setupChangeListeners()
+        setupAppServicesIntegration()
+
+        if AppConfig.enableAppServicesSync {
+            enableAppServices()
+        }
+    }
+
     // MARK: - App Services Integration
-    
+
     private func setupAppServicesIntegration() {
         guard let database = database else {
             print("❌ Database not ready for App Services integration")
