@@ -2,6 +2,11 @@
 
 A retail inventory management app for Android demonstrating Couchbase Lite's offline-first capabilities, real-time sync with Capella App Services, and peer-to-peer sync between devices.
 
+## Prerequisites
+
+> [!IMPORTANT]
+> Before proceeding with the Android setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
+
 ## Quick Start (For Already Configured Systems)
 
 If you've already completed the initial setup and have Java 17 + Couchbase Lite EE installed:
@@ -20,18 +25,17 @@ cd /path/to/Android
 
 **First time setup?** Continue reading below for complete installation instructions.
 
-## Requirements
+## Requirements and Dependencies
+
+The following requirements apply to both macOS and Windows:
 
 - **Android Studio**: Ladybug (2024.2.1) or later
-- **Android SDK**: 
+- **Android SDK**:
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
 - **JDK**: 17 or later
 - **Kotlin**: 2.0.21
-- **Homebrew**: For installing Java on macOS (optional but recommended)
-
-## Dependencies
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
@@ -41,6 +45,16 @@ The project uses Gradle with Kotlin DSL for dependency management. Key dependenc
 - **Lifecycle Components**: ViewModel and LiveData
 
 All dependencies are declared in `gradle/libs.versions.toml` and automatically resolved by Gradle.
+
+### macOS-specific
+
+- **Homebrew**: For installing Java on macOS (optional but recommended)
+
+### Windows-specific
+
+- [Git for Windows](https://git-scm.com/install/windows)
+
+Android Studio manages library dependencies via Gradle. Third-party libraries such as Couchbase Lite Enterprise Edition will be resolved and downloaded at compile time.
 
 ## Initial Setup (macOS)
 
@@ -106,42 +120,81 @@ ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
 
 **Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
 
-## Getting Started
+After completing the macOS-specific steps above, continue with the [Common Setup Steps](#common-setup-steps) that apply to both platforms.
 
-### 1. Verify Prerequisites
+### Step 4: Verify Prerequisites
 
-Before opening the project, ensure:
+Before opening the project, ensure the following. Commands below are shown for a Unix-like shell (macOS Terminal, Linux, or Git Bash on Windows); Windows Command Prompt / PowerShell equivalents are noted inline.
+
+**macOS / Linux / Git Bash:**
 
 ```bash
 # Check Java version
 java -version  # Should show 17.0.x
 
 # Check Gradle wrapper exists
-cd /path/to/Android
+cd <path-to-repo>/Android
 ls -la gradlew  # Should exist and be executable
 
-# Verify Couchbase EE is installed locally
+# Verify Couchbase EE (core + KTX) is installed locally
 ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
 ```
 
-### 2. Open the Project
+### Step 5: Open the Project
 
 Open Android Studio and select **File** > **Open**, then navigate to the `Android` directory and open it.
 
 Android Studio will automatically sync Gradle and resolve dependencies from:
-1. Local Maven repository (`~/.m2/repository/`) for Couchbase Lite EE
-2. Google Maven for Android libraries  
+
+1. Local Maven repository (`~/.m2/repository/` on macOS, `%USERPROFILE%\.m2\repository\` on Windows) for Couchbase Lite EE
+2. Google Maven for Android libraries
 3. Maven Central for other dependencies
 
 This may take a few minutes on first open.
 
-### 3. Configure Capella App Services
+## Initial Setup (Windows)
+
+### Step 1: Install required Software
+
+Install the following software using the default settings:
+
+- [Git for Windows](https://git-scm.com/install/windows)
+- [Android Studio]([Download Android Studio & App Tools - Android Developers](https://developer.android.com/studio/))
+
+### Step 2: Clone the Repository
+
+We use Android Studio to clone the repository.
+
+- Open Android Studio
+- On the Welcome screen, click **Clone Repository**
+- Enter URL `[https://github.com/couchbase-examples/couchbase-lite-retail-demo.git](https://github.com/couchbase-examples/couchbase-lite-retail-demo.git)`
+- Select a folder into which to clone the repository; **take not of the folder path**
+- Once the project has been cloned, **close the project** (File -> Close Project)
+- Remove the project from recent history (Click the three dots and select **Remove from recent projects**)
+
+### Step 3: Import the Project into Android Studio
+
+- On the Welcome screen, click **Open**
+- Navigate to the folder into which you cloned the project
+- Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
+- Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
+
+After import completes, proceed to the [Common Setup Steps](#common-setup-steps). In particular, modify the `gradle.properties` file as described in [Step 3: Configure Capella App Services — Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
+
+## Common Setup Steps
+
+The following steps apply to both macOS and Windows. Complete your platform-specific setup above before continuing.
+
+### Step 1: Configure Capella App Services
 
 Before running the app, configure your Capella App Services connection using environment variables or Gradle properties.
 
+**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL**, it will look like `wss://<id>.apps.cloud.couchbase.com`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
+
 #### Option A: Environment Variables (Recommended)
 
-Set these environment variables before running Android Studio:
+**On MacOS**, set these environment variables before running Android Studio:
 
 ```bash
 export CBL_BASE_URL="wss://your-endpoint.apps.cloud.couchbase.com:4984"
@@ -158,6 +211,36 @@ Then launch Android Studio from the same terminal:
 studio.sh  # or open -a "Android Studio" on macOS
 ```
 
+On Windows, either set persistent values via **System Properties** > **Environment Variables**, or use a PowerShell session:
+
+```powershell
+$env:CBL_BASE_URL = "wss://your-endpoint.apps.cloud.couchbase.com:4984"
+$env:CBL_AA_DB    = "supermarket-aa"
+$env:CBL_NYC_DB   = "supermarket-nyc"
+$env:CBL_AA_USER  = "aa-store-01@supermarket.com"
+$env:CBL_NYC_USER = "nyc-store-01@supermarket.com"
+$env:CBL_PASSWORD = "P@ssword1"
+
+# Launch Android Studio from the same session so it inherits the variables.
+# Adjust the path if your install location differs.
+& "C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Command Prompt (CMD) equivalent:
+
+```cmd
+set "CBL_BASE_URL=wss://your-endpoint.apps.cloud.couchbase.com:4984"
+set "CBL_AA_DB=supermarket-aa"
+set "CBL_NYC_DB=supermarket-nyc"
+set "CBL_AA_USER=aa-store-01@supermarket.com"
+set "CBL_NYC_USER=nyc-store-01@supermarket.com"
+set "CBL_PASSWORD=P@ssword1"
+
+"C:\Program Files\Android\Android Studio\bin\studio64.exe"
+```
+
+Variables set via `$env:` or `set` apply only to the current shell session; launching Android Studio from that same session is what lets the IDE inherit them.
+
 #### Option B: Gradle Properties
 
 Add these properties to your local `gradle.properties` file (create it in the `Android` directory if it doesn't exist):
@@ -173,9 +256,27 @@ CBL_PASSWORD=P@ssword1
 
 **Note**: Do not commit `gradle.properties` with sensitive credentials to version control.
 
-### 4. Build and Run
+## Build and Run
 
-Select an emulator or connected device from the device dropdown and click **Run** (▶).
+### Step 1: Create a Virtual Device
+
+Creating a virtual device is documented at [Create and manage virtual devices | Android Studio | Android Developers](https://developer.android.com/studio/run/managing-avds). In short:
+
+- Go to Tools -> Device Manager
+- Click **Add a new device**, then **Create virtual device**
+- Select a device, e.g., a **Pixel** phone
+- On the next screen, select, e.g.:
+    - API: **API 28 "Pie"**
+    - System image: Choose the image matching your host architecture; emulating the wrong architecture is either unsupported or prohibitively slow.
+        - On Intel/AMD Macs and Windows PCs: **Google Play Intel x86 Atom System Image**
+        - On Apple Silicon Macs (M1/M2/M3/M4): **Google Play ARM 64 v8a System Image**
+- Click **Finish**
+
+### Step 2: Run the app on the Emulator
+
+At the top toolbar, ensure your virtual device emulator is selected. Click the **Green Run button (▶)**. The emulator comes up on the right hand side, running the application.
+
+Further documentation: [Run apps on the Android Emulator | Android Studio | Android Developers](https://developer.android.com/studio/run/emulator#runningapp)
 
 ## Project Structure
 
@@ -217,7 +318,7 @@ Android/
 
 - **Database Name**: `GroceryInventoryDB`
 - **Scopes**: `AA-Store`, `NYC-Store` (based on selected store)
-- **Collections**: 
+- **Collections**:
   - `inventory` - Product inventory items
   - `orders` - Customer orders
   - `profile` - Store profile information
@@ -370,7 +471,6 @@ dependencyResolutionManagement {
 - Verify the `P2P_PEER_GROUP_ID` is the same across all devices
 - Look for P2P-related logs in Logcat (filter by "MultipeerSyncManager")
 
-
 ## Debugging
 
 ### Enable Verbose Logging
@@ -393,8 +493,15 @@ You can use the Couchbase Lite command-line tool to inspect the database file:
 
 The following files were created or configured during the initial setup process:
 
-#### Global Configuration (`~/.gradle/gradle.properties`)
-Contains JVM arguments and Gradle settings, including SSL certificate handling:
+#### Global Configuration
+
+Contains JVM arguments and Gradle settings, including SSL certificate handling. Location and `trustStoreType` value are platform-specific:
+
+- **macOS / Linux:** `~/.gradle/gradle.properties`
+- **Windows:** `%USERPROFILE%\.gradle\gradle.properties` (CMD) or `$env:USERPROFILE\.gradle\gradle.properties` (PowerShell)
+
+macOS:
+
 ```properties
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=KeychainStore
 org.gradle.daemon=true
@@ -402,8 +509,19 @@ org.gradle.parallel=true
 org.gradle.caching=true
 ```
 
+Windows (use `Windows-ROOT`, or omit the `trustStoreType` arg entirely — `KeychainStore` is macOS-only and will throw `KeyStoreException` on Windows):
+
+```properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+```
+
 #### Project Configuration (`settings.gradle.kts`)
+
 Configured with `mavenLocal()` repository to use locally downloaded Couchbase Lite EE:
+
 ```kotlin
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -419,12 +537,25 @@ dependencyResolutionManagement {
 }
 ```
 
-#### Environment Variables (`~/.zshrc`)
-Java configuration added to your shell profile:
+#### Environment Variables
+
+Java configuration is set per-platform:
+
+**macOS (`~/.zshrc`):**
+
 ```bash
 export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
 ```
+
+**Windows — PowerShell (current session):**
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17"   # adjust to your JDK install path
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+```
+
+**Windows — persistent (System Properties):** open **System Properties** → **Advanced** → **Environment Variables**, set `JAVA_HOME` to your JDK 17 install directory, and prepend `%JAVA_HOME%\bin` to the `Path` variable. Launch Android Studio after applying the change so it inherits the new environment.
 
 ### Enterprise vs Community Edition
 
@@ -450,7 +581,6 @@ You would also need to comment out or remove the P2P sync functionality in:
 - `MultipeerSyncComponents.kt`
 - References to MultipeerSyncManager in other screens
 
-
 ### Verification Commands
 
 To verify your setup:
@@ -475,4 +605,151 @@ ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
 - [iOS App README](../iOS/README.md) - iOS version of this app
 - [Web App README](../web/README.md) - Web version of this app
 - [Couchbase Lite Android Documentation](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)
+
+
+
+## Navigating the Codebase 
+
+The repository contains significant amounts of code across various layers. For a developer specifically interested in Couchbase Lite, approximately **80% of the codebase consists of Android framework "noise"** (UI, navigation, and theme boilerplate).
+
+We provide guidance as to which parts of the code are of particular relevance.
+
+### The framework "Noise" (Safe to ignore)
+
+These components manage the presentation and Android environment but contain no database logic:
+
+- **`ui/theme/*` & `MainActivity.kt`**: Application styling and standard Android permission handling
+- **`LandingScreen.kt` & Navigation**: Jetpack Compose routing between different app screens
+- **`InventoryScreen.kt`, `GroceryItemCard.kt`, & `LoginScreen.kt`**: UI layouts and Compose states for displaying and interacting with data
+
+### The Couchbase "Heart" (Focus here)
+
+The core database implementation is concentrated in these key files:
+
+- **`DatabaseManager.kt`**: The central orchestrator for the database lifecycle and reactive queries
+- **`AppServicesSyncManager.kt`**: Manages cloud synchronization with Couchbase Capella App Services
+- **`MultipeerSyncManager.kt`**: Implements serverless P2P synchronization
+- **`AuthenticationManager.kt`**: Handles user sessions using a dedicated local database
+
+## System Architecture
+
+The application uses a reactive pattern where data flows from the Couchbase Lite engine directly into the UI layers via Kotlin StateFlows.
+
+![](assets/components.png)
+
+### Component Roles
+
+- **`DatabaseManager`**: Initializes Couchbase Lite and opens the `GroceryInventoryDB`. It manages dynamic data partitioning by opening collections (`inventory`, `orders`, `profile`) within store-specific scopes like `AA-Store` or `NYC-Store` based on the user's login.
+- **`AppServicesSyncManager`**: Configures and manages a continuous, bidirectional `Replicator` to sync local collections with a remote WebSocket endpoint in Couchbase Capella
+- **`MultipeerSyncManager`**: Uses the `MultipeerReplicator` API to discover nearby devices via DNS-SD and sync data over a secure, TLS-encrypted mesh network
+- **`AuthenticationManager`**: Operates a standalone `AuthDB` to persist `user_session` documents. This allows user login states to persist across app restarts independently of the main inventory database 
+
+## Recommended Learning Path
+
+For developers new to this project, explore the source code in the following order to understand the data flow:
+
+1. **Initialize**: `DatabaseManager.kt`. Learn how the engine and collections are opened
+2. **Authenticate**: `AuthenticationManager.kt`. See how simple local persistence works
+3. **Sync Cloud**: `AppServicesSyncManager.kt`. Review the `Replicator` configuration
+4. **Sync P2P**: `MultipeerSyncManager.kt`. Understand serverless discovery and TLS security
+
+## Workflow: "Create Order"
+
+This workflow demonstrates how a user action bridges the UI, the local database, and cloud synchronization.
+
+![](assets/createOrder.png)
+
+### Execution Steps
+
+1. **UI Submission**: A user enters a quantity in the `OrderFormDialog` and clicks "Create Order"
+2. **Manager Call**: The UI triggers `databaseManager.createOrder(item, quantity)`.
+3. **Local Persistence**
+
+    - The `DatabaseManager` accesses the `orders` collection for the active store scope
+    - It generates a unique document ID using a NanoID-style algorithm
+    - A `MutableDocument` is created, populated with the order details, and saved locally via `collection.save()`
+
+4. **Sync Trigger**: If cloud sync is enabled, the manager calls `pushDocumentImmediately(documentId)`
+5. **Transmission**: The `AppServicesSyncManager` ensures the continuous replicator detects the new local document and transmits it immediately to Capella
+
+
+## Workflow: "Update Grocery Item Quantity"
+
+This diagram illustrates the factual path of an inventory update, from the user interface interaction through local persistence and out to the cloud.
+
+![](assets/updateQuantity.png)
+
+### Sequence Breakdown
+
+1. **User Trigger**: The user interacts with the `GroceryItemCard`, triggering the `onQuantityChanged` event
+    
+2. **Screen Logic**: The `InventoryScreen` receives the event and invokes `databaseManager.updateQuantityWithSync()`
+    
+3. **Sync-Aware Update**: The `DatabaseManager` identifies the active sync mode (App Services) and prepares a `MutableDocument`
+    
+4. **Local Persistence**: The manager updates the `stockQty` field and removes legacy fields to prevent sync conflicts before calling `collection.save()`
+    
+5. **Immediate Push**: The manager explicitly triggers `pushDocumentImmediately()` to ensure the change is prioritized by the replicato
+    
+6. **Cloud Transmission**: The `AppSyncManager` passes the change to the active continuous replicator for transmission to **Couchbase Capella**
+
+
+## Workflow: "Login & App Services Initialization"
+
+This sequence illustrates the critical path from user credentials to a fully synchronized, store-specific database environment .
+
+![](assets/login.png)
+
+**Sequence Breakdown:**
+
+1. **Authentication & Store Mapping**: `LoginScreen` triggers the login. `AuthManager` uses `AppConfig.setStoreForUser()` to dynamically update the `scopeName` and `syncGatewayURL` based on the user's location (AA vs NYC)
+
+2. **Background Handoff**: `AuthManager` invokes `databaseManager.startSyncAfterLogin()`. The manager launches a background coroutine to ensure the UI remains responsive during setup
+    
+3. **Scoped Resource Prep**: `DatabaseManager` runs `setupIndexes()` to create value indexes specifically within the new store's collections
+    
+4. **Replicator Activation**: `AppSyncManager` cleans up any existing replicators, builds a new configuration using the dynamic `AppConfig` credentials, and starts a continuous `PUSH_AND_PULL` sync
+
+## Key Implementation Patterns
+
+### Synchronization with App Services
+
+The application implements a centralized cloud synchronization pattern through the `AppServicesSyncManager`, which orchestrates a `Replicator` to bridge local collections with Couchbase Capella. This implementation utilizes a `ReplicatorConfiguration` that targets a specific `URLEndpoint` and employs a `BasicAuthenticator` for secure communication.
+
+The synchronization is configured as a `PUSH_AND_PULL` type and operates in a continuous, event-driven mode rather than relying on polling. This ensures that changes in the `inventory`, `profile`, and `orders` collections are synchronized in real-time. To maintain high responsiveness for critical actions, the `DatabaseManager` can trigger an explicit `pushDocumentImmediately` call, forcing the replicator to pick up local changes (such as a newly created replenishment order) and transmit them to App Services without delay.
+
+### Scopes and Collections (CBL 3.0+ Architecture)
+
+The app utilizes the latest Couchbase Lite organizational structure to partition data dynamically.
+
+- **Logical Partitioning**: Instead of just using the default database, the app organizes data into a specific `scopeName` (e.g., `AA-Store` or `NYC-Store`)
+- **Categorization**: Within those scopes, it separates data into three distinct collections: `inventory`, `orders`, and `profile`. This reflects a production-ready multi-tenant or multi-location strategy
+
+### Reactive API via Kotlin Extensions (KTX)
+
+The codebase demonstrates how to use official Couchbase Lite KTX extensions to integrate with modern Android reactive patterns.
+
+- **`queryChangeFlow()`**: In `DatabaseManager.getOrdersFlow()`, the app uses this built-in extension to convert a Query into a Cold Flow.
+- **Automatic Updates**: This allows the UI to stay in sync with the database without manual polling or observer management
+
+### Performance Optimization: Value Indexing
+
+To ensure searches remain fast as the database grows (the app handles over 3,000 items), it utilizes native indexing.
+
+- **`IndexBuilder`**: The `DatabaseManager` programmatically creates value indexes for the `name` and `category` properties within the inventory collection
+- **Search Performance**: These indexes are essential for the case-insensitive searches performed in `searchGrocery()`
+
+### Custom Conflict Resolution
+
+While many apps rely on "Last Write Wins," this project implements sophisticated custom resolution logic for distributed environments.
+
+- **`GroceryCRDTResolver`**: The app defines a custom `ConflictResolver` for the `MultipeerReplicator`
+- **Convergent Merging**: This resolver specifically understands the PN-Counter structure, manually merging the "p" (positive) and "n" (negative) dictionaries from local and remote documents to ensure no inventory updates are lost during a sync conflict
+
+### Security: TLS Identities for P2P
+
+For the serverless P2P mesh network, security is handled natively within the Couchbase SDK.
+
+- **`TLSIdentity`**: The `MultipeerSyncManager` creates or retrieves a self-signed TLS identity for the device.
+- **Authenticated Discovery**: It uses a `MultipeerCertificateAuthenticator` to validate peers before allowing them to join the mesh network
 

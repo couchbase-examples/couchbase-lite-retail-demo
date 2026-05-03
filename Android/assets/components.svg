@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1000"
+   height="800"
+   viewBox="0 0 1000 800"
+   version="1.1"
+   id="svg52"
+   sodipodi:docname="components.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview52"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.41625"
+     inkscape:cx="623.12445"
+     inkscape:cy="305.73698"
+     inkscape:window-width="3440"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg52" />
+  <defs
+     id="defs5">
+    <marker
+       id="arrowGrey"
+       markerWidth="10"
+       markerHeight="7"
+       refX="9"
+       refY="3.5"
+       orient="auto"
+       viewBox="0 0 10 7"
+       preserveAspectRatio="xMidYMid">
+      <polygon
+         points="0 0, 10 3.5, 0 7"
+         fill="#6c757d"
+         id="polygon1" />
+    </marker>
+    <marker
+       id="arrowRed"
+       markerWidth="10"
+       markerHeight="7"
+       refX="9"
+       refY="3.5"
+       orient="auto">
+      <polygon
+         points="0 0, 10 3.5, 0 7"
+         fill="#d2232a"
+         id="polygon2" />
+    </marker>
+    <marker
+       id="arrowBlue"
+       markerWidth="10"
+       markerHeight="7"
+       refX="9"
+       refY="3.5"
+       orient="auto">
+      <polygon
+         points="0 0, 10 3.5, 0 7"
+         fill="#2c3e50"
+         id="polygon3" />
+    </marker>
+    <marker
+       id="arrowCyan"
+       markerWidth="10"
+       markerHeight="7"
+       refX="9"
+       refY="3.5"
+       orient="auto"
+       viewBox="0 0 10 7"
+       preserveAspectRatio="xMidYMid">
+      <polygon
+         points="0 0, 10 3.5, 0 7"
+         fill="#00a3e0"
+         id="polygon4" />
+    </marker>
+    <marker
+       id="arrowOrange"
+       markerWidth="10"
+       markerHeight="7"
+       refX="9"
+       refY="3.5"
+       orient="auto">
+      <polygon
+         points="0 0, 10 3.5, 0 7"
+         fill="#f39c12"
+         id="polygon5" />
+    </marker>
+  </defs>
+  <rect
+     width="1000"
+     height="800"
+     fill="#ffffff"
+     id="rect5" />
+  <text
+     x="500"
+     y="40"
+     font-family="Arial"
+     font-size="24"
+     font-weight="bold"
+     text-anchor="middle"
+     fill="#333"
+     id="text5">Grocery App Architecture (Detailed Functional Map)</text>
+  <rect
+     x="30"
+     y="100"
+     width="220"
+     height="480"
+     rx="10"
+     fill="#f8f9fa"
+     stroke="#adb5bd"
+     stroke-width="2"
+     stroke-dasharray="5,5"
+     id="rect6" />
+  <text
+     x="50"
+     y="125"
+     font-family="Arial"
+     font-size="14"
+     font-weight="bold"
+     fill="#495057"
+     id="text6">PRESENTATION LAYER</text>
+  <rect
+     x="50"
+     y="150"
+     width="180"
+     height="90"
+     rx="5"
+     fill="#e9ecef"
+     stroke="#6c757d"
+     id="rect7" />
+  <text
+     x="60"
+     y="170"
+     font-family="Arial"
+     font-size="11"
+     font-weight="bold"
+     id="text7">Compose Screens</text>
+  <text
+     x="60"
+     y="190"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text8">- collectAsState()</text>
+  <text
+     x="60"
+     y="205"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text9">- launchedEffect(Flow)</text>
+  <text
+     x="60"
+     y="220"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text10">- UI Event Triggering</text>
+  <rect
+     x="50"
+     y="320"
+     width="180"
+     height="90"
+     rx="5"
+     fill="#e9ecef"
+     stroke="#6c757d"
+     id="rect10" />
+  <text
+     x="60"
+     y="340"
+     font-family="Arial"
+     font-size="11"
+     font-weight="bold"
+     id="text11">ViewModels</text>
+  <text
+     x="60"
+     y="360"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text12">- MutableStateFlow</text>
+  <text
+     x="60"
+     y="375"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text13">- viewModelScope.launch</text>
+  <text
+     x="60"
+     y="390"
+     font-family="Arial"
+     font-size="9"
+     fill="#555"
+     id="text14">- State Mapping</text>
+  <path
+     d="M 140,239.44861 V 318"
+     stroke="#6c757d"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowGrey)"
+     id="path14"
+     sodipodi:nodetypes="cc" />
+  <rect
+     x="300"
+     y="80"
+     width="400"
+     height="650"
+     rx="10"
+     fill="#fff5f5"
+     stroke="#d2232a"
+     stroke-width="2"
+     id="rect14" />
+  <text
+     x="420"
+     y="105"
+     font-family="Arial"
+     font-size="14"
+     font-weight="bold"
+     fill="#d2232a"
+     id="text15">APP DATA CORE</text>
+  <rect
+     x="330"
+     y="130"
+     width="340"
+     height="110"
+     rx="5"
+     fill="#d2232a"
+     id="rect15" />
+  <text
+     x="340"
+     y="155"
+     font-family="Arial"
+     font-size="13"
+     font-weight="bold"
+     fill="white"
+     id="text16">DatabaseManager.kt</text>
+  <text
+     x="340"
+     y="175"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text17">● CBLite.init(context) &amp; DatabaseConfig</text>
+  <text
+     x="340"
+     y="190"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text18">● queryChangeFlow() Reactive Streams</text>
+  <text
+     x="340"
+     y="205"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text19">● getCollection(name, storeScope)</text>
+  <text
+     x="340"
+     y="220"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text20">● ConcurrencyControl.LAST_WRITE_WINS</text>
+  <rect
+     x="330"
+     y="270"
+     width="160"
+     height="110"
+     rx="5"
+     fill="#2c3e50"
+     id="rect20" />
+  <text
+     x="335"
+     y="290"
+     font-family="Arial"
+     font-size="10"
+     font-weight="bold"
+     fill="white"
+     id="text21">AppServicesSyncManager</text>
+  <text
+     x="335"
+     y="310"
+     font-family="Arial"
+     font-size="9"
+     fill="#adb5bd"
+     id="text22">● Replicator(Config)</text>
+  <text
+     x="335"
+     y="325"
+     font-family="Arial"
+     font-size="9"
+     fill="#adb5bd"
+     id="text23">● URLEndpoint(URI)</text>
+  <text
+     x="335"
+     y="340"
+     font-family="Arial"
+     font-size="9"
+     fill="#adb5bd"
+     id="text24">● BasicAuthenticator</text>
+  <text
+     x="335"
+     y="355"
+     font-family="Arial"
+     font-size="9"
+     fill="#adb5bd"
+     id="text25">● PUSH_AND_PULL</text>
+  <rect
+     x="510"
+     y="382"
+     width="160"
+     height="110"
+     rx="5"
+     fill="#2c3e50"
+     id="rect25" />
+  <text
+     x="515"
+     y="402"
+     font-family="Arial"
+     font-size="10px"
+     font-weight="bold"
+     fill="#ffffff"
+     id="text26">MultipeerSyncManager</text>
+  <text
+     x="515"
+     y="422"
+     font-family="Arial"
+     font-size="9px"
+     fill="#adb5bd"
+     id="text27">● DNS-SD Peer Discovery</text>
+  <text
+     x="515"
+     y="437"
+     font-family="Arial"
+     font-size="9px"
+     fill="#adb5bd"
+     id="text28">● TLSIdentity (X.509)</text>
+  <text
+     x="515"
+     y="452"
+     font-family="Arial"
+     font-size="9px"
+     fill="#adb5bd"
+     id="text29">● CRDT Conflict Resolver</text>
+  <text
+     x="515"
+     y="467"
+     font-family="Arial"
+     font-size="9px"
+     fill="#adb5bd"
+     id="text30">● Peer Discovery Listeners</text>
+  <rect
+     x="50"
+     y="440"
+     width="180"
+     height="100"
+     rx="5"
+     fill="#6c757d"
+     id="rect30" />
+  <text
+     x="60"
+     y="465"
+     font-family="Arial"
+     font-size="11"
+     font-weight="bold"
+     fill="white"
+     id="text31">AuthenticationManager</text>
+  <text
+     x="60"
+     y="485"
+     font-family="Arial"
+     font-size="9"
+     fill="#e9ecef"
+     id="text32">● Standalone AuthDB</text>
+  <text
+     x="60"
+     y="500"
+     font-family="Arial"
+     font-size="9"
+     fill="#e9ecef"
+     id="text33">● sessionDoc.getString()</text>
+  <text
+     x="60"
+     y="515"
+     font-family="Arial"
+     font-size="9"
+     fill="#e9ecef"
+     id="text34">● storeSession(User)</text>
+  <rect
+     x="330"
+     y="550"
+     width="340"
+     height="130"
+     rx="40"
+     fill="#00a3e0"
+     id="rect34" />
+  <text
+     x="405"
+     y="585"
+     font-family="Arial"
+     font-size="16"
+     font-weight="bold"
+     fill="white"
+     id="text35">Couchbase Lite Engine</text>
+  <text
+     x="350"
+     y="615"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text36">● NoSQL Document Store (JSON-like)</text>
+  <text
+     x="350"
+     y="630"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text37">● SQL++ (N1QL) Execution Engine</text>
+  <text
+     x="350"
+     y="645"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text38">● Binary Delta Sync &amp; Multi-Collection Scopes</text>
+  <text
+     x="350"
+     y="660"
+     font-family="Arial"
+     font-size="10"
+     fill="white"
+     id="text39">● PN-Counter (CRDT) Delta Summation Logic</text>
+  <rect
+     x="750"
+     y="270"
+     width="200"
+     height="110"
+     rx="10"
+     fill="#fcf3cf"
+     stroke="#f39c12"
+     stroke-width="2"
+     id="rect39" />
+  <text
+     x="760"
+     y="300"
+     font-family="Arial"
+     font-size="14"
+     font-weight="bold"
+     fill="#a04000"
+     id="text40">Couchbase Capella</text>
+  <text
+     x="760"
+     y="325"
+     font-family="Arial"
+     font-size="10"
+     fill="#a04000"
+     id="text41">- App Services Gateway</text>
+  <text
+     x="760"
+     y="340"
+     font-family="Arial"
+     font-size="10"
+     fill="#a04000"
+     id="text42">- WebSocket Protocol</text>
+  <text
+     x="760"
+     y="355"
+     font-family="Arial"
+     font-size="10"
+     fill="#a04000"
+     id="text43">- Centralized JSON Cloud</text>
+  <rect
+     x="750"
+     y="394"
+     width="200"
+     height="110"
+     rx="10"
+     fill="#d4edda"
+     stroke="#28a745"
+     stroke-width="2"
+     id="rect43" />
+  <text
+     x="760"
+     y="424"
+     font-family="Arial"
+     font-size="14px"
+     font-weight="bold"
+     fill="#155724"
+     id="text44">Remote Peers</text>
+  <text
+     x="760"
+     y="449"
+     font-family="Arial"
+     font-size="10px"
+     fill="#155724"
+     id="text45">- Peer-to-Peer Mesh</text>
+  <text
+     x="760"
+     y="464"
+     font-family="Arial"
+     font-size="10px"
+     fill="#155724"
+     id="text46">- Direct Local Sync</text>
+  <text
+     x="760"
+     y="479"
+     font-family="Arial"
+     font-size="10px"
+     fill="#155724"
+     id="text47">- mDNS Advertisement</text>
+  <path
+     d="M 230.51366,368.73454 330,188"
+     stroke="#d2232a"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowRed)"
+     id="path47"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="M 410,240.3615 410,268"
+     stroke="#2c3e50"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowBlue)"
+     id="path48"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="M 590,239.9647 V 380"
+     stroke="#2c3e50"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowBlue)"
+     id="path49"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="M 490.23301,325 H 748"
+     stroke="#f39c12"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowOrange)"
+     id="path50"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="m 670,439 79.00784,0.44131"
+     stroke="#28a745"
+     stroke-width="2"
+     fill="none"
+     marker-end="url(#arrowBlue)"
+     id="path51"
+     sodipodi:nodetypes="cc"
+     style="fill:#225500;fill-opacity:1;marker-end:url(#arrowGrey)" />
+  <path
+     d="M500 240 L500 540"
+     stroke="#00a3e0"
+     stroke-width="1.5"
+     stroke-dasharray="4,2"
+     fill="none"
+     marker-end="url(#arrowCyan)"
+     id="path52" />
+</svg>
