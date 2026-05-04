@@ -18,8 +18,21 @@ enum class StoreLocation(val displayName: String) {
 object AppConfig {
     
     // MARK: - Current Store Selection
-    // Change this value to switch between stores
-    val currentStore: StoreLocation = StoreLocation.NYC
+    // Set dynamically at login based on user credentials
+    var currentStore: StoreLocation = StoreLocation.NYC
+        private set
+    
+    fun setStoreForUser(username: String) {
+        currentStore = when {
+            username.lowercase().startsWith("aa-") -> StoreLocation.AA
+            username.lowercase().startsWith("nyc-") -> StoreLocation.NYC
+            else -> {
+                Log.w("AppConfig", "⚠️ Unknown user prefix for: $username, defaulting to NYC")
+                StoreLocation.NYC
+            }
+        }
+        Log.d("AppConfig", "🏪 Store set to ${currentStore.displayName} for user: $username")
+    }
     
     // MARK: - Capella App Services Configuration (ENV-DRIVEN)
     // Values are injected via BuildConfig (from Gradle properties or env vars)

@@ -144,7 +144,9 @@ struct OrderRow: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header Row
             HStack {
-                Text("Order #\(order.orderId)")
+                // `orderId` can be a long UUID-style string in imported data;
+                // show a trimmed suffix so the header stays readable.
+                Text("Order #\(OrderRow.shortOrderId(order.orderId))")
                     .font(.headline)
                     .fontWeight(.bold)
                 
@@ -213,6 +215,14 @@ struct OrderRow: View {
         .padding(.vertical, 8)
     }
     
+    /// Trim long UUID-style `orderId`s to the last 6 chars so the list
+    /// header stays compact. Short numeric IDs are shown as-is.
+    static func shortOrderId(_ raw: String) -> String {
+        guard raw.count > 10 else { return raw }
+        let tail = raw.suffix(6)
+        return "…\(tail)"
+    }
+
     private var statusColor: Color {
         switch order.orderStatus {
         case "Approved":

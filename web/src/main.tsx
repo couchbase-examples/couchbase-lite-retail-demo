@@ -5,7 +5,7 @@ import "./index.css";
 import { initializeDatabase } from "./lib/database/initDatabase";
 import { DatabaseProvider } from "./lib/database/DatabaseProvider";
 import { setupSync } from "./lib/database/sync";
-import { getStoredCredentials, getAppServicesUrl } from "./lib/auth";
+import { getStoredCredentials, getAppServicesUrl, getAppEndpoint } from "./lib/auth";
 import type { RetailDatabase } from "./lib/database/types";
 import { initializeLogging } from "./lib/logging";
 
@@ -23,10 +23,10 @@ export async function startContinuousSync(db: RetailDatabase) {
 
   console.log('🔄 Starting continuous sync for inventory and orders...');
   console.log('🏪 Store ID:', credentials.storeId);
-  
-  const syncUrl = getAppServicesUrl();
+
+  const syncUrl = getAppServicesUrl() + "/" + getAppEndpoint(credentials);
   console.log('📡 App Services URL:', syncUrl);
-  
+
   try {
     const replicator = setupSync(db, {
       url: syncUrl,
@@ -34,12 +34,12 @@ export async function startContinuousSync(db: RetailDatabase) {
       password: credentials.password,
       storeId: credentials.storeId,
     });
-    
+
     console.log('✅ Continuous sync started successfully');
-    
+
     // Store replicator instance for later use
     (window as any).__replicator = replicator;
-    
+
     return replicator;
   } catch (syncError) {
     console.error('⚠️ Continuous sync setup failed:', syncError);
@@ -52,18 +52,18 @@ async function bootstrap() {
     // Initialize logging first
     await initializeLogging();
     console.log('🚀 Bootstrapping application...');
-    
+
     // Check if user has stored credentials
     const credentials = getStoredCredentials();
-    
+
     let db: RetailDatabase | null = null;
-    
+
     if (credentials) {
       // User is logged in - initialize database with their storeId
       console.log('🔑 Found stored credentials for store:', credentials.storeId);
       db = await initializeDatabase(credentials.storeId);
       console.log('✅ Database initialized for', credentials.storeId);
-      
+
       // Start continuous sync immediately
       console.log('🚀 Bootstrap: Starting continuous sync...');
       await startContinuousSync(db);
@@ -72,7 +72,7 @@ async function bootstrap() {
       // No credentials - database will be initialized after login
       console.log('📝 No stored credentials - database will initialize after login');
     }
-    
+
     // Render app
     const rootElement = document.getElementById("root");
     if (rootElement && !rootElement.innerHTML) {
