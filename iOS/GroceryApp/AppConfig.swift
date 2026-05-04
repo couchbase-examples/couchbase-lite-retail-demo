@@ -15,20 +15,58 @@ enum StoreLocation: String, CaseIterable {
 
 // MARK: - App Configuration
 struct AppConfig {
-    
+
     // MARK: - Current Store Selection
-    // Change this value to switch between stores
-    static let currentStore: StoreLocation = .nyc
+    //
+    // Lazily initialized from UserDefaults on first access so cold starts
+    // with a persisted session see the correct scope BEFORE DatabaseManager
+    // opens the database. Without this, DatabaseManager.init() would spot
+    // a mismatch between the default (.nyc) and the store last used by the
+    // signed-in user, and spuriously purge the local data.
+    //
+    // The didSet re-persists to UserDefaults, so callers can simply write
+    // `AppConfig.currentStore = .aa` after login and be done.
+    private static let persistedStoreKey = "AppConfig.persistedCurrentStore"
+
+    static var currentStore: StoreLocation = {
+        if let raw = UserDefaults.standard.string(forKey: persistedStoreKey),
+           let loc = StoreLocation(rawValue: raw) {
+            return loc
+        }
+        return .nyc
+    }() {
+        didSet {
+            UserDefaults.standard.set(currentStore.rawValue, forKey: persistedStoreKey)
+        }
+    }
+
+    /// Maps an authenticated username to its corresponding store.
+    /// Credentials in this demo are prefixed with "aa-" or "nyc-";
+    /// callers get a single, consistent resolution rule instead of
+    /// copying the same `username.contains(...)` check in multiple places.
+    static func store(for username: String) -> StoreLocation {
+        let lowered = username.lowercased()
+        if lowered.contains("aa-store") {
+            return .aa
+        }
+        return .nyc
+    }
     
     // MARK: - Capella App Services Configuration (ENV/Info.plist DRIVEN)
-    // Prefer Info.plist (via .xcconfig) or environment variables when running from Xcode
-    private static let env = ProcessInfo.processInfo.environment
-    private static let baseURL: String = env["CBL_BASE_URL"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_BASE_URL") as? String ?? "")
-    private static let aaDB: String = env["CBL_AA_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_DB") as? String ?? "")
-    private static let nycDB: String = env["CBL_NYC_DB"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_DB") as? String ?? "")
-    private static let aaUser: String = env["CBL_AA_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_AA_USER") as? String ?? "")
-    private static let nycUser: String = env["CBL_NYC_USER"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_NYC_USER") as? String ?? "")
-    private static let passwordValue: String = env["CBL_PASSWORD"] ?? (Bundle.main.object(forInfoDictionaryKey: "CBL_PASSWORD") as? String ?? "")
+    // Prefer environment variables, then Info.plist. Computed each time
+    // (not lazy-stored) so an Info.plist populated after the first access
+    // during test setup still resolves correctly.
+    private static func configValue(for key: String) -> String {
+        ProcessInfo.processInfo.environment[key]
+            ?? (Bundle.main.object(forInfoDictionaryKey: key) as? String ?? "")
+    }
+
+    private static var baseURL: String       { configValue(for: "CBL_BASE_URL") }
+    private static var aaDB: String          { configValue(for: "CBL_AA_DB") }
+    private static var nycDB: String         { configValue(for: "CBL_NYC_DB") }
+    private static var aaUser: String        { configValue(for: "CBL_AA_USER") }
+    private static var nycUser: String       { configValue(for: "CBL_NYC_USER") }
+    private static var passwordValue: String { configValue(for: "CBL_PASSWORD") }
     
     static var syncGatewayURL: String {
         switch currentStore {
