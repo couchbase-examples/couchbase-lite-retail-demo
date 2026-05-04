@@ -1,8 +1,8 @@
-# Couchbase Lite Retail Demo — React Native
+# Couchbase Lite Retail Demo: React Native
 
 A retail inventory management app for iOS and Android built with React Native (Expo), demonstrating Couchbase Lite's offline-first capabilities and real-time sync with Capella App Services.
 
-> **New to Couchbase?** Read the [Key Concepts section in the root README](../README.md#key-concepts) first. It explains what Couchbase Lite, Capella, App Services, scopes, collections, and replication mean — terms that appear throughout this guide.
+> **New to Couchbase?** Read the [Key Concepts section in the root README](../README.md#key-concepts) first. It explains what Couchbase Lite, Capella, App Services, scopes, collections, and replication mean (terms that appear throughout this guide).
 
 ## How This App Works
 
@@ -10,15 +10,15 @@ This app demonstrates a common mobile architecture: **local-first storage with c
 
 ```
 [React Native App (iOS or Android)]
-           ↕  local reads & writes — always instant, works offline
-[Couchbase Lite — embedded NoSQL database inside the app]
-           ↕  WebSocket replication — runs in background when online
-[Capella App Services — cloud sync gateway]
+           ↕  local reads & writes (always instant, works offline)
+[Couchbase Lite: embedded NoSQL database inside the app]
+           ↕  WebSocket replication (runs in background when online)
+[Capella App Services: cloud sync gateway]
            ↕
-[Couchbase Capella — cloud database cluster]
+[Couchbase Capella: cloud database cluster]
 ```
 
-When you open the app and log in, Couchbase Lite opens a local database on the device. All reads and writes go to that local database immediately — there is no waiting for a network call. In the background, a **replicator** (the sync engine built into Couchbase Lite) connects to Capella App Services over a persistent WebSocket and syncs changes in both directions continuously.
+When you open the app and log in, Couchbase Lite opens a local database on the device. All reads and writes go to that local database immediately, with no waiting for a network call. In the background, a **replicator** (the sync engine built into Couchbase Lite) connects to Capella App Services over a persistent WebSocket and syncs changes in both directions continuously.
 
 If you go offline, the app keeps working normally. When you come back online, all changes made while offline are automatically pushed to the cloud and any missed remote changes are pulled down.
 
@@ -40,7 +40,7 @@ The demo simulates two separate supermarket locations: **Ann Arbor (AA-Store)** 
 - **Node.js**: 18 or later
 - **npm**: Comes with Node.js
 - **Expo CLI**: Installed via `npx` (no global install required)
-- **Xcode**: 15.0 or later (for iOS builds — macOS only)
+- **Xcode**: 15.0 or later (for iOS builds; macOS only)
 - **Android Studio**: Ladybug (2024.2.1) or later (for Android builds)
 - **iOS Deployment Target**: 16.0 or later
 - **Ruby**: 2.6.10 or later (needed by CocoaPods for iOS)
@@ -70,12 +70,12 @@ echo $JAVA_HOME # Must point to a JDK 17 installation
 
 Key dependencies (all declared in `package.json` and installed via `npm install`):
 
-- **cbl-reactnative** 1.0.0 — Couchbase Lite for React Native. This is a native module that wraps the Couchbase Lite C++ SDK for both iOS and Android. It is **not** a pure JavaScript library, which is why a native build step is required (see [Why Prebuild is Required](#why-prebuild-is-required)).
-- **expo** ~51.0.32 — Expo SDK
-- **expo-router** ~3.5.23 — File-based navigation
+- **cbl-reactnative** 1.0.0: Couchbase Lite for React Native. This is a native module that wraps the Couchbase Lite C++ SDK for both iOS and Android. It is **not** a pure JavaScript library, which is why a native build step is required (see [Why Prebuild is Required](#why-prebuild-is-required)).
+- **expo** ~51.0.32: Expo SDK
+- **expo-router** ~3.5.23: File-based navigation
 - **react-native** 0.75.2
-- **@rneui/themed** — React Native Elements UI components
-- **react-native-uuid** — Unique ID generation
+- **@rneui/themed**: React Native Elements UI components
+- **react-native-uuid**: Unique ID generation
 
 ### Community Edition vs Enterprise Edition
 
@@ -127,7 +127,7 @@ Open `app.json` and update the `extra` section with the values from your Capella
 
 | Key | What it is | Where to find it |
 |-----|-----------|-----------------|
-| `cblBaseUrl` | The WebSocket URL of your App Services instance | Capella dashboard → App Services → your endpoint → **Connect** tab → **Public Connection URL**. Use the base URL only — do **not** append the database name. |
+| `cblBaseUrl` | The WebSocket URL of your App Services instance | Capella dashboard → App Services → your endpoint → **Connect** tab → **Public Connection URL**. Use the base URL only; do **not** append the database name. |
 | `cblAADB` | The App Endpoint name for the Ann Arbor store | The name you gave when creating the AA App Endpoint (e.g., `supermarket-aa`) |
 | `cblNYCDB` | The App Endpoint name for the NYC store | The name you gave when creating the NYC App Endpoint (e.g., `supermarket-nyc`) |
 | `cblAAUser` | Login username for the Ann Arbor store | The App User you created in the `supermarket-aa` endpoint |
@@ -174,7 +174,7 @@ npx expo run:android
 
 Most Expo apps use the **managed workflow**, where Expo handles all native code for you and you never see an `ios/` or `android/` folder. You can just run `npx expo start` and it works.
 
-This project uses the **bare workflow** because `cbl-reactnative` is a **native module** — it includes compiled C++ code (the Couchbase Lite engine) that must be linked into the iOS and Android build systems. Expo's managed workflow cannot do this automatically.
+This project uses the **bare workflow** because `cbl-reactnative` is a **native module**: it includes compiled C++ code (the Couchbase Lite engine) that must be linked into the iOS and Android build systems. Expo's managed workflow cannot do this automatically.
 
 `npx expo prebuild` generates the native projects and runs `plugin.config.js` (see below) to wire up the Couchbase Lite SDK. After prebuild, you build and run using `npx expo run:ios` / `npx expo run:android` instead of `npx expo start`.
 
@@ -202,7 +202,7 @@ react-native/
 │   ├── Order.ts                        # Order type definition
 │   └── StoreProfile.ts                 # Store profile type definition
 ├── services/
-│   └── database.service.ts             # ⭐ Core Couchbase Lite file — see below
+│   └── database.service.ts             # ⭐ Core Couchbase Lite file; see below
 ├── providers/
 │   ├── AuthProvider.tsx                # Manages login/logout state
 │   ├── AuthContext.tsx                 # React context hook for auth state
@@ -220,8 +220,8 @@ react-native/
 │   └── useThemeColor.ts                # Returns the right color for current theme
 ├── constants/
 │   └── Colors.ts                       # Color palette for light and dark themes
-├── app.json                            # Expo config — Capella credentials live here
-├── plugin.config.js                    # Expo config plugin — wires CBL into native builds
+├── app.json                            # Expo config: Capella credentials live here
+├── plugin.config.js                    # Expo config plugin: wires CBL into native builds
 ├── package.json                        # JavaScript dependencies
 ├── ios/                                # Generated iOS Xcode project (created by prebuild)
 └── android/                            # Generated Android Gradle project (created by prebuild)
@@ -229,7 +229,7 @@ react-native/
 
 ### Key Files to Understand
 
-**`services/database.service.ts`** — This is the most important file in the project for understanding how Couchbase Lite works. It contains:
+**`services/database.service.ts`**: This is the most important file in the project for understanding how Couchbase Lite works. It contains:
 - Opening and closing the local `GroceryInventoryDB` database
 - All CRUD operations (fetch inventory items, create orders, update quantities, etc.)
 - Setting up the **replicator** that syncs data with Capella App Services
@@ -237,9 +237,9 @@ react-native/
 
 If you want to understand how this app uses Couchbase Lite, start here.
 
-**`plugin.config.js`** — A custom Expo config plugin that modifies the native iOS and Android projects during `expo prebuild`. It adds the Couchbase Lite Gradle configuration to the Android build and links the CocoaPods podspec for iOS. You do not need to modify this file. It runs automatically during prebuild.
+**`plugin.config.js`**: A custom Expo config plugin that modifies the native iOS and Android projects during `expo prebuild`. It adds the Couchbase Lite Gradle configuration to the Android build and links the CocoaPods podspec for iOS. You do not need to modify this file. It runs automatically during prebuild.
 
-**`providers/DatabaseProvider.tsx`** — Manages the lifecycle of the Couchbase Lite database: opens it when the user logs in and closes it on sign-out. It wraps all tab screens so that every screen has access to the database via `DatabaseContext`.
+**`providers/DatabaseProvider.tsx`**: Manages the lifecycle of the Couchbase Lite database: opens it when the user logs in and closes it on sign-out. It wraps all tab screens so that every screen has access to the database via `DatabaseContext`.
 
 ---
 
@@ -262,11 +262,11 @@ When a user logs in as an Ann Arbor user, the replicator syncs only the `AA-Stor
 
 ### Sync Configuration
 
-The app uses **continuous bidirectional replication** — the replicator keeps a persistent WebSocket connection to Capella App Services and syncs changes immediately in both directions as they happen.
+The app uses **continuous bidirectional replication**: the replicator keeps a persistent WebSocket connection to Capella App Services and syncs changes immediately in both directions as they happen.
 
 Key settings in `AppConfig.ts`:
-- `syncContinuous: true` — Enables real-time sync (as opposed to a one-shot sync)
-- `syncEndpoint` — Constructed at runtime by combining `cblBaseUrl` from `app.json` with the store-specific database name (`cblAADB` or `cblNYCDB`)
+- `syncContinuous: true`: Enables real-time sync (as opposed to a one-shot sync)
+- `syncEndpoint`: Constructed at runtime by combining `cblBaseUrl` from `app.json` with the store-specific database name (`cblAADB` or `cblNYCDB`)
 
 ### Demo Credentials
 
@@ -285,7 +285,7 @@ Tap **View Demo Credentials** on the login screen to auto-fill them.
 
 ### Offline-First Architecture
 
-All reads and writes go directly to the local Couchbase Lite database — there are no blocking network calls on the main thread. The app works fully offline: browse inventory, create orders, and update quantities without any internet connection. When connectivity returns, the replicator syncs all pending changes automatically.
+All reads and writes go directly to the local Couchbase Lite database. There are no blocking network calls on the main thread. The app works fully offline: browse inventory, create orders, and update quantities without any internet connection. When connectivity returns, the replicator syncs all pending changes automatically.
 
 ### Real-Time Cloud Sync
 
@@ -304,14 +304,14 @@ The React Native app runs on both iOS and Android from a single TypeScript codeb
 
 ## Troubleshooting
 
-### Before You Build — Common Root Causes
+### Before You Build: Common Root Causes
 
 Most build and runtime failures come from one of these:
 
-1. **Skipped Capella setup** — The app opens but shows no data and fails to authenticate. Complete the [root README](../README.md) Capella setup first.
-2. **`app.json` not updated** — The `cblBaseUrl` still has the placeholder value. Update it with your real endpoint URL.
-3. **Prebuild not run** — Native module errors at build time. Run `npx expo prebuild --clean`.
-4. **Wrong Java version for Android** — Gradle build errors. Must be Java 17.
+1. **Skipped Capella setup**: The app opens but shows no data and fails to authenticate. Complete the [root README](../README.md) Capella setup first.
+2. **`app.json` not updated**: The `cblBaseUrl` still has the placeholder value. Update it with your real endpoint URL.
+3. **Prebuild not run**: Native module errors at build time. Run `npx expo prebuild --clean`.
+4. **Wrong Java version for Android**: Gradle build errors. Must be Java 17.
 
 ### Build Errors
 
@@ -344,7 +344,7 @@ This is expected. Couchbase Lite includes native C++ libraries that take several
 **Sync not connecting / stays in "connecting" state**
 - Verify `cblBaseUrl` in `app.json` is the correct URL from your Capella dashboard and uses the `wss://` protocol (not `https://`).
 - Confirm your Capella App Services endpoint is running (check the Capella dashboard).
-- Check the Metro/terminal console for `[GrocerySync]` log messages — they will show connection errors.
+- Check the Metro/terminal console for `[GrocerySync]` log messages; they will show connection errors.
 - The Settings screen in the app shows live sync status.
 
 **Authentication failures on login**
@@ -360,7 +360,7 @@ This is expected. Couchbase Lite includes native C++ libraries that take several
 
 **Logged in but no data appears**
 - Confirm you imported the sample dataset into Capella (see [root README](../README.md)).
-- Check that scope names in Capella (`AA-Store`, `NYC-Store`) exactly match the values in `AppConfig.ts` — they are case-sensitive.
+- Check that scope names in Capella (`AA-Store`, `NYC-Store`) exactly match the values in `AppConfig.ts`; they are case-sensitive.
 - Pull down to refresh on the Inventory or Orders screens to trigger a manual reload.
 - Look for errors in the Metro console filtered by `[GrocerySync]` or `[DatabaseService]`.
 
@@ -368,10 +368,10 @@ This is expected. Couchbase Lite includes native C++ libraries that take several
 
 ## Related Documentation
 
-- [Root README](../README.md) — Key Concepts glossary, Capella setup, data model, architecture overview
-- [iOS App README](../iOS/README.md) — Native Swift/SwiftUI version (includes peer-to-peer sync)
-- [Android App README](../Android/README.md) — Native Kotlin/Compose version (includes peer-to-peer sync)
-- [Web App README](../web/README.md) — React + TypeScript web version
-- [cbl-reactnative on npm](https://www.npmjs.com/package/cbl-reactnative) — The React Native Couchbase Lite package
-- [Couchbase Lite Documentation](https://docs.couchbase.com/couchbase-lite/current/index.html) — Full API reference
-- [Capella App Services Documentation](https://docs.couchbase.com/cloud/app-services/index.html) — Sync gateway configuration
+- [Root README](../README.md): Key Concepts glossary, Capella setup, data model, architecture overview
+- [iOS App README](../iOS/README.md): Native Swift/SwiftUI version (includes peer-to-peer sync)
+- [Android App README](../Android/README.md): Native Kotlin/Compose version (includes peer-to-peer sync)
+- [Web App README](../web/README.md): React + TypeScript web version
+- [cbl-reactnative on npm](https://www.npmjs.com/package/cbl-reactnative): The React Native Couchbase Lite package
+- [Couchbase Lite Documentation](https://docs.couchbase.com/couchbase-lite/current/index.html): Full API reference
+- [Capella App Services Documentation](https://docs.couchbase.com/cloud/app-services/index.html): Sync gateway configuration
