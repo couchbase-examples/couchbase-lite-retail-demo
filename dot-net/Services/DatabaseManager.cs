@@ -17,7 +17,12 @@ public class DatabaseManager : IDisposable
     private AppServicesSyncManager? _syncManager;
 
     public AppServicesSyncManager? SyncManager => _syncManager;
-    public bool IsAppServicesEnabled { get; private set; }
+    /// <summary>
+    /// Single source of truth: the sync manager's own flag. Earlier this was a
+    /// separate boolean that callers could forget to update when toggling sync
+    /// from the Settings page, so the two could drift out of sync.
+    /// </summary>
+    public bool IsAppServicesEnabled => _syncManager?.IsEnabled ?? false;
 
     /// <summary>Fired when documents in the inventory collection change (after sync).</summary>
     public event EventHandler? InventoryChanged;
@@ -135,11 +140,9 @@ public class DatabaseManager : IDisposable
             try
             {
                 _syncManager.SetupAndStartSync();
-                IsAppServicesEnabled = true;
             }
             catch (Exception ex)
             {
-                IsAppServicesEnabled = false;
                 LogError("App Services sync setup failed", ex);
             }
         }
@@ -148,7 +151,6 @@ public class DatabaseManager : IDisposable
     public void DisableAppServices()
     {
         Log("Disabling App Services sync...");
-        IsAppServicesEnabled = false;
         _syncManager?.DisableAppServices();
         DetachCollectionListeners();
     }

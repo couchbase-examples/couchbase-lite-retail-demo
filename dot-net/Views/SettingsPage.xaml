@@ -106,8 +106,7 @@
                             </VerticalStackLayout>
                             <Switch Grid.Column="2"
                                     IsToggled="{Binding IsAppServicesEnabled, Mode=TwoWay}"
-                                    OnColor="{StaticResource Primary}"
-                                    Toggled="OnAppServicesToggled" />
+                                    OnColor="{StaticResource Primary}" />
                         </Grid>
 
                         <!-- Sync status pill -->

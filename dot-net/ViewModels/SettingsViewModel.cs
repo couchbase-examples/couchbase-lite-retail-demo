@@ -22,6 +22,13 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty]
     private bool isAppServicesEnabled;
 
+    /// <summary>
+    /// Set to <c>true</c> while we're propagating a state change *from* the
+    /// sync manager into the bound property, so the resulting setter does
+    /// not call back into Enable/Disable and create a feedback loop.
+    /// </summary>
+    private bool _suppressToggleSideEffect;
+
     [ObservableProperty]
     private string username = string.Empty;
 
@@ -62,7 +69,7 @@ public partial class SettingsViewModel : BaseViewModel
         Role = user?.Role ?? string.Empty;
         StoreDisplayName = AppConfig.CurrentStore.DisplayName();
         SyncUrl = AppConfig.SyncGatewayUrl;
-        IsAppServicesEnabled = _databaseManager.IsAppServicesEnabled;
+        SetIsAppServicesEnabledFromManager(_databaseManager.IsAppServicesEnabled);
     }
 
     private async void OnSyncStateChanged(object? sender, AppServicesSyncState state)
@@ -74,16 +81,38 @@ public partial class SettingsViewModel : BaseViewModel
     {
         SyncStatus = state.Status;
         Progress = state.Progress;
-        IsAppServicesEnabled = _databaseManager.IsAppServicesEnabled;
+        SetIsAppServicesEnabledFromManager(_databaseManager.IsAppServicesEnabled);
         LastSyncTime = state.LastSyncTime?.ToLocalTime().ToString("HH:mm:ss") ?? "—";
     }
 
-    [RelayCommand]
-    private void ToggleSync()
+    private void SetIsAppServicesEnabledFromManager(bool enabled)
     {
+        if (IsAppServicesEnabled == enabled) return;
+        _suppressToggleSideEffect = true;
+        try
+        {
+            IsAppServicesEnabled = enabled;
+        }
+        finally
+        {
+            _suppressToggleSideEffect = false;
+        }
+    }
+
+    /// <summary>
+    /// Triggered by the source generator whenever <see cref="IsAppServicesEnabled"/>
+    /// changes. Drives the sync manager from a single direction: the bound
+    /// switch flips this property, this method calls Enable/Disable, and
+    /// programmatic state pushes from the manager use the suppress flag so
+    /// they don't echo back through here.
+    /// </summary>
+    partial void OnIsAppServicesEnabledChanged(bool value)
+    {
+        if (_suppressToggleSideEffect) return;
         if (_databaseManager.SyncManager == null) return;
-        _databaseManager.SyncManager.ToggleAppServices();
-        IsAppServicesEnabled = _databaseManager.SyncManager.IsEnabled;
+        if (_databaseManager.SyncManager.IsEnabled == value) return;
+        if (value) _databaseManager.SyncManager.EnableAppServices();
+        else _databaseManager.SyncManager.DisableAppServices();
     }
 
     [RelayCommand]
