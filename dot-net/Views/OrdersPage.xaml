@@ -102,7 +102,7 @@
                                 BackgroundColor="{StaticResource LightSection}"
                                 Stroke="Transparent"
                                 StrokeShape="RoundRectangle 12">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnDefinitions="*,Auto">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnDefinitions="*,Auto">
 
                                 <!-- Header row: Order ID + status pill -->
                                 <Label Grid.Row="0" Grid.Column="0"
@@ -162,7 +162,7 @@
                                 <BoxView Grid.Row="3" Grid.ColumnSpan="2" HeightRequest="1" Color="#E5D9C0" Margin="0,6" />
 
                                 <!-- Date + doc id -->
-                                <Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                                <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,2,0,0">
                                     <Label Grid.Column="0"
                                            Text="{Binding OrderDateFormatted}"
                                            FontSize="11"

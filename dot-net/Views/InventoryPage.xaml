@@ -5,46 +5,65 @@
              xmlns:models="clr-namespace:GroceryApp.Models"
              x:Class="GroceryApp.Views.InventoryPage"
              x:DataType="vm:InventoryViewModel"
-             BackgroundColor="White"
+             BackgroundColor="#F2F2F4"
              Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
 
-        <!-- Header -->
-        <VerticalStackLayout Grid.Row="0" Padding="20,16,20,0" Spacing="2">
-            <Label Text="Grocery Mart Inventory"
-                   FontSize="26"
-                   FontAttributes="Bold"
-                   TextColor="Black" />
-            <Label Text="Welcome!"
-                   FontSize="13"
-                   TextColor="#888" />
-        </VerticalStackLayout>
+        <!-- Welcome + Role badge row -->
+        <Grid Grid.Row="0" Padding="20,16,20,0" ColumnDefinitions="*,Auto">
+            <Label Grid.Column="0"
+                   Text="Welcome!"
+                   FontSize="15"
+                   TextColor="#999"
+                   VerticalOptions="Center" />
+            <Border Grid.Column="1"
+                    BackgroundColor="#E5EEFF"
+                    Stroke="Transparent"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12,6">
+                <Label Text="Store Manager"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#1D4ED8" />
+            </Border>
+        </Grid>
+
+        <!-- Title -->
+        <Label Grid.Row="1"
+               Text="Grocery Inventory"
+               FontSize="34"
+               FontAttributes="Bold"
+               TextColor="Black"
+               Padding="20,6,20,0" />
 
         <!-- Search -->
-        <Border Grid.Row="1"
-                Margin="20,12,20,8"
-                Padding="14,4"
-                Stroke="#E5E5E5"
+        <Border Grid.Row="2"
+                Margin="20,16,20,12"
+                Padding="16,6"
+                Stroke="#E5E5E8"
                 StrokeThickness="1"
                 BackgroundColor="White"
-                StrokeShape="RoundRectangle 12">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                StrokeShape="RoundRectangle 14">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <Label Grid.Column="0"
                        Text="🔍"
                        VerticalOptions="Center"
-                       FontSize="14"
-                       TextColor="#888" />
+                       FontSize="16"
+                       TextColor="#999" />
                 <Entry Grid.Column="1"
-                       Placeholder="Search products..."
+                       Placeholder="Search"
                        Text="{Binding SearchText}"
                        ClearButtonVisibility="WhileEditing"
-                       TextColor="Black" />
+                       FontSize="16"
+                       PlaceholderColor="#999"
+                       TextColor="Black"
+                       BackgroundColor="Transparent" />
             </Grid>
         </Border>
 
         <!-- 2-column inventory grid -->
-        <RefreshView Grid.Row="2"
+        <RefreshView Grid.Row="3"
                      IsRefreshing="{Binding IsBusy}"
                      Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Items}"
@@ -55,7 +74,7 @@
                     <GridItemsLayout Orientation="Vertical"
                                      Span="2"
                                      HorizontalItemSpacing="12"
-                                     VerticalItemSpacing="12" />
+                                     VerticalItemSpacing="14" />
                 </CollectionView.ItemsLayout>
 
                 <CollectionView.EmptyView>
@@ -81,59 +100,95 @@
                                 BackgroundColor="White"
                                 Stroke="Transparent"
                                 StrokeThickness="0"
-                                StrokeShape="RoundRectangle 14">
+                                StrokeShape="RoundRectangle 18">
                             <Border.Shadow>
-                                <Shadow Brush="Black" Opacity="0.08" Radius="10" Offset="0,3" />
+                                <Shadow Brush="Black" Opacity="0.06" Radius="12" Offset="0,4" />
                             </Border.Shadow>
 
-                            <VerticalStackLayout Spacing="6" Padding="12">
+                            <VerticalStackLayout Spacing="0" Padding="14,14,14,14">
                                 <!-- Product image -->
                                 <Image Source="{Binding ImageUrl}"
                                        Aspect="AspectFit"
-                                       HeightRequest="100"
-                                       Margin="0,4,0,4" />
+                                       HeightRequest="150"
+                                       Margin="0,4,0,10" />
 
                                 <Label Text="{Binding Name}"
-                                       FontSize="15"
+                                       FontSize="18"
                                        FontAttributes="Bold"
                                        TextColor="Black"
                                        LineBreakMode="TailTruncation" />
 
                                 <Label Text="{Binding Price, StringFormat='Price: ${0:F2}'}"
-                                       FontSize="12"
-                                       TextColor="#666" />
+                                       FontSize="14"
+                                       TextColor="#999"
+                                       Margin="0,4,0,0" />
 
                                 <Label Text="Inventory Count"
-                                       FontSize="12"
-                                       TextColor="#666"
-                                       Margin="0,6,0,0"
+                                       FontSize="14"
+                                       TextColor="#555"
+                                       Margin="0,14,0,0"
                                        HorizontalOptions="Center" />
 
                                 <Label Text="{Binding Quantity}"
-                                       FontSize="38"
+                                       FontSize="64"
                                        FontAttributes="Bold"
+                                       CharacterSpacing="-2"
                                        TextColor="{Binding Quantity, Converter={StaticResource QuantityToColorConverter}}"
-                                       HorizontalOptions="Center" />
+                                       HorizontalOptions="Center"
+                                       Margin="0,-2,0,4">
+                                    <Label.FontFamily>
+                                        <OnPlatform x:TypeArguments="x:String">
+                                            <On Platform="iOS" Value="HelveticaNeue-Bold" />
+                                            <On Platform="MacCatalyst" Value="HelveticaNeue-Bold" />
+                                            <On Platform="Android" Value="sans-serif-medium" />
+                                        </OnPlatform>
+                                    </Label.FontFamily>
+                                </Label>
 
-                                <HorizontalStackLayout Spacing="14" HorizontalOptions="Center" Margin="0,2,0,4">
-                                    <Button Text="−"
-                                            Style="{StaticResource CircleButton}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=DecrementCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    <Button Text="+"
-                                            Style="{StaticResource CircleButton}"
-                                            BackgroundColor="#EFEFEF"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=IncrementCommand}"
-                                            CommandParameter="{Binding .}" />
+                                <HorizontalStackLayout Spacing="18" HorizontalOptions="Center" Margin="0,4,0,12">
+                                    <Border WidthRequest="44"
+                                            HeightRequest="44"
+                                            Stroke="#CCC"
+                                            StrokeThickness="2"
+                                            StrokeShape="RoundRectangle 22"
+                                            BackgroundColor="Transparent">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=DecrementCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="−"
+                                               FontSize="22"
+                                               FontAttributes="Bold"
+                                               TextColor="#999"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+                                    <Border WidthRequest="44"
+                                            HeightRequest="44"
+                                            Stroke="#CCC"
+                                            StrokeThickness="2"
+                                            StrokeShape="RoundRectangle 22"
+                                            BackgroundColor="Transparent">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=IncrementCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="+"
+                                               FontSize="22"
+                                               FontAttributes="Bold"
+                                               TextColor="#999"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
                                 </HorizontalStackLayout>
 
                                 <Button Text="Re-order now"
                                         BackgroundColor="{StaticResource Primary}"
                                         TextColor="White"
                                         FontAttributes="Bold"
-                                        FontSize="13"
+                                        FontSize="15"
                                         CornerRadius="10"
-                                        HeightRequest="40"
+                                        HeightRequest="46"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryViewModel}}, Path=OpenCreateOrderCommand}"
                                         CommandParameter="{Binding .}" />
                             </VerticalStackLayout>

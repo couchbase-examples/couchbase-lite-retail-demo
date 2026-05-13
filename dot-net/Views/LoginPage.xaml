@@ -118,18 +118,11 @@
 
         <!-- Couchbase footer -->
         <VerticalStackLayout Grid.Row="1" Spacing="6" Padding="0,12,0,24" HorizontalOptions="Center">
-            <Border BackgroundColor="#D9342B"
-                    StrokeShape="RoundRectangle 22"
-                    Stroke="Transparent"
-                    WidthRequest="44"
-                    HeightRequest="44"
-                    HorizontalOptions="Center">
-                <Label Text="🛢"
-                       FontSize="20"
-                       TextColor="White"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Border>
+            <Image Source="couchbase_logo.png"
+                   HeightRequest="44"
+                   WidthRequest="44"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center" />
             <Label Text="Powered by Couchbase"
                    FontSize="12"
                    FontAttributes="Bold"

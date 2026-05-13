@@ -24,7 +24,10 @@ public partial class DemoCredentialsPage : ContentPage
         if (sender is BindableObject bo && bo.BindingContext is DemoUser user)
         {
             _viewModel.UseCredentialCommand.Execute(user);
-            await Navigation.PopModalAsync().ConfigureAwait(false);
+            await Navigation.PopModalAsync();
+            // Continuation runs on UI thread (no ConfigureAwait(false)), so triggering
+            // the LoginCommand here is safe — it updates UI-bound state (IsBusy etc.).
+            MainThread.BeginInvokeOnMainThread(() => _viewModel.LoginCommand.Execute(null));
         }
     }
 }

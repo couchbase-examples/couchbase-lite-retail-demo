@@ -15,7 +15,9 @@ public partial class AppShell : Shell
             {
                 if (authManager.IsAuthenticated)
                 {
-                    await Shell.Current.GoToAsync("//main").ConfigureAwait(false);
+                    // Land on the Inventory tab on app launch (not whichever tab
+                    // happened to be persisted by Shell).
+                    await Shell.Current.GoToAsync("//inventory").ConfigureAwait(false);
                 }
                 else
                 {

@@ -16,16 +16,28 @@
 
     <!-- Authenticated tabs -->
     <TabBar Route="main">
-        <Tab Title="Inventory" Icon="🛒">
+        <Tab Title="Inventory">
+            <Tab.Icon>
+                <FontImageSource Glyph="🛒" FontFamily="AppleColorEmoji" Size="22" />
+            </Tab.Icon>
             <ShellContent Route="inventory" ContentTemplate="{DataTemplate views:InventoryPage}" />
         </Tab>
-        <Tab Title="Orders" Icon="📋">
+        <Tab Title="Orders">
+            <Tab.Icon>
+                <FontImageSource Glyph="🧾" FontFamily="AppleColorEmoji" Size="22" />
+            </Tab.Icon>
             <ShellContent Route="orders" ContentTemplate="{DataTemplate views:OrdersPage}" />
         </Tab>
-        <Tab Title="Profile" Icon="👤">
+        <Tab Title="Profile">
+            <Tab.Icon>
+                <FontImageSource Glyph="🏬" FontFamily="AppleColorEmoji" Size="22" />
+            </Tab.Icon>
             <ShellContent Route="profile" ContentTemplate="{DataTemplate views:ProfilePage}" />
         </Tab>
-        <Tab Title="Settings" Icon="⚙️">
+        <Tab Title="Settings">
+            <Tab.Icon>
+                <FontImageSource Glyph="⚙️" FontFamily="AppleColorEmoji" Size="22" />
+            </Tab.Icon>
             <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
         </Tab>
     </TabBar>

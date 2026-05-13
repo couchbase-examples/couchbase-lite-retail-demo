@@ -34,10 +34,21 @@ public partial class InventoryViewModel : BaseViewModel
         await MainThread.InvokeOnMainThreadAsync(async () => await RefreshAsync().ConfigureAwait(false));
     }
 
+    private bool _refreshInFlight;
+
     [RelayCommand]
     public async Task RefreshAsync()
     {
-        if (IsBusy) return;
+        // Re-entrancy: if a refresh is already running (e.g. the replicator
+        // change-listener triggered one), don't kick off a second one — but
+        // *do* clear IsBusy so the RefreshView spinner doesn't get stuck on
+        // when the user pulls down while one is mid-flight.
+        if (_refreshInFlight)
+        {
+            IsBusy = false;
+            return;
+        }
+        _refreshInFlight = true;
         IsBusy = true;
         try
         {
@@ -60,6 +71,7 @@ public partial class InventoryViewModel : BaseViewModel
         }
         finally
         {
+            _refreshInFlight = false;
             IsBusy = false;
         }
     }

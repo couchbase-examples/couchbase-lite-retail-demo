@@ -27,6 +27,8 @@ public partial class LoginPage : ContentPage
 
     private async void OnLoginSucceeded(object? sender, Models.User user)
     {
-        await Shell.Current.GoToAsync("//main").ConfigureAwait(false);
+        // Always land on the Inventory tab after sign-in, regardless of which
+        // tab was active before sign-out.
+        await Shell.Current.GoToAsync("//inventory").ConfigureAwait(false);
     }
 }
