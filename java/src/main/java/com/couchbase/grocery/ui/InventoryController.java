@@ -24,7 +24,11 @@ import javafx.scene.paint.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.couchbase.lite.Document;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class InventoryController {
 
@@ -39,6 +43,11 @@ public class InventoryController {
     @FXML private GridPane tileGrid;
     @FXML private Label emptyLabel;
     @FXML private ScrollPane scrollPane;
+
+    /** Per-item references so a change-event can update one tile in place
+     *  instead of rebuilding the whole grid. */
+    private final Map<String, Label> qtyLabelByItemId = new HashMap<>();
+    private final Map<String, GroceryItem> itemById = new HashMap<>();
 
     public InventoryController(App.Services services) { this.services = services; }
 
@@ -57,7 +66,13 @@ public class InventoryController {
         }
 
         searchField.textProperty().addListener((obs, oldV, newV) -> reloadAsync(newV));
-        services.db.onInventoryChanged(v -> Platform.runLater(() -> reload(searchField.getText())));
+
+        // Targeted updates: when CBL fires a change event, only redraw the
+        // tiles whose docs actually changed. This stops the whole grid from
+        // flickering on every +/- tap, AND it stops every product image from
+        // being re-fetched on every replicator pull.
+        services.db.onInventoryChanged(changedIds ->
+                Platform.runLater(() -> applyIncrementalUpdate(changedIds)));
 
         reloadAsync(null);
     }
@@ -90,14 +105,47 @@ public class InventoryController {
 
     private void applyItems(List<GroceryItem> results) {
         tileGrid.getChildren().clear();
+        qtyLabelByItemId.clear();
+        itemById.clear();
         for (int i = 0; i < results.size(); i++) {
             int row = i / COLUMNS, col = i % COLUMNS;
-            VBox tile = buildTile(results.get(i));
+            GroceryItem it = results.get(i);
+            VBox tile = buildTile(it);
             tileGrid.add(tile, col, row);
             GridPane.setHgrow(tile, Priority.ALWAYS);
+            itemById.put(it.getId(), it);
         }
         emptyLabel.setVisible(results.isEmpty());
         emptyLabel.setManaged(results.isEmpty());
+    }
+
+    /**
+     * Incremental update: for each changed doc id, look it up and patch the
+     * existing tile's qty label. If a changed id isn't on screen yet (new
+     * product synced down for the first time, or the user has an active
+     * search filter that hid it), fall back to a full reload so we don't
+     * miss inserts.
+     */
+    private void applyIncrementalUpdate(List<String> changedIds) {
+        if (changedIds == null || changedIds.isEmpty()) return;
+        boolean missing = false;
+        for (String id : changedIds) {
+            if (!qtyLabelByItemId.containsKey(id)) { missing = true; break; }
+        }
+        if (missing) { reload(searchField.getText()); return; }
+
+        for (String id : changedIds) {
+            try {
+                Document doc = services.db.getInventoryDocument(id);
+                if (doc == null) continue; // deleted — full reload would handle it
+                GroceryItem fresh = GroceryItem.fromDocument(doc);
+                itemById.put(id, fresh);
+                Label qtyLabel = qtyLabelByItemId.get(id);
+                if (qtyLabel != null) qtyLabel.setText(String.valueOf(fresh.getQuantity()));
+            } catch (Exception ex) {
+                log.warn("Incremental update failed for {}: {}", id, ex.getMessage());
+            }
+        }
     }
 
     private VBox buildTile(GroceryItem item) {
@@ -132,20 +180,22 @@ public class InventoryController {
 
         Label qty = new Label(String.valueOf(item.getQuantity()));
         qty.getStyleClass().add("tile-qty");   // always green, no threshold
+        if (item.getId() != null) qtyLabelByItemId.put(item.getId(), qty);
 
+        final String itemId = item.getId();
         Button minus = new Button("−");
         minus.getStyleClass().add("circle-button");
-        minus.setOnAction(e -> adjustQuantity(item, -1));
+        minus.setOnAction(e -> adjustQuantity(itemId, -1));
         Button plus = new Button("+");
         plus.getStyleClass().add("circle-button");
-        plus.setOnAction(e -> adjustQuantity(item, +1));
+        plus.setOnAction(e -> adjustQuantity(itemId, +1));
         HBox circleRow = new HBox(16, minus, plus);
         circleRow.setAlignment(Pos.CENTER);
 
         Button reorder = new Button("Re-order now");
         reorder.getStyleClass().add("primary-button");
         reorder.setMaxWidth(Double.MAX_VALUE);
-        reorder.setOnAction(e -> openCreateOrder(item));
+        reorder.setOnAction(e -> openCreateOrder(itemId));
 
         VBox qtyBlock = new VBox(2, invLabel, qty);
         qtyBlock.setAlignment(Pos.CENTER);
@@ -154,18 +204,36 @@ public class InventoryController {
         return tile;
     }
 
-    private void adjustQuantity(GroceryItem item, int delta) {
-        int next = Math.max(0, item.getQuantity() + delta);
-        if (next == item.getQuantity()) return;
+    private void adjustQuantity(String itemId, int delta) {
+        // Always read the latest cached state by id. The closure-captured
+        // GroceryItem instance is replaced by the change-listener on every
+        // save, so dereferencing it here would use a stale quantity.
+        GroceryItem current = itemById.get(itemId);
+        if (current == null) return;
+        int next = Math.max(0, current.getQuantity() + delta);
+        if (next == current.getQuantity()) return;
+
+        // Optimistic UI: bump the label immediately so consecutive taps feel
+        // responsive instead of waiting for the CBL change event round-trip.
+        Label label = qtyLabelByItemId.get(itemId);
+        if (label != null) label.setText(String.valueOf(next));
+        current.setQuantity(next);
+
         Thread t = new Thread(() -> {
-            try { services.db.updateQuantity(item.getId(), next); }
+            try { services.db.updateQuantity(itemId, next); }
             catch (Exception ex) { log.error("Failed to update qty", ex); }
         }, "qty-update");
         t.setDaemon(true);
         t.start();
     }
 
-    private void openCreateOrder(GroceryItem item) {
+    private void openCreateOrder(String itemId) {
+        GroceryItem item = itemById.get(itemId);
+        if (item == null) return;
+        openCreateOrderDialog(item);
+    }
+
+    private void openCreateOrderDialog(GroceryItem item) {
         javafx.scene.control.TextInputDialog d = new javafx.scene.control.TextInputDialog("100");
         d.setTitle("Re-order Stock");
         d.setHeaderText("Re-order: " + (item.getName() != null ? item.getName() : ""));

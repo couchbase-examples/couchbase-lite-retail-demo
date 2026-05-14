@@ -28,7 +28,7 @@ public class ProfileController {
 
     @FXML
     public void initialize() {
-        services.db.onProfileChanged(v -> Platform.runLater(this::reload));
+        services.db.onProfileChanged(ids -> Platform.runLater(this::reload));
         reloadAsync();
     }
 

@@ -56,7 +56,7 @@ public class OrdersController {
             chipsRow.getChildren().add(chip);
         }
 
-        services.db.onOrdersChanged(v -> Platform.runLater(this::reload));
+        services.db.onOrdersChanged(ids -> Platform.runLater(this::reload));
         reloadAsync();
     }
 

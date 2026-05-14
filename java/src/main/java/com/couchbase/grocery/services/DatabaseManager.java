@@ -43,9 +43,9 @@ public class DatabaseManager {
     private Collection profileColl;
     private AppConfig config;
 
-    private final List<Consumer<Void>> inventoryListeners = new CopyOnWriteArrayList<>();
-    private final List<Consumer<Void>> ordersListeners = new CopyOnWriteArrayList<>();
-    private final List<Consumer<Void>> profileListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<List<String>>> inventoryListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<List<String>>> ordersListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<List<String>>> profileListeners = new CopyOnWriteArrayList<>();
 
     /** Lazy one-time CBL.init() — safe to call from anywhere. */
     public static synchronized void initCBL() {
@@ -70,9 +70,9 @@ public class DatabaseManager {
         this.ordersColl    = ensureCollection(AppConfig.COLLECTION_ORDERS, cfg.scope());
         this.profileColl   = ensureCollection(AppConfig.COLLECTION_PROFILE, cfg.scope());
 
-        inventoryColl.addChangeListener(change -> fire(inventoryListeners));
-        ordersColl.addChangeListener(change -> fire(ordersListeners));
-        profileColl.addChangeListener(change -> fire(profileListeners));
+        inventoryColl.addChangeListener(change -> fire(inventoryListeners, change.getDocumentIDs()));
+        ordersColl.addChangeListener(change -> fire(ordersListeners, change.getDocumentIDs()));
+        profileColl.addChangeListener(change -> fire(profileListeners, change.getDocumentIDs()));
 
         log.info("Database '{}' opened, scope='{}', inventory={} orders={} profile={}",
                 AppConfig.LOCAL_DB_NAME, cfg.scope(),
@@ -203,13 +203,18 @@ public class DatabaseManager {
 
     // ---- Change listeners --------------------------------------------------
 
-    public void onInventoryChanged(Consumer<Void> cb) { inventoryListeners.add(cb); }
-    public void onOrdersChanged(Consumer<Void> cb)    { ordersListeners.add(cb); }
-    public void onProfileChanged(Consumer<Void> cb)   { profileListeners.add(cb); }
+    public void onInventoryChanged(Consumer<List<String>> cb) { inventoryListeners.add(cb); }
+    public void onOrdersChanged(Consumer<List<String>> cb)    { ordersListeners.add(cb); }
+    public void onProfileChanged(Consumer<List<String>> cb)   { profileListeners.add(cb); }
 
-    private static void fire(List<Consumer<Void>> listeners) {
-        for (Consumer<Void> c : listeners) {
-            try { c.accept(null); } catch (Exception e) {
+    /** Returns a single document by id (helper for incremental UI updates). */
+    public Document getInventoryDocument(String id) throws CouchbaseLiteException {
+        return inventoryColl == null ? null : inventoryColl.getDocument(id);
+    }
+
+    private static void fire(List<Consumer<List<String>>> listeners, List<String> ids) {
+        for (Consumer<List<String>> c : listeners) {
+            try { c.accept(ids); } catch (Exception e) {
                 log.warn("Listener threw: {}", e.getMessage());
             }
         }
