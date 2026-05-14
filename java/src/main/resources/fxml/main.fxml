@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.MainShellController"
+      styleClass="main-shell">
+
+    <!-- Tab content area — the current tab's root is swapped in here -->
+    <StackPane fx:id="contentArea" VBox.vgrow="ALWAYS"/>
+
+    <!-- iOS-style bottom tab bar — 4 buttons evenly spaced -->
+    <HBox fx:id="tabBar" styleClass="ios-tabbar" alignment="CENTER" spacing="0"/>
+
+    <!-- Small status pill at the very bottom for the replicator state -->
+    <HBox alignment="CENTER" styleClass="status-bar">
+        <Label fx:id="syncStatusLabel" text="Sync: starting…"/>
+    </HBox>
+</VBox>

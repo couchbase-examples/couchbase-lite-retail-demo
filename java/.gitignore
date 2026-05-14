@@ -1,0 +1,16 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+bin/
+
+# Local config — never commit your real Capella creds
+src/main/resources/.env
+
+# OS noise
+.DS_Store

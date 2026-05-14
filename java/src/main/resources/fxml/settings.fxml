@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.SettingsController"
+      styleClass="page-root">
+
+    <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+    <Label text="Settings" styleClass="page-title">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+    </Label>
+
+    <Label text="SYNC STATUS" styleClass="section-header"/>
+    <VBox spacing="6" styleClass="profile-card">
+        <Label fx:id="syncStateLabel" text="Sync: STOPPED" styleClass="sync-state-label"/>
+        <Label fx:id="lastSyncLabel" text="Last update: —" styleClass="sync-meta"/>
+        <Label fx:id="endpointLabel" text="Endpoint: —" styleClass="sync-meta" wrapText="true"/>
+    </VBox>
+
+    <HBox spacing="10">
+        <VBox.margin><Insets top="14"/></VBox.margin>
+        <Button fx:id="toggleSyncButton" text="Stop sync" styleClass="secondary-button"/>
+        <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <Label text="ACCOUNT" styleClass="section-header">
+        <VBox.margin><Insets top="22"/></VBox.margin>
+    </Label>
+    <VBox styleClass="profile-card">
+        <Label fx:id="userLabel" text="—" styleClass="profile-field-value"/>
+    </VBox>
+
+    <Region VBox.vgrow="ALWAYS"/>
+
+    <Button fx:id="signOutButton" text="Sign Out" styleClass="danger-button" maxWidth="Infinity"/>
+</VBox>

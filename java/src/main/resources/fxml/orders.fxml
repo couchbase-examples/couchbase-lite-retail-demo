@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.OrdersController"
+      styleClass="page-root">
+
+    <padding><Insets top="20" right="24" bottom="0" left="24"/></padding>
+
+    <Label text="Orders" styleClass="page-title"/>
+
+    <HBox fx:id="chipsRow" spacing="10" styleClass="chips-row">
+        <VBox.margin><Insets top="14" bottom="14"/></VBox.margin>
+    </HBox>
+
+    <Label fx:id="emptyLabel" text="No orders yet — re-order stock from the Inventory tab."
+           styleClass="empty-state" wrapText="true" visible="false" managed="false">
+        <VBox.margin><Insets top="40"/></VBox.margin>
+    </Label>
+
+    <ScrollPane fitToWidth="true" styleClass="orders-scroll" VBox.vgrow="ALWAYS">
+        <VBox fx:id="listContainer" spacing="10" styleClass="orders-list">
+            <padding><Insets bottom="20"/></padding>
+        </VBox>
+    </ScrollPane>
+</VBox>

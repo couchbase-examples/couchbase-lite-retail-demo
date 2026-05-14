@@ -1,0 +1,290 @@
+/* Grocery Inventory — JavaFX styles tuned to match the iOS Swift app.
+
+   Primary orange : #FC9C0C
+   Cream bg       : #FFE9C7  (login)
+   Light surface  : #F2F2F4  (page bg)
+   Card surface   : #FFFFFF
+   Body text      : #111
+   Muted text     : #888
+   Accent blue    : #1D4ED8  (Store Manager pill, demo arrow)
+*/
+
+.root {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", "Arial", sans-serif;
+    -fx-font-size: 14px;
+    -fx-background-color: #F2F2F4;
+}
+
+/* ---- Login screen ---- */
+
+.login-root         { -fx-background-color: #FFE9C7; }
+.login-cart         { -fx-font-size: 92px; }
+.login-title        { -fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: #111; }
+.login-subtitle     { -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a; }
+
+.field-label        { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111; }
+
+/* Pill-style input: light gray bg, no visible border */
+.input-pill {
+    -fx-background-color: #F4F1EB;
+    -fx-background-radius: 14;
+    -fx-padding: 6 16;
+}
+.input-icon          { -fx-font-size: 16px; -fx-text-fill: #999; }
+.input-icon-trailing { -fx-font-size: 14px; -fx-text-fill: #999; -fx-cursor: hand; }
+
+.input-borderless {
+    -fx-background-color: transparent;
+    -fx-text-fill: #111;
+    -fx-text-inner-color: #111;       /* JavaFX modena needs both */
+    -fx-highlight-fill: #FFD79A;
+    -fx-highlight-text-fill: #111;
+    -fx-prompt-text-fill: #B5B0A6;
+    -fx-font-size: 16px;
+    -fx-padding: 12 0;
+}
+.input-borderless:focused {
+    -fx-background-color: transparent;
+    -fx-text-fill: #111;
+    -fx-text-inner-color: #111;
+}
+
+.primary-button {
+    -fx-background-color: #F8A93B;
+    -fx-background-radius: 12;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+    -fx-padding: 14 16;
+    -fx-cursor: hand;
+}
+.primary-button:hover    { -fx-background-color: #E89A2A; }
+.primary-button:disabled { -fx-background-color: #F8C684; -fx-text-fill: rgba(255,255,255,0.85); }
+
+.secondary-button {
+    -fx-background-color: white; -fx-background-radius: 10;
+    -fx-border-color: #DDD; -fx-border-radius: 10; -fx-border-width: 1;
+    -fx-text-fill: #333; -fx-font-weight: bold;
+    -fx-padding: 8 16; -fx-cursor: hand;
+}
+.secondary-button:hover  { -fx-background-color: #F5F5F5; }
+
+.danger-button {
+    -fx-background-color: #D9342B; -fx-background-radius: 10;
+    -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px;
+    -fx-padding: 12 16; -fx-cursor: hand;
+}
+.danger-button:hover     { -fx-background-color: #B82A22; }
+
+.error-label    {
+    -fx-text-fill: #D9342B; -fx-font-size: 13px;
+    -fx-text-alignment: center; -fx-alignment: center;
+}
+
+.demo-toggle {
+    -fx-text-fill: #111; -fx-font-size: 15px; -fx-font-weight: bold;
+    -fx-cursor: hand; -fx-padding: 6 0;
+}
+.footer-label   { -fx-font-size: 12px; -fx-text-fill: #444; -fx-font-weight: bold; }
+
+/* ---- Demo Credentials sheet ---- */
+
+.sheet-root      { -fx-background-color: #EFEFF1; }
+.sheet-titlebar  { -fx-padding: 6 0 12 0; }
+.sheet-title     { -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #111; }
+.sheet-done {
+    -fx-background-color: transparent; -fx-text-fill: #007AFF;
+    -fx-font-size: 16px; -fx-cursor: hand;
+}
+.sheet-done:hover { -fx-text-fill: #005FCC; }
+
+.credential-row {
+    -fx-background-color: transparent; -fx-cursor: hand;
+}
+.credential-row:hover { -fx-background-color: #F8F8F9; }
+.credentials-separator .line {
+    -fx-border-color: #E5E5E8; -fx-border-width: 0.5 0 0 0;
+}
+.credential-email {
+    -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #111;
+}
+.credential-role-pill {
+    -fx-background-color: #E6EEFC; -fx-text-fill: #2B6CB0;
+    -fx-background-radius: 6; -fx-padding: 4 10; -fx-font-size: 11px;
+}
+.credential-arrow-button {
+    -fx-background-color: #1D4ED8; -fx-text-fill: white;
+    -fx-background-radius: 14; -fx-min-width: 28; -fx-min-height: 28;
+    -fx-max-width: 28; -fx-max-height: 28;
+    -fx-padding: 0; -fx-font-size: 14px; -fx-cursor: hand;
+}
+.credential-arrow-button:hover { -fx-background-color: #1640C0; }
+.credential-description { -fx-font-size: 13px; -fx-text-fill: #888; }
+.credential-endpoint {
+    -fx-font-family: "Menlo", "Consolas", monospace;
+    -fx-font-size: 13px; -fx-text-fill: #1D4ED8;
+}
+.credential-password {
+    -fx-font-family: "Menlo", "Consolas", monospace;
+    -fx-font-size: 13px; -fx-text-fill: #888;
+}
+.instruction { -fx-font-size: 13px; -fx-text-fill: #333; }
+
+/* ---- Page chrome ---- */
+
+.page-root          { -fx-background-color: #F2F2F4; }
+.page-title         { -fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: #111; }
+
+.page-titlebar          { -fx-padding: 0 0 10 0; }
+.page-titlebar-title    { -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #111; }
+
+.welcome-label      { -fx-font-size: 14px; -fx-text-fill: #888; }
+.role-badge {
+    -fx-background-color: #E6EEFC; -fx-background-radius: 8;
+    -fx-text-fill: #2B6CB0; -fx-font-size: 12px; -fx-font-weight: bold;
+    -fx-padding: 5 12;
+}
+
+.search-field {
+    -fx-background-color: white; -fx-background-radius: 12;
+    -fx-border-color: #E5E5E8; -fx-border-radius: 12; -fx-border-width: 1;
+    -fx-padding: 10 14; -fx-text-fill: black;
+    -fx-prompt-text-fill: #999; -fx-font-size: 14px;
+}
+.search-field:focused { -fx-border-color: #FC9C0C; }
+
+.empty-state {
+    -fx-text-fill: #888; -fx-font-size: 13px;
+    -fx-text-alignment: center; -fx-alignment: center;
+}
+
+.section-header {
+    -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #8E8E93;
+    -fx-padding: 4 4 6 4;
+}
+
+/* ---- Main shell with custom tab bar ---- */
+
+.main-shell { -fx-background-color: #F2F2F4; }
+
+.ios-tabbar {
+    -fx-background-color: white;
+    -fx-border-color: #E5E5E8 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 30 10 30;     /* big side padding so icons breathe */
+    -fx-spacing: 32;             /* gap between tab buttons */
+}
+.ios-tab-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-padding: 8 18;
+    -fx-cursor: hand;
+}
+.ios-tab-button:hover { -fx-background-color: #F4F4F6; }
+.ios-tab-button .tab-icon  {
+    -fx-font-size: 22px; -fx-text-fill: #B0B0B5;
+}
+.ios-tab-button .tab-label {
+    -fx-font-size: 11px; -fx-text-fill: #B0B0B5; -fx-font-weight: bold;
+}
+.ios-tab-button-active .tab-icon  { -fx-text-fill: #007AFF; }
+.ios-tab-button-active .tab-label { -fx-text-fill: #007AFF; }
+
+.status-bar {
+    -fx-background-color: white; -fx-padding: 4 0;
+    -fx-border-color: #E5E5E8 transparent transparent transparent;
+    -fx-border-width: 0.5 0 0 0;
+}
+.status-bar .label { -fx-text-fill: #888; -fx-font-size: 10px; }
+
+/* ---- Inventory tile ---- */
+
+.inventory-scroll, .orders-scroll { -fx-background: #F2F2F4; -fx-background-color: #F2F2F4; }
+.inventory-scroll > .viewport     { -fx-background-color: #F2F2F4; }
+.orders-scroll    > .viewport     { -fx-background-color: #F2F2F4; }
+.inventory-grid                   { -fx-background-color: #F2F2F4; }
+
+.inventory-tile {
+    -fx-background-color: white; -fx-background-radius: 16;
+    -fx-border-radius: 16; -fx-border-color: transparent;
+}
+
+.tile-name  { -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #111; }
+.tile-price { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4A4A4F; }
+.tile-inv-label {
+    -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2A2A2E;
+    -fx-padding: 10 0 0 0;
+}
+.tile-qty {
+    -fx-font-size: 56px; -fx-font-weight: bold;
+    -fx-padding: -6 0 6 0;
+    -fx-text-fill: #16A34A;     /* always green per design */
+}
+/* Kept for backward-compat — both map to the same green now */
+.qty-ok   { -fx-text-fill: #16A34A; }
+.qty-low  { -fx-text-fill: #16A34A; }
+
+.circle-button {
+    -fx-background-color: transparent; -fx-text-fill: #B0B0B5;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-min-width: 40; -fx-min-height: 40;
+    -fx-max-width: 40; -fx-max-height: 40;
+    -fx-background-radius: 20; -fx-border-radius: 20;
+    -fx-border-color: #D0D0D5; -fx-border-width: 1.5;
+    -fx-padding: 0; -fx-cursor: hand;
+}
+.circle-button:hover { -fx-background-color: #F2F2F4; }
+
+/* ---- Orders ---- */
+
+.chips-row              { -fx-padding: 0; }
+.filter-chip {
+    -fx-background-color: white; -fx-text-fill: #555;
+    -fx-background-radius: 18; -fx-border-radius: 18;
+    -fx-border-color: #E5E5E8; -fx-border-width: 1;
+    -fx-padding: 7 18; -fx-font-size: 13px; -fx-cursor: hand;
+}
+.filter-chip:hover      { -fx-background-color: #FAFAFA; }
+.filter-chip:selected {
+    -fx-background-color: #FC9C0C; -fx-text-fill: white;
+    -fx-font-weight: bold; -fx-border-color: #FC9C0C;
+}
+
+.order-row {
+    -fx-background-color: white; -fx-background-radius: 14;
+    -fx-border-color: #E5E5E8; -fx-border-radius: 14; -fx-border-width: 1;
+}
+.order-name { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #111; }
+.order-meta { -fx-font-size: 13px; -fx-text-fill: #888; }
+
+.status-pill {
+    -fx-padding: 5 12; -fx-background-radius: 12;
+    -fx-font-size: 11px; -fx-font-weight: bold;
+}
+.status-submitted   { -fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; }
+.status-review      { -fx-background-color: #FEF3C7; -fx-text-fill: #B45309; }
+.status-approved    { -fx-background-color: #D1FAE5; -fx-text-fill: #047857; }
+.status-rejected    { -fx-background-color: #FEE2E2; -fx-text-fill: #B91C1C; }
+
+/* ---- Profile / Settings cards ---- */
+
+.profile-card {
+    -fx-background-color: white; -fx-background-radius: 14;
+    -fx-border-color: transparent; -fx-border-radius: 14; -fx-border-width: 0;
+    -fx-padding: 16;
+}
+.profile-store-name { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #111; }
+.profile-store-id   { -fx-font-size: 14px; -fx-text-fill: #888; -fx-padding: 6 0 0 0; }
+.profile-row        { -fx-padding: 10 0; }
+.profile-field-name { -fx-font-size: 15px; -fx-text-fill: #111; -fx-font-weight: bold; }
+.profile-field-value{ -fx-font-size: 14px; -fx-text-fill: #888; }
+.profile-address    { -fx-font-size: 15px; -fx-text-fill: #111; }
+.profile-coords     { -fx-font-size: 13px; -fx-text-fill: #1D4ED8; -fx-padding: 8 0 0 0; }
+.profile-manager    { -fx-font-size: 12px; -fx-text-fill: #888; -fx-padding: 8 0 0 0; }
+
+.sync-state-label   { -fx-font-size: 16px; -fx-font-weight: bold; }
+.sync-meta          { -fx-font-size: 11px; -fx-text-fill: #888; }
+.state-ok           { -fx-text-fill: #16A34A; }
+.state-pending      { -fx-text-fill: #B45309; }
+.state-error        { -fx-text-fill: #D9342B; }
+.state-stopped      { -fx-text-fill: #888; }

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.LoginController"
+      styleClass="login-root"
+      alignment="TOP_CENTER">
+
+    <padding><Insets top="60" right="30" bottom="20" left="30"/></padding>
+
+    <Label text="🛒" styleClass="login-cart">
+        <VBox.margin><Insets bottom="6"/></VBox.margin>
+    </Label>
+    <Label text="Grocery Inventory" styleClass="login-title"/>
+    <Label text="Management System" styleClass="login-subtitle">
+        <VBox.margin><Insets top="2" bottom="36"/></VBox.margin>
+    </Label>
+
+    <VBox spacing="20" styleClass="login-form" maxWidth="420">
+
+        <VBox spacing="8">
+            <Label text="Username" styleClass="field-label"/>
+            <HBox styleClass="input-pill" alignment="CENTER_LEFT" spacing="10">
+                <Label text="👤" styleClass="input-icon"/>
+                <TextField fx:id="usernameField" promptText="Enter username"
+                           styleClass="input-borderless" HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <VBox spacing="8">
+            <Label text="Password" styleClass="field-label"/>
+            <HBox styleClass="input-pill" alignment="CENTER_LEFT" spacing="10">
+                <Label text="🔒" styleClass="input-icon"/>
+                <PasswordField fx:id="passwordField" promptText="Enter password"
+                               styleClass="input-borderless" HBox.hgrow="ALWAYS"/>
+                <Label fx:id="eyeIcon" text="👁" styleClass="input-icon-trailing"/>
+            </HBox>
+        </VBox>
+
+        <Button fx:id="signInButton" text="➜  Sign In"
+                styleClass="primary-button" maxWidth="Infinity">
+            <VBox.margin><Insets top="8"/></VBox.margin>
+        </Button>
+
+        <Label fx:id="errorLabel" styleClass="error-label" wrapText="true" alignment="CENTER"
+               maxWidth="Infinity"/>
+
+        <Label fx:id="demoToggleLabel" text="ⓘ  View Demo Credentials"
+               styleClass="demo-toggle" alignment="CENTER" maxWidth="Infinity"/>
+    </VBox>
+
+    <Region VBox.vgrow="ALWAYS"/>
+
+    <VBox alignment="CENTER" spacing="4">
+        <padding><Insets bottom="20"/></padding>
+        <ImageView fitHeight="44" preserveRatio="true">
+            <Image url="@../images/couchbase_logo.png"/>
+        </ImageView>
+        <Label text="Powered by Couchbase" styleClass="footer-label">
+            <VBox.margin><Insets top="6"/></VBox.margin>
+        </Label>
+    </VBox>
+</VBox>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.InventoryController"
+      styleClass="page-root">
+
+    <padding><Insets top="20" right="24" bottom="0" left="24"/></padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label fx:id="welcomeLabel" text="Welcome!" styleClass="welcome-label"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="roleBadge" text="Store Manager" styleClass="role-badge"/>
+    </HBox>
+
+    <Label text="Grocery Inventory" styleClass="page-title">
+        <VBox.margin><Insets top="6" bottom="14"/></VBox.margin>
+    </Label>
+
+    <TextField fx:id="searchField" promptText="Search" styleClass="search-field"/>
+
+    <Label fx:id="emptyLabel" text="No inventory yet — pull to refresh once App Services has synced data."
+           styleClass="empty-state" wrapText="true" visible="false" managed="false">
+        <VBox.margin><Insets top="40"/></VBox.margin>
+    </Label>
+
+    <ScrollPane fx:id="scrollPane" fitToWidth="true" styleClass="inventory-scroll"
+                VBox.vgrow="ALWAYS">
+        <VBox.margin><Insets top="14"/></VBox.margin>
+        <GridPane fx:id="tileGrid" hgap="14" vgap="14" styleClass="inventory-grid">
+            <padding><Insets bottom="20"/></padding>
+        </GridPane>
+    </ScrollPane>
+</VBox>

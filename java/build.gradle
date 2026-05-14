@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.couchbase.grocery'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://mobile.maven.couchbase.com/maven2/dev/'
+    }
+}
+
+// JavaFX modules. We pull them straight from Maven Central instead of using
+// the org.openjfx.javafxplugin so this builds without internet access to
+// plugins.gradle.org.
+def osName     = System.getProperty('os.name').toLowerCase()
+def osArch     = System.getProperty('os.arch').toLowerCase()
+def javafxClassifier
+if (osName.contains('mac')) {
+    javafxClassifier = osArch.contains('aarch64') || osArch.contains('arm') ? 'mac-aarch64' : 'mac'
+} else if (osName.contains('windows')) {
+    javafxClassifier = 'win'
+} else {
+    javafxClassifier = osArch.contains('aarch64') || osArch.contains('arm') ? 'linux-aarch64' : 'linux'
+}
+
+def javafxVersion = '21.0.4'
+def javafxModules = ['javafx-base', 'javafx-graphics', 'javafx-controls', 'javafx-fxml']
+
+dependencies {
+    // JavaFX runtime — platform-specific natives
+    javafxModules.each { mod ->
+        implementation "org.openjfx:${mod}:${javafxVersion}"
+        implementation "org.openjfx:${mod}:${javafxVersion}:${javafxClassifier}"
+    }
+
+    // Couchbase Lite for Java — Enterprise Edition 4.0.3 (matches iOS/Android/.NET)
+    implementation 'com.couchbase.lite:couchbase-lite-java-ee:4.0.3'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.13'
+    implementation 'org.slf4j:slf4j-simple:2.0.13'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+application {
+    mainClass = 'com.couchbase.grocery.Main'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('run') {
+    // Open modules CBL touches reflectively.
+    jvmArgs = [
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.nio=ALL-UNNAMED'
+    ]
+}

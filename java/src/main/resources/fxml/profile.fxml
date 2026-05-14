@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.couchbase.grocery.ui.ProfileController"
+      styleClass="page-root">
+
+    <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+    <!-- iOS-style centered header bar -->
+    <HBox alignment="CENTER" styleClass="page-titlebar">
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="Store Profile" styleClass="page-titlebar-title"/>
+        <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <Label fx:id="emptyLabel" text="Profile is still syncing — give it a moment after first login."
+           styleClass="empty-state" wrapText="true" visible="false" managed="false"/>
+
+    <VBox fx:id="contentBox" spacing="14">
+        <VBox spacing="4" styleClass="profile-card">
+            <Label fx:id="storeNameLabel" styleClass="profile-store-name" wrapText="true"/>
+            <Label fx:id="storeIdLabel" styleClass="profile-store-id"/>
+        </VBox>
+
+        <Label text="CONTACT INFORMATION" styleClass="section-header"/>
+        <VBox styleClass="profile-card" spacing="0">
+            <HBox styleClass="profile-row">
+                <Label text="Email" styleClass="profile-field-name"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="emailLabel" styleClass="profile-field-value"/>
+            </HBox>
+            <Separator/>
+            <HBox styleClass="profile-row">
+                <Label text="Phone" styleClass="profile-field-name"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="phoneLabel" styleClass="profile-field-value"/>
+            </HBox>
+        </VBox>
+
+        <Label text="LOCATION" styleClass="section-header"/>
+        <VBox styleClass="profile-card" spacing="6">
+            <Label fx:id="addressLabel" styleClass="profile-address" wrapText="true"/>
+            <Label fx:id="coordsLabel" styleClass="profile-coords"/>
+        </VBox>
+
+        <Label fx:id="managerLabel" styleClass="profile-manager"/>
+    </VBox>
+</VBox>
