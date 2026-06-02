@@ -1,0 +1,268 @@
+/* Grocery Inventory — Ionic React styles tuned to match the Swift / Java
+   ports. Most layout primitives come from @ionic/react; this file adds
+   the grocery-specific palette and components. */
+
+ion-content {
+  --background: #F2F2F4;
+}
+
+/* ---- Login ---- */
+
+.login-content {
+  --background: #FFE9C7;
+}
+.login-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 60px 28px 24px;
+}
+
+.login-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.login-cart { font-size: 90px; color: #111; }
+.login-title    { font-size: 32px; font-weight: 800; color: #111; margin: 6px 0 0; }
+.login-subtitle { font-size: 16px; font-weight: 700; color: #2A2A2E; margin: 2px 0 28px; }
+
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+
+.field-label { font-size: 15px; font-weight: 700; color: #111; padding: 0 4px; }
+
+.input-pill {
+  --background: #F4F1EB;
+  --border-radius: 14px;
+  --inner-padding-end: 12px;
+  --padding-start: 14px;
+  --highlight-color: transparent;
+  border-radius: 14px;
+}
+.input-pill ion-input { --color: #111; --placeholder-color: #B5B0A6; font-size: 16px; }
+.input-icon          { color: #999; font-size: 18px; margin-inline-end: 4px; }
+.input-icon-trailing { color: #999; font-size: 16px; cursor: pointer; }
+
+.primary-button {
+  --background: #F8A93B;
+  --background-hover: #E89A2A;
+  --color: white;
+  --border-radius: 12px;
+  font-weight: 700;
+  font-size: 16px;
+  height: 50px;
+  margin-top: 6px;
+}
+
+.secondary-button {
+  --background: white;
+  --color: #333;
+  --border-color: #DDD;
+  --border-width: 1px;
+  --border-style: solid;
+  --border-radius: 10px;
+  font-weight: 700;
+}
+
+.danger-button {
+  --background: #D9342B;
+  --background-hover: #B82A22;
+  --color: white;
+  --border-radius: 10px;
+  font-weight: 700;
+  height: 50px;
+}
+
+.error-note { display: block; text-align: center; margin-top: 6px; font-size: 13px; }
+
+.demo-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  color: #111; font-size: 15px; font-weight: 700; cursor: pointer;
+  padding: 6px 0; margin-top: 6px;
+}
+.demo-toggle ion-icon { font-size: 18px; }
+
+.login-footer {
+  margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding-bottom: 14px;
+}
+.cb-logo      { width: 44px; height: 44px; object-fit: contain; }
+.footer-label { font-size: 12px; font-weight: 700; color: #444; }
+
+/* ---- Demo Credentials sheet ---- */
+
+.demo-toolbar { --background: #EFEFF1; --color: #111; --border-style: none; }
+.demo-content { --background: #EFEFF1; padding: 0 16px; }
+
+.demo-card {
+  background: white; border-radius: 14px; padding: 0;
+  margin: 8px 0 18px;
+}
+.instructions-card { padding: 14px 16px; }
+.instructions-card p { font-size: 13px; color: #333; margin: 4px 0; }
+
+.cred-row { padding: 14px 16px; cursor: pointer; }
+.cred-row:hover { background: #F8F8F9; }
+.cred-row-top { display: flex; align-items: center; gap: 8px; }
+.cred-email { flex: 1; font-size: 17px; font-weight: 700; color: #111; word-break: break-word; }
+.cred-role-pill {
+  background: #E6EEFC; color: #2B6CB0; padding: 4px 10px;
+  border-radius: 6px; font-size: 11px; font-weight: 700;
+}
+.cred-arrow {
+  width: 28px; height: 28px; border-radius: 14px;
+  background: #1D4ED8; color: white; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px;
+}
+.cred-arrow:hover { background: #1640C0; }
+.cred-description { font-size: 13px; color: #888; margin-top: 4px; }
+.cred-endpoint    { font-family: Menlo, Consolas, monospace; font-size: 13px; color: #1D4ED8; margin-top: 2px; }
+.cred-password    { font-family: Menlo, Consolas, monospace; font-size: 13px; color: #888; margin-top: 2px; }
+.cred-separator   { height: 0.5px; background: #E5E5E8; margin: 0 16px; }
+
+/* ---- Page headers ---- */
+
+.page-toolbar { --background: transparent; --border-style: none; padding: 0 8px; }
+.page-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+}
+.welcome-label { font-size: 14px; color: #888; }
+.role-badge {
+  background: #E6EEFC; color: #2B6CB0;
+  padding: 5px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 700;
+}
+.page-title {
+  font-size: 34px; font-weight: 800; color: #111;
+  padding: 6px 16px 4px;
+  margin: 0;
+}
+.centered-titlebar  { text-align: center; }
+.centered-page-title { font-size: 17px; font-weight: 700; color: #111; margin: 12px 0; text-align: center; }
+
+.section-header {
+  font-size: 11px; font-weight: 700; color: #8E8E93;
+  text-transform: uppercase; letter-spacing: 0.4px;
+  padding: 18px 16px 6px; margin: 0;
+}
+
+.empty-state {
+  color: #888; font-size: 13px; text-align: center;
+  padding: 60px 24px;
+}
+
+/* ---- Inventory ---- */
+
+.page-content { --padding-top: 4px; --padding-bottom: 8px; }
+.search-wrap  { padding: 0 16px; }
+.search-pill {
+  --background: white; --border-radius: 14px; --border-color: #E5E5E8;
+  --border-width: 1px; --border-style: solid; --highlight-color: transparent;
+  --inner-padding-end: 10px;
+  border-radius: 14px;
+  margin: 10px 0 16px;
+}
+.search-pill ion-input { --color: #111; --placeholder-color: #999; }
+.search-pill ion-icon  { color: #888; font-size: 18px; }
+
+.inventory-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  padding: 0 16px 24px;
+}
+
+.inventory-tile {
+  background: white; border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  padding: 14px; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 6px;
+}
+.tile-image-wrap { width: 100%; height: 130px; display: flex; align-items: center; justify-content: center; }
+.tile-image-wrap img { max-height: 130px; max-width: 100%; object-fit: contain; }
+.tile-image-placeholder { width: 80px; height: 80px; background: #F4F4F6; border-radius: 12px; }
+.tile-name   { font-size: 17px; font-weight: 700; color: #111; }
+.tile-price  { font-size: 14px; font-weight: 700; color: #4A4A4F; }
+.tile-inv-label { font-size: 14px; font-weight: 700; color: #2A2A2E; margin-top: 8px; }
+.tile-qty    { font-size: 52px; font-weight: 800; color: #16A34A; line-height: 1; }
+.tile-circle-row { display: flex; gap: 18px; margin-top: 4px; }
+.circle-button {
+  width: 40px; height: 40px; border-radius: 20px;
+  border: 1.5px solid #D0D0D5; background: transparent; color: #B0B0B5;
+  font-size: 22px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.circle-button:hover { background: #F2F2F4; }
+.tile-reorder {
+  width: 100%; margin-top: 8px;
+}
+
+/* ---- Orders ---- */
+
+.chips-row { display: flex; gap: 10px; padding: 6px 16px 12px; flex-wrap: wrap; }
+.filter-chip {
+  background: white; color: #555;
+  border: 1px solid #E5E5E8; border-radius: 18px;
+  padding: 7px 18px; font-size: 13px; cursor: pointer;
+}
+.filter-chip:hover { background: #FAFAFA; }
+.filter-chip-active {
+  background: #FC9C0C; color: white; border-color: #FC9C0C;
+  font-weight: 700;
+}
+
+.orders-list { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 24px; }
+.order-row {
+  background: white; border: 1px solid #E5E5E8; border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.order-name { font-size: 15px; font-weight: 700; color: #111; }
+.order-meta { font-size: 13px; color: #888; margin-top: 4px; }
+
+.status-pill {
+  padding: 5px 12px; border-radius: 12px;
+  font-size: 11px; font-weight: 700;
+}
+.status-submitted { background: #DBEAFE; color: #1D4ED8; }
+.status-in-review { background: #FEF3C7; color: #B45309; }
+.status-approved  { background: #D1FAE5; color: #047857; }
+.status-rejected  { background: #FEE2E2; color: #B91C1C; }
+
+/* ---- Profile / Settings cards ---- */
+
+.profile-card {
+  background: white; border-radius: 14px; padding: 16px;
+  margin: 0 16px 12px;
+}
+.profile-store-name { font-size: 24px; font-weight: 700; color: #111; }
+.profile-store-id   { font-size: 14px; color: #888; margin-top: 6px; }
+.profile-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+}
+.profile-field-name  { font-size: 15px; font-weight: 700; color: #111; }
+.profile-field-value { font-size: 14px; color: #888; }
+.profile-address     { font-size: 15px; color: #111; line-height: 1.4; }
+.profile-coords      { font-size: 13px; color: #1D4ED8; padding-top: 10px; display: flex; align-items: center; gap: 4px; }
+.profile-manager     { font-size: 12px; color: #888; padding: 8px 16px 16px; }
+
+.sync-state-label { font-size: 16px; font-weight: 700; }
+.sync-meta        { font-size: 12px; color: #888; word-break: break-all; margin-top: 4px; }
+.state-ok       { color: #16A34A; }
+.state-pending  { color: #B45309; }
+.state-error    { color: #D9342B; }
+.state-stopped  { color: #888; }
+
+.settings-button-row { padding: 0 16px; }
+.settings-spacer     { flex: 1; min-height: 30px; }
+
+/* ---- Bottom tab bar ---- */
+
+.ios-tabbar {
+  --background: white;
+  --border-color: #E5E5E8;
+  --color: #B0B0B5;
+  --color-selected: #007AFF;
+  --padding-top: 4px;
+  --padding-bottom: 6px;
+}
+.ios-tabbar ion-tab-button { --background-focused: transparent; }
+.ios-tabbar ion-icon       { font-size: 22px; }
+.ios-tabbar ion-label      { font-size: 11px; font-weight: 700; }
