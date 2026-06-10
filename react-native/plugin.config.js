@@ -35,6 +35,16 @@ function includeNativeModulePod(config) {
   });
 }
 
+function setIosDeploymentTarget(config) {
+  return withPodfileProperties(config, (podConfig) => {
+    const deploymentTarget = config?.ios?.deploymentTarget;
+    if (typeof deploymentTarget === 'string' && deploymentTarget.length > 0) {
+      podConfig.modResults['ios.deploymentTarget'] = deploymentTarget;
+    }
+    return podConfig;
+  });
+}
+
 module.exports = (config) => {
   config = withProjectBuildGradle(config, (gradleConfig) => {
     return modifyAndroidBuildGradle(gradleConfig);
@@ -42,6 +52,7 @@ module.exports = (config) => {
   config = withXcodeProject(config, (xcodeConfig) => {
     return modifyXcodeProject(xcodeConfig);
   });
+  config = setIosDeploymentTarget(config);
   config = includeNativeModulePod(config);
   return config;
 };

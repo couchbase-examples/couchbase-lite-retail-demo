@@ -24,6 +24,21 @@ type UseCollectionListenerOptions = {
     label?: string;
 };
 
+async function removeListenerToken(
+    token: ListenerToken,
+    onError: (error: unknown) => void,
+): Promise<void> {
+    if (!token || typeof token.remove !== 'function') return;
+    try {
+        const maybePromise = token.remove();
+        if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
+            await maybePromise;
+        }
+    } catch (e) {
+        onError(e);
+    }
+}
+
 /**
  * Subscribes to a Couchbase Lite collection change listener for as long as
  * the host component is mounted.
@@ -78,11 +93,9 @@ export function useCollectionListener(
                 const t = await register(fire);
                 if (cancelled) {
                     // Component unmounted before subscribe finished; clean up immediately.
-                    if (t && typeof t.remove === 'function') {
-                        await t.remove().catch((e: unknown) =>
-                            console.warn(`[useCollectionListener:${label}] late remove error`, e),
-                        );
-                    }
+                    await removeListenerToken(t, (e) =>
+                        console.warn(`[useCollectionListener:${label}] late remove error`, e),
+                    );
                     return;
                 }
                 token = t;
@@ -96,12 +109,11 @@ export function useCollectionListener(
         return () => {
             cancelled = true;
             if (timer) clearTimeout(timer);
-            if (token && typeof token.remove === 'function') {
-                token.remove().catch((e: unknown) =>
-                    console.warn(`[useCollectionListener:${label}] remove error`, e),
-                );
-            }
+            const tokenToRemove = token;
             token = null;
+            void removeListenerToken(tokenToRemove, (e) =>
+                console.warn(`[useCollectionListener:${label}] remove error`, e),
+            );
         };
     }, [enabled, register, debounceMs, label]);
 }

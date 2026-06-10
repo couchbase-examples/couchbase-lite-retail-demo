@@ -319,7 +319,11 @@ export class DatabaseService {
     ): Promise<GroceryItem[]> {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
-        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${APP_CONFIG.collections.inventory}\` ORDER BY name`;
+        const col = APP_CONFIG.collections.inventory;
+        let queryStr =
+            `SELECT META(inv).id AS id, inv AS \`${col}\` ` +
+            `FROM \`${scope}\`.\`${col}\` AS inv ` +
+            `ORDER BY inv.name`;
         if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }
@@ -367,9 +371,9 @@ export class DatabaseService {
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.inventory;
         let queryStr =
-            `SELECT META().id, * FROM \`${scope}\`.\`${col}\` ` +
+            `SELECT META(inv).id AS id, inv AS \`${col}\` FROM \`${scope}\`.\`${col}\` AS inv ` +
             `WHERE MATCH(${INVENTORY_FTS_INDEX_NAME}, $term) ` +
-            `ORDER BY RANK(${INVENTORY_FTS_INDEX_NAME}), name`;
+            `ORDER BY RANK(${INVENTORY_FTS_INDEX_NAME}), inv.name`;
         if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }
@@ -462,11 +466,11 @@ export class DatabaseService {
         if (!this.database || !this.storeConfig) return [];
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.orders;
-        let queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\``;
+        let queryStr = `SELECT META(ord).id AS id, ord AS \`${col}\` FROM \`${scope}\`.\`${col}\` AS ord`;
         if (typeof status === 'string' && status.length > 0) {
-            queryStr += ` WHERE orderStatus = $status`;
+            queryStr += ` WHERE ord.orderStatus = $status`;
         }
-        queryStr += ` ORDER BY orderDate DESC`;
+        queryStr += ` ORDER BY ord.orderDate DESC`;
         if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }
@@ -546,7 +550,9 @@ export class DatabaseService {
         if (!this.database || !this.storeConfig) return null;
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.profile;
-        const queryStr = `SELECT META().id, * FROM \`${scope}\`.\`${col}\` LIMIT 1`;
+        const queryStr =
+            `SELECT META(profile).id AS id, profile AS \`${col}\` ` +
+            `FROM \`${scope}\`.\`${col}\` AS profile LIMIT 1`;
         const results = await this.database.createQuery(queryStr).execute();
         if (results && results.length > 0) {
             const row = results[0];
