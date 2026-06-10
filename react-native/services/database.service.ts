@@ -372,8 +372,8 @@ export class DatabaseService {
         const col = APP_CONFIG.collections.inventory;
         let queryStr =
             `SELECT META(inv).id AS id, inv AS \`${col}\` FROM \`${scope}\`.\`${col}\` AS inv ` +
-            `WHERE MATCH(${INVENTORY_FTS_INDEX_NAME}, $term) ` +
-            `ORDER BY RANK(${INVENTORY_FTS_INDEX_NAME}), inv.name`;
+            `WHERE MATCH(inv.\`${INVENTORY_FTS_INDEX_NAME}\`, $term) ` +
+            `ORDER BY RANK(inv.\`${INVENTORY_FTS_INDEX_NAME}\`), inv.name`;
         if (typeof limit === 'number' && limit > 0) {
             queryStr += ` LIMIT $limit OFFSET $offset`;
         }

@@ -30,10 +30,7 @@ async function removeListenerToken(
 ): Promise<void> {
     if (!token || typeof token.remove !== 'function') return;
     try {
-        const maybePromise = token.remove();
-        if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
-            await maybePromise;
-        }
+        await token.remove();
     } catch (e) {
         onError(e);
     }
