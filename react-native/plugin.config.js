@@ -38,7 +38,7 @@ function includeNativeModulePod(config) {
 function setIosDeploymentTarget(config) {
   return withPodfileProperties(config, (podConfig) => {
     const deploymentTarget = config?.ios?.deploymentTarget;
-    if (typeof deploymentTarget === 'string' && deploymentTarget.length > 0) {
+    if (podConfig.modResults && typeof deploymentTarget === 'string' && deploymentTarget.length > 0) {
       podConfig.modResults['ios.deploymentTarget'] = deploymentTarget;
     }
     return podConfig;
