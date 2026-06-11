@@ -213,6 +213,7 @@ class DatabaseManager(private val context: Context) {
             val query = QueryBuilder
                 .select(SelectResult.all())
                 .from(DataSource.collection(collection))
+                .orderBy(Ordering.expression(Expression.property("name").collate(Collation.unicode().setIgnoreCase(true))).ascending())
             
             Log.d("DatabaseManager", "🔄 [Reactive API] Setting up query change listener...")
             
@@ -276,6 +277,7 @@ class DatabaseManager(private val context: Context) {
                 val query = QueryBuilder
                     .select(SelectResult.all())
                     .from(DataSource.collection(collection))
+                    .orderBy(Ordering.expression(Expression.property("name").collate(Collation.unicode().setIgnoreCase(true))).ascending())
                 
                 val results = query.execute()
                 val groceryItems = mutableListOf<GroceryItem>()
@@ -356,6 +358,7 @@ class DatabaseManager(private val context: Context) {
                 val query = QueryBuilder
                     .select(SelectResult.all())
                     .from(DataSource.collection(collection))
+                    .orderBy(Ordering.expression(Expression.property("name").collate(Collation.unicode().setIgnoreCase(true))).ascending())
                 
                 val results = query.execute()
                 val groceryItems = mutableListOf<GroceryItem>()
