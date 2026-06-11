@@ -358,7 +358,7 @@ class DatabaseManager(private val context: Context) {
                 val query = QueryBuilder
                     .select(SelectResult.all())
                     .from(DataSource.collection(collection))
-                    .orderBy(Ordering.expression(Expression.property("name")).ascending())
+                    .orderBy(Ordering.expression(Expression.property("name").collation(Collation.unicode().ignoreCase(true))).ascending())
                 
                 val results = query.execute()
                 val groceryItems = mutableListOf<GroceryItem>()
