@@ -6,7 +6,7 @@ const {
 
 // Function to modify Android build.gradle
 function modifyAndroidBuildGradle(config) {
-  const lineToAdd = ` apply from: "../node_modules/cbl-reactnative/android/build.gradle"`;
+  const lineToAdd = ` apply from: "../node_modules/@couchbase/couchbase-lite-react-native/android/build.gradle"`;
   if (!config.modResults.contents.includes(lineToAdd)) {
     config.modResults.contents += `\n${lineToAdd}`;
     console.debug(config.modResults.contents);
@@ -25,7 +25,7 @@ function modifyXcodeProject(config) {
 // Function to modify Podfile properties to include the native module podspec
 function includeNativeModulePod(config) {
   return withPodfileProperties(config, async (podConfig) => {
-    const podspecPath = `../node_modules/cbl-reactnative/cbl-reactnative.podspec`;
+    const podspecPath = `../node_modules/@couchbase/couchbase-lite-react-native/cbl-reactnative.podspec`;
     if (podConfig.modResults.podfileProperties !== undefined && podConfig.modResults.podfileProperties.pod !== undefined) {
       podConfig.modResults.podfileProperties.pod(
           `'cbl-reactnative', :path => '${podspecPath}'`

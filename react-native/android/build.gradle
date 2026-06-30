@@ -40,4 +40,4 @@ allprojects {
     }
 }
 
- apply from: "../node_modules/cbl-reactnative/android/build.gradle"
+ apply from: "../node_modules/@couchbase/couchbase-lite-react-native/android/build.gradle"

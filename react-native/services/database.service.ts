@@ -18,7 +18,7 @@ import {
     ReplicatorConfiguration,
     URLEndpoint,
     ValueIndexItem,
-} from 'cbl-reactnative';
+} from '@couchbase/couchbase-lite-react-native';
 import { StoreConfig, APP_CONFIG } from '@/models/AppConfig';
 import { GroceryItem } from '@/models/GroceryItem';
 import { Order } from '@/models/Order';
@@ -325,15 +325,12 @@ export class DatabaseService {
             `FROM \`${scope}\`.\`${col}\` AS inv ` +
             `ORDER BY inv.name`;
         if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT $limit OFFSET $offset`;
+            // Couchbase Lite SQL++ does NOT accept bound parameters in LIMIT/OFFSET —
+            // they must be integer literals. Safe to interpolate here because both
+            // values are coerced to non-negative integers.
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
         }
         const query = this.database.createQuery(queryStr);
-        if (typeof limit === 'number' && limit > 0) {
-            const params = new Parameters();
-            params.setInt('limit', Math.floor(limit));
-            params.setInt('offset', Math.max(0, Math.floor(offset)));
-            query.parameters = params;
-        }
         const results = await query.execute();
         return this.mapInventoryResults(results);
     }
@@ -375,15 +372,12 @@ export class DatabaseService {
             `WHERE MATCH(inv.\`${INVENTORY_FTS_INDEX_NAME}\`, $term) ` +
             `ORDER BY RANK(inv.\`${INVENTORY_FTS_INDEX_NAME}\`), inv.name`;
         if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT $limit OFFSET $offset`;
+            // LIMIT/OFFSET must be integer literals in CBL SQL++ (see getInventoryItems).
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
         }
         const query = this.database.createQuery(queryStr);
         const params = new Parameters();
         params.setString('term', ftsExpression);
-        if (typeof limit === 'number' && limit > 0) {
-            params.setInt('limit', Math.floor(limit));
-            params.setInt('offset', Math.max(0, Math.floor(offset)));
-        }
         query.parameters = params;
         const results = await query.execute();
         return this.mapInventoryResults(results);
@@ -472,20 +466,13 @@ export class DatabaseService {
         }
         queryStr += ` ORDER BY ord.orderDate DESC`;
         if (typeof limit === 'number' && limit > 0) {
-            queryStr += ` LIMIT $limit OFFSET $offset`;
+            // LIMIT/OFFSET must be integer literals in CBL SQL++ (see getInventoryItems).
+            queryStr += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.max(0, Math.floor(offset))}`;
         }
         const query = this.database.createQuery(queryStr);
-        const hasStatus = typeof status === 'string' && status.length > 0;
-        const hasPagination = typeof limit === 'number' && limit > 0;
-        if (hasStatus || hasPagination) {
+        if (typeof status === 'string' && status.length > 0) {
             const params = new Parameters();
-            if (typeof status === 'string' && status.length > 0) {
-                params.setString('status', status);
-            }
-            if (typeof limit === 'number' && limit > 0) {
-                params.setInt('limit', Math.floor(limit));
-                params.setInt('offset', Math.max(0, Math.floor(offset)));
-            }
+            params.setString('status', status);
             query.parameters = params;
         }
         const results = await query.execute();
@@ -550,9 +537,11 @@ export class DatabaseService {
         if (!this.database || !this.storeConfig) return null;
         const scope = this.storeConfig.scopeName;
         const col = APP_CONFIG.collections.profile;
+        // Use a FROM alias ("prof") distinct from the collection/projection name
+        // ("profile") — reusing "profile" for both trips CBL's "duplicate alias" check.
         const queryStr =
-            `SELECT META(profile).id AS id, profile AS \`${col}\` ` +
-            `FROM \`${scope}\`.\`${col}\` AS profile LIMIT 1`;
+            `SELECT META(prof).id AS id, prof AS \`${col}\` ` +
+            `FROM \`${scope}\`.\`${col}\` AS prof LIMIT 1`;
         const results = await this.database.createQuery(queryStr).execute();
         if (results && results.length > 0) {
             const row = results[0];

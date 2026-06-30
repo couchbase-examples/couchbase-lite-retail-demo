@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "groceryapp",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
@@ -26,7 +27,9 @@
     },
     "plugins": [
       "expo-router",
-      "./plugin.config.js"
+      "./plugin.config.js",
+      "expo-font",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

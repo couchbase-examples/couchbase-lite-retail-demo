@@ -1,4 +1,4 @@
-import { LogDomain, LogLevel, LogSinks } from "cbl-reactnative";
+import { LogDomain, LogLevel, LogSinks } from "@couchbase/couchbase-lite-react-native";
 
 /**
  * Configures console logging for Couchbase Lite using the LogSinks API.
