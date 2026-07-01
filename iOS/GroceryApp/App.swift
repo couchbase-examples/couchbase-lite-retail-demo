@@ -402,18 +402,24 @@ final class GrocerySyncApp {
         
         let url = endpoint.url.appending(path: name)
         let target = URLEndpoint(url: url)
-        var config = ReplicatorConfiguration(target: target)
+
+        // CBL 4.x: per-collection configs are built up front and passed to the
+        // initializer; ReplicatorConfiguration(target:) and addCollections(_:config:)
+        // were removed in 4.0.
+        let collectionConfigs = collections.map { coll -> CollectionConfiguration in
+            var cc = CollectionConfiguration(collection: coll)
+            cc.conflictResolver = GroceryCRDTConflictResolver.shared
+            return cc
+        }
+
+        var config = ReplicatorConfiguration(collections: collectionConfigs, target: target)
         config.replicatorType = .pushAndPull
         config.continuous = true
         config.allowReplicatingInBackground = true
-        
+
         if let username = endpoint.username, let password = endpoint.password {
             config.authenticator = BasicAuthenticator(username: username, password: password)
         }
-
-        var collectionConfig = CollectionConfiguration()
-        collectionConfig.conflictResolver = GroceryCRDTConflictResolver.shared
-        config.addCollections(collections, config: collectionConfig)
 
         let replicator = Replicator(config: config)
         
@@ -434,15 +440,19 @@ final class GrocerySyncApp {
     private func setupReplicator(for connection: NWConnection) {
         let messageEndpointDelegate = NMMessageEndpointDelegate(connection: connection)
         let target = MessageEndpoint(uid: uuid, target: nil, protocolType: .byteStream, delegate: messageEndpointDelegate)
-        var config = ReplicatorConfiguration(target: target)
+
+        // CBL 4.x: per-collection configs up front (addCollections(_:config:) removed).
+        let collectionConfigs = collections.map { coll -> CollectionConfiguration in
+            var cc = CollectionConfiguration(collection: coll)
+            cc.conflictResolver = GroceryCRDTConflictResolver.shared
+            return cc
+        }
+
+        var config = ReplicatorConfiguration(collections: collectionConfigs, target: target)
         config.replicatorType = .pushAndPull
         config.continuous = true
         config.allowReplicatingInBackground = true
-        
-        var collectionConfig = CollectionConfiguration()
-        collectionConfig.conflictResolver = GroceryCRDTConflictResolver.shared
-        config.addCollections(collections, config: collectionConfig)
-        
+
         let replicator = Replicator(config: config)
         replicators[HashableObject(connection)] = replicator
         
