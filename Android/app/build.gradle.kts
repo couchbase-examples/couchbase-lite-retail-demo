@@ -68,8 +68,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
-    // Couchbase Lite - Enterprise Edition 3.3.0 with KTX
-    implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:3.3.0")
+    // Couchbase Lite - Enterprise Edition 4.1.0 with KTX (adds the Bluetooth
+    // multipeer transport). Resolved from the public Maven repo in settings.gradle.kts.
+    implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:4.1.0")
     
     // Coil - Image loading library for Compose
     implementation("io.coil-kt:coil-compose:2.5.0")

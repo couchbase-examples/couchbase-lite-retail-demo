@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import java.security.cert.X509Certificate
 import java.util.Calendar
 import java.util.Date
+import java.util.EnumSet
 
 /**
  * MultipeerSyncManager manages peer-to-peer synchronization using the MultipeerReplicator API.
@@ -37,6 +38,18 @@ class MultipeerSyncManager(
     // MARK: - Configuration
     private val peerGroupID = AppConfig.P2P_PEER_GROUP_ID
     private val identityLabel = AppConfig.P2P_IDENTITY_LABEL
+
+    /**
+     * Transports the MultipeerReplicator advertises and scans on.
+     *
+     * Defaults to BOTH Wi-Fi (peer discovery via DNS-SD/Bonjour) AND Bluetooth LE.
+     * The replicator self-organizes a mesh and auto-selects/auto-switches between
+     * transports based on availability — so two devices sync over the LAN when they
+     * share Wi-Fi, and over Bluetooth when they don't. The CBL default is WIFI only;
+     * we explicitly opt Bluetooth in here. Requires CBL Android EE 4.1.0+.
+     */
+    var transports: Set<MultipeerTransport> =
+        EnumSet.of(MultipeerTransport.WIFI, MultipeerTransport.BLUETOOTH)
     
     companion object {
         private const val TAG = "MultipeerSync"
@@ -126,12 +139,17 @@ class MultipeerSyncManager(
                     collectionConfigs.add(config)
                 }
                 
-                // 5. Create MultipeerReplicator configuration
+                // 5. Create MultipeerReplicator configuration.
+                //    setTransports() opts into Bluetooth LE *in addition to* Wi-Fi.
+                //    Without it the replicator defaults to Wi-Fi only and never
+                //    advertises/scans over Bluetooth.
+                Log.i(TAG, "📡 Multipeer transports: ${transports.joinToString(", ")}")
                 val config = MultipeerReplicatorConfiguration.Builder()
                     .setPeerGroupID(peerGroupID)
                     .setIdentity(identity!!)
                     .setAuthenticator(authenticator)
                     .setCollections(collectionConfigs)
+                    .setTransports(transports)
                     .build()
                 
                 // 6. Create MultipeerReplicator
@@ -514,22 +532,24 @@ class MultipeerSyncManager(
     private fun getRequiredPermissions(): List<String> {
         val permissions = mutableListOf<String>()
 
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                // Android 13+ (API 33+): Nearby Wi-Fi devices (no location needed with neverForLocation flag)
-                permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                // Android 12 (API 31-32): Bluetooth permissions + location (required for mDNS)
-                permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
-                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-                permissions.add(Manifest.permission.BLUETOOTH_SCAN)
-                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
-            else -> {
-                // Android 11 and below: Location permission (required for mDNS discovery)
-                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
+        // Bluetooth runtime permissions became mandatory in Android 12 (API 31).
+        // These are needed for the Bluetooth LE multipeer transport REGARDLESS of
+        // API level >= 31 — the previous either/or logic skipped them on API 33+,
+        // which silently broke Bluetooth peer discovery on Android 13+ devices.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ (API 33+): Nearby Wi-Fi devices replaces location for
+            // Wi-Fi/mDNS peer discovery (declared with the neverForLocation flag).
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        } else {
+            // Android 12 and below: location is required for Wi-Fi/mDNS discovery
+            // (and for BLE scanning on API 30 and below).
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
         return permissions

@@ -155,7 +155,7 @@ class AuthenticationManager: ObservableObject {
             sessionDoc.setBoolean(true, forKey: "isAuthenticated")
             sessionDoc.setDate(Date(), forKey: "loginTime")
             
-            try database.saveDocument(sessionDoc)
+            try database.defaultCollection().save(document: sessionDoc)
             print("💾 Session stored in Couchbase Lite")
         } catch {
             print("❌ Error storing session: \(error)")
@@ -170,7 +170,7 @@ class AuthenticationManager: ObservableObject {
     /// briefly show the NYC scope or a LoginView flash.
     func restoreSessionIfAny() {
         guard let database = database,
-              let sessionDoc = database.document(withID: sessionDocID) else {
+              let sessionDoc = try? database.defaultCollection().document(id: sessionDocID) else {
             print("ℹ️ No stored session found")
             return
         }
@@ -212,12 +212,12 @@ class AuthenticationManager: ObservableObject {
     
     private func clearStoredLogin() {
         guard let database = database,
-              let sessionDoc = database.document(withID: sessionDocID) else {
+              let sessionDoc = try? database.defaultCollection().document(id: sessionDocID) else {
             return
         }
-        
+
         do {
-            try database.deleteDocument(sessionDoc)
+            try database.defaultCollection().delete(document: sessionDoc)
             print("🗑️ Session cleared from Couchbase Lite")
         } catch {
             print("❌ Error clearing session: \(error)")

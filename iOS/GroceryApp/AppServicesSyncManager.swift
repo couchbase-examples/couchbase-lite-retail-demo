@@ -66,11 +66,26 @@ class AppServicesSyncManager: ObservableObject {
             }
             
             let target = URLEndpoint(url: url)
-            var config = ReplicatorConfiguration(target: target)
-            
+
+            // CBL 4.x: each CollectionConfiguration now carries its own
+            // collection (init(collection:)), and the full set is passed to the
+            // ReplicatorConfiguration initializer — `config.addCollection(_:config:)`
+            // and `ReplicatorConfiguration(target:)` were removed in 4.0.
+            var inventoryConfig = CollectionConfiguration(collection: inventoryCollection)
+            inventoryConfig.conflictResolver = GroceryCRDTConflictResolver.shared
+
+            // Profile and orders need no CRDT resolver (default last-write-wins).
+            let profileConfig = CollectionConfiguration(collection: profileCollection)
+            let ordersConfig = CollectionConfiguration(collection: ordersCollection)
+
+            var config = ReplicatorConfiguration(
+                collections: [inventoryConfig, profileConfig, ordersConfig],
+                target: target
+            )
+
             // Configure authentication
             config.authenticator = BasicAuthenticator(username: username, password: password)
-            
+
             // Configure replication type and behavior
             config.replicatorType = .pushAndPull
             config.continuous = true
@@ -79,17 +94,7 @@ class AppServicesSyncManager: ObservableObject {
             config.maxAttempts = 10
             config.maxAttemptWaitTime = 300 // 5 minutes
             config.allowReplicatingInBackground = true
-            
-            // Configure collections with CRDT conflict resolver (for inventory only)
-            var inventoryConfig = CollectionConfiguration()
-            inventoryConfig.conflictResolver = GroceryCRDTConflictResolver.shared
-            config.addCollection(inventoryCollection, config: inventoryConfig)
-            
-            // Add profile and orders collections (no CRDT needed for these)
-            var defaultConfig = CollectionConfiguration()
-            config.addCollection(profileCollection, config: defaultConfig)
-            config.addCollection(ordersCollection, config: defaultConfig)
-            
+
             // Create replicator
             replicator = Replicator(config: config)
             
@@ -378,7 +383,7 @@ class AppServicesSyncManager: ObservableObject {
         stopSync()
         
         if let token = replicatorChangeToken {
-            replicator?.removeChangeListener(withToken: token)
+            token.remove()
         }
         
         replicator = nil

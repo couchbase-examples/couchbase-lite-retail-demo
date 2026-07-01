@@ -27,6 +27,16 @@ class GroceryMultipeerSyncManager: ObservableObject {
     
     private let peerGroupID = "com.example.groceryapp"
     private let identityLabel = "com.example.groceryapp.p2p.identity"
+
+    /// Transports the MultipeerReplicator advertises and scans on.
+    ///
+    /// Defaults to BOTH Wi-Fi (peer discovery via DNS-SD/Bonjour, `_couchbaseP2P._tcp`)
+    /// AND Bluetooth LE (L2CAP channel, encrypted, no device pairing). The replicator
+    /// self-organizes a mesh and auto-selects/auto-switches between transports based on
+    /// availability — so two devices sync over the LAN when they share Wi-Fi, and over
+    /// Bluetooth when they don't. The CBL default is `[.wifi]` only; we explicitly opt
+    /// Bluetooth in here. Requires CBL 4.1+ and iOS 15+.
+    var transports: Set<MultipeerTransport> = [.wifi, .bluetooth]
     
     // MARK: - Couchbase Lite Components
     
@@ -85,13 +95,18 @@ class GroceryMultipeerSyncManager: ObservableObject {
         }
         
         // 4. Create MultipeerReplicator configuration
-        let config = MultipeerReplicatorConfiguration(
+        var config = MultipeerReplicatorConfiguration(
             peerGroupID: peerGroupID,
             identity: identity!,
             authenticator: authenticator,
             collections: collectionConfigs
         )
-        
+
+        // Opt into Bluetooth LE *in addition to* Wi-Fi. Without this line the
+        // replicator defaults to `[.wifi]` and never advertises over Bluetooth.
+        config.transports = transports
+        logger.info("📡 Multipeer transports: \(self.transports.map { "\($0)" }.sorted().joined(separator: ", "))")
+
         // 5. Create MultipeerReplicator
         replicator = try MultipeerReplicator(config: config)
         

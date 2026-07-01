@@ -451,6 +451,7 @@
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSCameraUsageDescription = "GroceryApp needs access to your camera to scan products and inventory for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -483,6 +484,7 @@
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSCameraUsageDescription = "GroceryApp needs access to your camera to scan products and inventory for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -629,7 +631,7 @@
 			repositoryURL = "https://github.com/couchbase/couchbase-lite-swift-ee.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.3.0;
+				minimumVersion = 4.1.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

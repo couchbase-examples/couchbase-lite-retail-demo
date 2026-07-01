@@ -6,6 +6,8 @@ A retail inventory management app for iOS demonstrating Couchbase Lite's offline
 
 > [!IMPORTANT]
 > Before proceeding with the iOS setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
+>
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 ## Requirements
 
@@ -18,7 +20,7 @@ A retail inventory management app for iOS demonstrating Couchbase Lite's offline
 
 The project uses Swift Package Manager (SPM) for dependency management. Dependencies are automatically resolved when you open the project:
 
-- **Couchbase Lite Swift**: 3.3.0 (Enterprise Edition)
+- **Couchbase Lite Swift**: 4.1.0 (Enterprise Edition) — 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
 
 ## Getting Started
 
@@ -160,12 +162,31 @@ The app syncs inventory, orders, and store profile data with your Capella cluste
 
 ### Peer-to-Peer Sync
 
-Devices on the same local network can sync directly with each other without going through the cloud. This is useful for:
+Devices can sync directly with each other without going through the cloud, over **Wi-Fi (local network) or Bluetooth LE**. This is useful for:
 - Demo scenarios with multiple devices
-- Offline collaboration between nearby devices
+- Offline collaboration between nearby devices, even with no shared network
 - Reducing cloud bandwidth usage
 
 To enable P2P sync, ensure `enableP2PSync` is set to `true` in `AppConfig.swift`.
+
+#### Transports: Wi-Fi + Bluetooth LE
+
+`GroceryMultipeerSyncManager` configures the replicator with both transports:
+
+```swift
+var transports: Set<MultipeerTransport> = [.wifi, .bluetooth]
+```
+
+The replicator auto-selects and auto-switches between transports based on availability — it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
+
+Bluetooth requires its own usage-description string in addition to the local-network one; both are already configured in the Xcode project (`Info.plist` generation settings):
+
+| Capability | Info.plist key |
+|---|---|
+| Bluetooth LE peer discovery | `NSBluetoothAlwaysUsageDescription` |
+| Wi-Fi / Bonjour peer discovery | `NSLocalNetworkUsageDescription` + `NSBonjourServices` |
+
+On first launch with P2P enabled, iOS prompts for both permissions separately — accept both, or Bluetooth sync will silently fail to advertise/scan.
 
 ### Offline-First Architecture
 

@@ -114,28 +114,31 @@ class MainActivity : ComponentActivity() {
      */
     private fun getRequiredP2PPermissions(): List<String> {
         val permissions = mutableListOf<String>()
-        
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                // Android 13+ (API 33+): Nearby Wi-Fi devices (no location needed)
-                permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-                Log.d("MainActivity", "📱 Android 13+ detected - requesting nearby Wi-Fi devices permission")
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                // Android 12 (API 31-32): Bluetooth permissions + location (required for mDNS)
-                permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
-                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-                permissions.add(Manifest.permission.BLUETOOTH_SCAN)
-                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-                Log.d("MainActivity", "📱 Android 12 detected - requesting Bluetooth + location permissions")
-            }
-            else -> {
-                // Android 11 and below: Location permission (required for mDNS discovery)
-                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-                Log.d("MainActivity", "📱 Android 11 or below - requesting location permission for mDNS")
-            }
+
+        // Bluetooth runtime permissions became mandatory in API 31 (Android 12).
+        // The multipeer Bluetooth-LE transport needs all three regardless of
+        // whether Wi-Fi is also available, so request them on every API 31+
+        // device — NOT just API 31-32. (The earlier either/or `when` skipped
+        // these on API 33+, so Android 13+ devices were never prompted and BLE
+        // sync silently failed.)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
         }
-        
+
+        // Wi-Fi mesh discovery: API 33+ uses the dedicated NEARBY_WIFI_DEVICES
+        // permission (declared with android:usesPermissionFlags="neverForLocation").
+        // Older devices fall back to ACCESS_FINE_LOCATION, which mDNS/DNS-SD
+        // discovery requires below API 33.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            Log.d("MainActivity", "📱 Android 13+ - requesting Bluetooth + nearby Wi-Fi devices permissions")
+        } else {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            Log.d("MainActivity", "📱 Android 12 or below - requesting Bluetooth (if 12) + location permissions")
+        }
+
         return permissions
     }
     

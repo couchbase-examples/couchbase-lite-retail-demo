@@ -6,6 +6,8 @@ A retail inventory management app for Android demonstrating Couchbase Lite's off
 
 > [!IMPORTANT]
 > Before proceeding with the Android setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
+>
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 ## Quick Start (For Already Configured Systems)
 
@@ -39,7 +41,7 @@ The following requirements apply to both macOS and Windows:
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
-- **Couchbase Lite Android**: 3.3.0 (Enterprise Edition with KTX extensions)
+- **Couchbase Lite Android**: 4.1.0 (Enterprise Edition with KTX extensions) — 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
 - **Jetpack Compose**: Material 3 UI components
 - **Kotlin Coroutines**: For asynchronous operations
 - **Lifecycle Components**: ViewModel and LiveData
@@ -100,22 +102,22 @@ Due to SSL certificate issues with the Couchbase Maven repository, we need to ma
 
 ```bash
 # Create local Maven repository directories
-mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0
-mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0
+mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0
+mkdir -p ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0
 
 # Download EE KTX (72KB)
-cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0
-curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.aar" -o couchbase-lite-android-ee-ktx-3.3.0.aar
-curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/couchbase-lite-android-ee-ktx-3.3.0.pom" -o couchbase-lite-android-ee-ktx-3.3.0.pom
+cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0/couchbase-lite-android-ee-ktx-4.1.0.aar" -o couchbase-lite-android-ee-ktx-4.1.0.aar
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0/couchbase-lite-android-ee-ktx-4.1.0.pom" -o couchbase-lite-android-ee-ktx-4.1.0.pom
 
 # Download EE Core (9.4MB)
-cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0
-curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.aar" -o couchbase-lite-android-ee-3.3.0.aar
-curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/couchbase-lite-android-ee-3.3.0.pom" -o couchbase-lite-android-ee-3.3.0.pom
+cd ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/couchbase-lite-android-ee-4.1.0.aar" -o couchbase-lite-android-ee-4.1.0.aar
+curl -L -k "https://mobile.maven.couchbase.com/maven2/dev/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/couchbase-lite-android-ee-4.1.0.pom" -o couchbase-lite-android-ee-4.1.0.pom
 
 # Verify files were downloaded
-ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/
-ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/
+ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0/
+ls -lh ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/
 ```
 
 **Note**: The `-k` flag bypasses SSL certificate verification. This is only needed for the initial download. Once files are in your local Maven repository (`~/.m2/`), Gradle will use them directly.
@@ -137,8 +139,8 @@ cd <path-to-repo>/Android
 ls -la gradlew  # Should exist and be executable
 
 # Verify Couchbase EE (core + KTX) is installed locally
-ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
-ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0/*.aar
 ```
 
 ### Step 5: Open the Project
@@ -340,12 +342,33 @@ The app syncs inventory, orders, and store profile data with your Capella cluste
 
 ### Peer-to-Peer Sync
 
-Devices on the same local network can sync directly with each other without going through the cloud. This is useful for:
+Devices can sync directly with each other without going through the cloud, over **Wi-Fi (local network) or Bluetooth LE**. This is useful for:
 - Demo scenarios with multiple devices
-- Offline collaboration between nearby devices
+- Offline collaboration between nearby devices, even with no shared network
 - Reducing cloud bandwidth usage
 
 P2P sync uses the same peer group ID as the iOS app, enabling cross-platform local sync between Android and iOS devices.
+
+#### Transports: Wi-Fi + Bluetooth LE
+
+`MultipeerSyncManager` configures the replicator with both transports:
+
+```kotlin
+var transports: Set<MultipeerTransport> = EnumSet.of(MultipeerTransport.WIFI, MultipeerTransport.BLUETOOTH)
+```
+
+The replicator auto-selects and auto-switches between transports based on availability — it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
+
+Bluetooth LE peer discovery requires runtime permissions in addition to the Wi-Fi/mDNS ones. The app already declares and requests all of these:
+
+| Android version | Permissions required |
+|---|---|
+| API 31+ (Android 12+) | `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN` |
+| API 33+ (Android 13+) | `NEARBY_WIFI_DEVICES` (covers Wi-Fi discovery; no location permission needed) |
+| API ≤32 (Android 12 and below) | `ACCESS_FINE_LOCATION` (required by mDNS discovery) |
+
+> [!NOTE]
+> On Android, the runtime permission prompt for Bluetooth is surfaced to the user as **"Nearby devices"**, not "Bluetooth" — the OS groups `BLUETOOTH_ADVERTISE`/`CONNECT`/`SCAN` and `NEARBY_WIFI_DEVICES` into a single permission group. If the app doesn't prompt on launch, check **Settings → Apps → Grocery Inventory → Permissions → Nearby devices** — it may already be granted from a previous run.
 
 ### Offline-First Architecture
 
@@ -409,8 +432,8 @@ This usually means the Couchbase Lite EE libraries aren't in your local Maven re
 
 ```bash
 # Verify the files exist
-ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
-ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee-ktx/4.1.0/*.aar
 
 # If missing, re-run Step 3 from Initial Setup
 ```
@@ -570,10 +593,10 @@ To use the Community Edition (if you don't need P2P sync), change the dependency
 
 ```kotlin
 // Replace enterprise edition
-implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:3.3.0")
+implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:4.1.0")
 
 // With community edition (available on Maven Central)
-implementation("com.couchbase.lite:couchbase-lite-android-ktx:3.3.0")
+implementation("com.couchbase.lite:couchbase-lite-android-ktx:4.1.0")
 ```
 
 You would also need to comment out or remove the P2P sync functionality in:
@@ -593,7 +616,7 @@ java -version  # Should show: openjdk version "17.0.x"
 ./gradlew --version  # Should show: Gradle 8.11.1
 
 # Check Couchbase EE locally installed
-ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/3.3.0/*.aar
+ls -la ~/.m2/repository/com/couchbase/lite/couchbase-lite-android-ee/4.1.0/*.aar
 
 # Test build
 ./gradlew assembleDebug  # Should complete successfully
