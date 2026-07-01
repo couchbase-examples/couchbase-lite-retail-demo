@@ -32,6 +32,8 @@ The demo simulates two separate supermarket locations: **Ann Arbor (AA-Store)** 
 
 > [!IMPORTANT]
 > Before setting up the React Native app, you **must** complete the Capella backend configuration described in the [root README](../README.md). This means creating a Capella cluster, a `supermarket` bucket, `AA-Store` and `NYC-Store` scopes with `inventory`/`orders`/`profile` collections, importing the sample dataset, creating App Endpoints (`supermarket-aa`, `supermarket-nyc`), creating App Users, and copying the public connection URL. Without this, the app will open but won't sync any data.
+>
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 ---
 

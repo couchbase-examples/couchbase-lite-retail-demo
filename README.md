@@ -7,14 +7,14 @@ A retail inventory management application built with [Couchbase Lite](https://do
 
 - 📱 **Offline-First**: Operates fully without an internet connection. Couchbase Lite stores all data locally, and changes sync automatically when connectivity is restored.
 - 🔄 **Real-Time Sync**: Bidirectional sync with Couchbase Capella via App Services. Changes appear instantly across iOS, Android, React Native, and web.
-- 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android devices over a local network, without going through the cloud.
+- 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android devices over Wi-Fi or Bluetooth LE, without going through the cloud. Devices auto-mesh and fall back to Bluetooth when no shared Wi-Fi network is available.
 - 🏪 **Multi-Platform Support**: A single backend supports **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)**, **[React Native](https://www.npmjs.com/package/cbl-reactnative)**, and **[Web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Couchbase Lite also supports C, Java, .NET, Ionic, Flutter, and more.
 
 ## Demo Video
 
 ### Peer-to-Peer Sync across iOS and Android
 
-A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P.
+A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P. The replicator meshes over Wi-Fi when available and automatically falls back to Bluetooth LE otherwise — put both devices in Airplane Mode with Bluetooth left on to see pure Bluetooth sync.
 
 https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
@@ -75,6 +75,9 @@ The complete setup of the demo would look like this:
 These are common set of instructions that you must follow to setup the cloud backend regardless of whether you are running iOS, Android and web versions of the app.
 
 Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well.
+
+> [!IMPORTANT]
+> **The sync backend must be Sync Gateway / App Services 4.0 or later.** This demo's Couchbase Lite clients are on the 4.x line, and a 4.x client requires a 4.x sync backend. Capella App Services' free tier already runs 4.x by default, so no action is needed there; if you self-manage Sync Gateway, ensure it is upgraded to version 4.0+.
 
 - Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
@@ -154,9 +157,9 @@ Repeat these steps for each of the App Endpoints
 
 The repo is organized as follows:
 
-- **iOS**: Swift/SwiftUI app for iPhone and iPad. Supports cloud sync and peer-to-peer sync. Follow the [iOS README](./iOS/README.md) to build and run.
+- **iOS**: Swift/SwiftUI app for iPhone and iPad. Supports cloud sync and peer-to-peer sync (Wi-Fi + Bluetooth LE). Follow the [iOS README](./iOS/README.md) to build and run.
 
-- **Android**: Kotlin/Jetpack Compose app for Android. Supports cloud sync and peer-to-peer sync. Follow the [Android README](./Android/README.md) to build and run.
+- **Android**: Kotlin/Jetpack Compose app for Android. Supports cloud sync and peer-to-peer sync (Wi-Fi + Bluetooth LE). Follow the [Android README](./Android/README.md) to build and run.
 
 - **react-native**: Cross-platform app built with React Native (Expo) that runs on both iOS and Android from a single codebase. Supports cloud sync. Follow the [React Native README](./react-native/README.md) to build and run.
 
