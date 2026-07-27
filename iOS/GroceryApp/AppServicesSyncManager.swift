@@ -47,24 +47,18 @@ class AppServicesSyncManager: ObservableObject {
     private func setupAppServicesSync() {
         print("🔧 Setting up App Services sync configuration...")
         print("🔧 Scope: \(AppConfig.scopeName)")
-        print("🔧 Collections: inventory, profile, orders")
-        
+        print("🔧 Collections: \(AppConfig.allSyncedCollections.joined(separator: ", "))")
+
         do {
             // Ensure all collections exist (using scope from AppConfig to match Capella structure)
-            let inventoryCollection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
+            let inventoryCollection = try database.collection(name: collectionName, scope: AppConfig.scopeName)
                 ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
-            
-            let profileCollection = try database.collection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
-                ?? database.createCollection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
-            
-            let ordersCollection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
-                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
-            
+
             // Create target endpoint
             guard let url = URL(string: syncGatewayURL) else {
                 throw NSError(domain: "Invalid sync gateway URL", code: -1)
             }
-            
+
             let target = URLEndpoint(url: url)
 
             // CBL 4.x: each CollectionConfiguration now carries its own
@@ -74,12 +68,23 @@ class AppServicesSyncManager: ObservableObject {
             var inventoryConfig = CollectionConfiguration(collection: inventoryCollection)
             inventoryConfig.conflictResolver = GroceryCRDTConflictResolver.shared
 
-            // Profile and orders need no CRDT resolver (default last-write-wins).
-            let profileConfig = CollectionConfiguration(collection: profileCollection)
-            let ordersConfig = CollectionConfiguration(collection: ordersCollection)
+            // Every other collection uses default last-write-wins. `planograms`,
+            // `product_knowledge` and `tasks` were added for the copilot: they sit in the
+            // existing per-store scope and replicate under the same App User, so this is
+            // additive channel configuration rather than an access-model change.
+            //
+            // Note for anyone hitting a 'collection not found' sync error: the App
+            // Services endpoint must also be configured to serve these three collections,
+            // otherwise the replicator will report them as missing on the remote.
+            var collectionConfigs = [inventoryConfig]
+            for name in AppConfig.allSyncedCollections where name != collectionName {
+                let collection = try database.collection(name: name, scope: AppConfig.scopeName)
+                    ?? database.createCollection(name: name, scope: AppConfig.scopeName)
+                collectionConfigs.append(CollectionConfiguration(collection: collection))
+            }
 
             var config = ReplicatorConfiguration(
-                collections: [inventoryConfig, profileConfig, ordersConfig],
+                collections: collectionConfigs,
                 target: target
             )
 

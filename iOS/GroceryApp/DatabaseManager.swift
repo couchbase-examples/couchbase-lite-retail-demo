@@ -18,6 +18,13 @@ class DatabaseManager: ObservableObject {
     @Published var appServicesSyncManager: AppServicesSyncManager?
     @Published var isAppServicesEnabled: Bool = false
 
+    // MARK: - Copilot / vector search state
+    /// Nil until the vector-search extension has been enabled; carries the failure
+    /// reason if it could not be. Surfaced on the copilot's diagnostics screen rather
+    /// than crashing, so the rest of the app still runs if the extension is unavailable.
+    @Published var vectorSearchError: String?
+    @Published var vectorIndexReports: [String] = []
+
     init() {
         // Print configuration on startup
         AppConfig.printConfiguration()
@@ -89,24 +96,77 @@ class DatabaseManager: ObservableObject {
     
     private func openDatabase() {
         do {
+            // The vector-search extension has to be enabled before any database is
+            // opened — it registers the APPROX_VECTOR_DISTANCE implementation with the
+            // query engine. A failure here is reported rather than fatal so the rest of
+            // the app (inventory, orders, sync) still works without the copilot.
+            enableVectorSearchExtension()
+
             // Check if we need to delete the old database due to store change
             checkAndHandleStoreChange()
-            
+
             let config = DatabaseConfiguration()
             database = try Database(name: databaseName, config: config)
             print("✅ Database opened successfully: \(databaseName)")
             print("📍 Database path: \(database?.path ?? "unknown")")
-            
+
             // Log initial document count
             let itemCount = getAllGroceryItems().count
             print("📊 Current inventory: \(itemCount) items")
-            
+
             if itemCount == 0 {
                 print("🔄 Database is empty - waiting for App Services to sync data...")
             }
+
+            // Seed the bundled extended dataset into any empty collection, then build the
+            // on-device vector indexes. Both are no-ops once real data has arrived.
+            prepareCopilotData()
         } catch {
             print("❌ Error opening database: \(error)")
         }
+    }
+
+    /// Enables the Couchbase Lite vector-search extension exactly once per process.
+    private static var vectorSearchEnabled = false
+
+    private func enableVectorSearchExtension() {
+        guard !Self.vectorSearchEnabled else { return }
+        do {
+            try Extension.enableVectorSearch()
+            Self.vectorSearchEnabled = true
+            print("🧭 [VectorSearch] extension enabled")
+        } catch {
+            let message = "Vector search extension unavailable: \(error.localizedDescription)"
+            print("❌ [VectorSearch] \(message)")
+            DispatchQueue.main.async { self.vectorSearchError = message }
+        }
+    }
+
+    /// Seeds bundled demo data if needed and (re)creates the vector indexes.
+    ///
+    /// Safe to call repeatedly — seeding skips non-empty collections and index creation
+    /// skips indexes that already exist. It is called on open and again when the
+    /// replicator goes idle, because on a cold start the collections are empty at open
+    /// time and an index created against an empty collection can never train.
+    func prepareCopilotData() {
+        guard let database = database else { return }
+
+        let seeded = LocalDatasetSeeder.seedIfNeeded(into: database)
+        for result in seeded where result.inserted > 0 {
+            print("🌱 [Copilot] seeded \(result.inserted) docs into \(result.collection)")
+        }
+
+        let outcomes = VectorIndexManager.ensureAllIndexes(in: database)
+        let reports = outcomes.map { o -> String in
+            if o.alreadyExisted {
+                return "\(o.spec.name): ready (\(o.vectorCount) vectors, \(o.centroids) centroids)"
+            } else if o.created {
+                return "\(o.spec.name): created (\(o.vectorCount) vectors, \(o.centroids) centroids)"
+            } else {
+                return "\(o.spec.name): \(o.skippedReason ?? "not created")"
+            }
+        }
+        DispatchQueue.main.async { self.vectorIndexReports = reports }
     }
     
     /// Check if the store configuration has changed and delete old database if needed

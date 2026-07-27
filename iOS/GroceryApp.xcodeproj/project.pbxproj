@@ -623,7 +623,7 @@
 			repositoryURL = "https://github.com/couchbase/couchbase-lite-vector-search-spm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 2.0.0;
 			};
 		};
 		D1E468902EAA673000588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-swift-ee" */ = {

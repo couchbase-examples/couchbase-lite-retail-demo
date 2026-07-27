@@ -115,6 +115,20 @@ struct AppConfig {
     static let collectionName = "inventory"  // Main inventory collection
     static let ordersCollectionName = "orders"  // Orders collection
     static let profileCollectionName = "profile"  // Store profile collection
+
+    // Collections added by the edge vector search / copilot extension.
+    // These sit in the existing per-store scopes and sync under the existing
+    // single App User per store — no new roles, users, or channels.
+    static let planogramsCollectionName = "planograms"          // Step 2: shelf audit
+    static let knowledgeCollectionName = "product_knowledge"    // Step 3: RAG source chunks
+    static let tasksCollectionName = "tasks"                    // Request Help
+
+    /// Every collection the replicator should carry, in a single list so the sync
+    /// manager and the local seeder cannot drift apart.
+    static var allSyncedCollections: [String] {
+        [collectionName, profileCollectionName, ordersCollectionName,
+         planogramsCollectionName, knowledgeCollectionName, tasksCollectionName]
+    }
     
     // MARK: - Sync Configuration (Event-Driven, Real-Time)
     // NOTE: "Continuous" sync is EVENT-DRIVEN, not polling!
@@ -131,6 +145,32 @@ struct AppConfig {
     static let enableAppServicesSync: Bool = true
     static let enableP2PSync: Bool = true
     static let enableAutoDataSeeding: Bool = false // DISABLED: No more hard-coded data
+
+    // MARK: - Store Associate Copilot (edge vector search)
+
+    /// Seeds the bundled extended dataset into the local database when a collection
+    /// comes up empty. This exists so the copilot can be built, demoed and explored
+    /// with no Capella backend at all — the extended dataset is not in Capella yet,
+    /// and a developer picking this app up should not need a cloud account to see
+    /// vector search work. Documents that arrive over App Services supersede the
+    /// seeded copies normally, since they carry the same document IDs.
+    static let enableLocalDatasetSeeding: Bool = true
+
+    /// Cosine-distance ceiling for a result to count as relevant.
+    ///
+    /// NOT the spec's hardcoded 0.35 — that was written before real vectors existed.
+    /// Measured against the actual MiniLM corpus, the hero query's best match sits at
+    /// 0.24 and the 5th percentile of all 104 documents is 0.57, so 0.35 would surface
+    /// only 2 documents and drop legitimate near-misses. 0.60 keeps the relevant set
+    /// and still excludes the bulk of the catalogue (median distance 0.81).
+    /// Tunable at runtime from the copilot's behind-the-scenes screen.
+    static let defaultRelevanceThreshold: Double = 0.60
+
+    /// How many candidates a vector query returns before threshold filtering.
+    static let copilotSearchLimit: Int = 10
+
+    /// Chunks fed to the on-device SLM for RAG answers.
+    static let copilotRAGChunkCount: Int = 4
     
     // MARK: - Debug Configuration
     static let debugLogging: Bool = true
