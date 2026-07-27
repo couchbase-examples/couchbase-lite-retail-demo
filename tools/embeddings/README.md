@@ -1,15 +1,36 @@
 # Embedding tooling — Store Associate Copilot
 
-Two scripts that produce the assets edge vector search needs:
+Scripts that produce the assets edge vector search needs. Text (Steps 1 and 3) first, then
+images (Step 2).
 
 | Script | Produces | Consumed by |
 |---|---|---|
-| `convert_minilm.py` | `MiniLMTextEncoder.mlpackage` | the iOS app, for on-device **query** embedding |
-| `embed_dataset.py` | dataset JSON with real vectors | Capella import, and the app's bundled demo dataset |
+| `convert_minilm.py` | `MiniLMTextEncoder.mlpackage` | the iOS app, for on-device **text query** embedding |
+| `embed_dataset.py` | dataset JSON with 384-d text vectors | Capella import, and the app's bundled demo dataset |
+| `convert_clip.py` | `ClipImageEncoder.mlpackage` | the iOS app, for on-device **shelf crop** embedding |
+| `generate_shelf_assets.py` | product + golden/messy shelf PNGs | `embed_images.py`, and the app's sample shelves |
+| `embed_images.py` | 512-d image vectors on inventory + planograms | the shelf audit's crop matching |
+| `verify_clip_parity.py` | pass/fail on every audit verdict | run after regenerating either image side |
 
-Both use the same weights (`sentence-transformers/all-MiniLM-L6-v2`, 384-d, cosine). That is
-the point: a query embedded on the device has to land in the same vector space as the product
-vectors authored offline, or ranking is meaningless.
+Each modality uses one set of weights on both sides — `all-MiniLM-L6-v2` (384-d, cosine) for
+text, `CLIP ViT-B/32` (512-d, cosine) for images. That is the point: a query embedded on the
+device has to land in the same vector space as the vectors authored offline, or ranking is
+meaningless.
+
+A full regeneration, in order:
+
+```bash
+DS=../../iOS/GroceryApp/Copilot/Resources/DemoDataset
+./.venv/bin/python convert_minilm.py "$DS"
+./.venv/bin/python embed_dataset.py "/path/to/demo-dataset-extended -vector" "$DS"
+./.venv/bin/python convert_clip.py
+./.venv/bin/python generate_shelf_assets.py "$DS" ./generated-assets
+./.venv/bin/python embed_images.py "$DS" ./generated-assets
+./.venv/bin/python verify_clip_parity.py "$DS" ./generated-assets   # must pass
+cp -R MiniLMTextEncoder.mlpackage ClipImageEncoder.mlpackage ../../iOS/GroceryApp/Copilot/Resources/
+cp generated-assets/products/*.png generated-assets/planograms/*.png \
+   ../../iOS/GroceryApp/Copilot/Resources/ShelfAssets/
+```
 
 ## Why both, and why they must agree
 
@@ -112,6 +133,64 @@ the threshold is 0.60 rather than the 0.35 in the data-model spec — 0.35 retur
    copilot works with no backend at all. `LocalDatasetSeeder` loads it into any collection
    that comes up empty, using the same document IDs, so synced documents supersede the
    seeded ones normally.
+
+## Step 2 — the image side
+
+### Why the imagery is generated
+
+Every image the dataset refers to returns **403**: the Footwear product shots
+(`.../20001.png`), the sports-nutrition shots (`.../21001.png`), and all the planogram
+goldens (`.../planograms/nyc_A1_golden.png`). Step 2 is entirely gated on imagery, so
+`generate_shelf_assets.py` renders a self-consistent set — one product image per new SKU,
+driven by that document's own colour/category/name, plus a **golden** and a **messy** shelf
+per planogram.
+
+They are placeholders, not photographs, and the audit UI says so. When real shelf photos
+arrive, only the inputs change; `embed_images.py` and the on-device crop matching are
+unaffected.
+
+The messy variant reproduces the narrative's failure at exactly one position: the product
+that belongs at the leftmost slot is pushed to the back and its neighbour has spread forward
+into the empty facing.
+
+### Why per-facing crops, not one shelf vector
+
+A single global CLIP vector per photo cannot say *which* item moved — it carries no
+per-position information, and CLIP is documented to overlook the fine spatial detail a
+planogram check depends on. So each expected position is cropped out and matched separately
+against product-image vectors. That is what makes "expected AeroStride Runner at A1-L, found
+WinterWarm Boot" possible.
+
+The app still shows whole-shelf similarity as a secondary number, and the gap is instructive:
+on the messy A1 shelf it reads **91%** — "basically fine" — while the per-position pass
+correctly flags the violation.
+
+### Why CLIP is quantized
+
+CLIP's vision tower is 87M parameters, so fp16 weights are **~168MB** — over GitHub's 100MB
+per-file hard limit. `convert_clip.py` applies int8 per-channel weight quantization, giving
+**84MB**.
+
+`verify_clip_parity.py` checks the thing that actually matters. Stored product vectors are
+authored from the fp32 PyTorch model; shelf-crop queries come from the int8 CoreML export. So
+rather than reporting a cosine, it re-runs every audit and asserts the *verdicts* hold:
+
+```
+positions checked: 36   failures: 0
+decision margin — min +0.0397  mean +0.1485
+```
+
+Quantization changed no verdict. The narrowest margin is two visually similar trail shoes
+(olive Trailblaze GTX vs brown TrailGrip Hiker), which the app surfaces as "low confidence"
+rather than implying certainty the vectors do not support.
+
+Preprocessing is the other place these two paths can diverge: resize shortest side to 224
+(bicubic), centre crop, scale to [0,1], normalize with CLIP's mean/std. `ImageEmbedder.swift`
+reproduces it, and `verify_clip_parity.py` is what confirms the agreement.
+
+> One host-side quirk: the int8 graph trips an `MLIR pass manager failed` assertion inside
+> MPSGraph on some Mac GPU drivers, so the verification script pins `CPU_ONLY`. The iOS
+> loader falls back to CPU for the same reason — a slower correct answer beats a failed audit.
 
 ## If the model ever changes
 
