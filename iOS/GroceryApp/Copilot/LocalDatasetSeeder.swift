@@ -40,6 +40,30 @@ enum LocalDatasetSeeder {
         let skippedReason: String?
     }
 
+    /// Whether a bundled document belongs to a category the copilot is hiding.
+    ///
+    /// Only the local demo seed is filtered — the JSON on disk is untouched, and footwear
+    /// documents arriving over App Services are unaffected. This exists so a backend-free
+    /// run of the grocery narrative has no footwear anywhere, including the inventory grid.
+    private static func isHidden(_ fields: [String: Any]) -> Bool {
+        let hidden = AppConfig.hiddenCategories
+        guard !hidden.isEmpty else { return false }
+
+        if let category = fields["category"] as? String, hidden.contains(category) {
+            return true
+        }
+        // Planograms carry a section rather than a category.
+        if let section = fields["section"] as? String, hidden.contains(section) {
+            return true
+        }
+        // Knowledge chunks are scoped by the categories they relate to.
+        if let related = fields["relatedCategories"] as? [String],
+           !related.isEmpty, related.allSatisfy(hidden.contains) {
+            return true
+        }
+        return false
+    }
+
     /// Seeds every collection that is currently empty. Returns one result per collection.
     @discardableResult
     static func seedIfNeeded(into database: Database) -> [SeedResult] {
@@ -87,15 +111,23 @@ enum LocalDatasetSeeder {
         }
 
         var inserted = 0
-        // One batch keeps 104 inserts to a single commit, which matters on the very first
+        var skipped = 0
+        // One batch keeps ~100 inserts to a single commit, which matters on the very first
         // launch where this runs before the UI has anything to show.
         try database.inBatch {
             for fields in docs {
                 guard let docId = fields["id"] as? String else { continue }
+                if isHidden(fields) {
+                    skipped += 1
+                    continue
+                }
                 let doc = MutableDocument(id: docId, data: fields)
                 try collection.save(document: doc)
                 inserted += 1
             }
+        }
+        if skipped > 0 {
+            print("🌱 [Seeder] \(name): skipped \(skipped) \(AppConfig.hiddenCategories.joined(separator: "/")) documents")
         }
 
         print("🌱 [Seeder] \(AppConfig.scopeName).\(name): inserted \(inserted) documents from \(resource).json")

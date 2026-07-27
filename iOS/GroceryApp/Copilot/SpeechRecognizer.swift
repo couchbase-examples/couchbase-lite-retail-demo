@@ -85,10 +85,15 @@ final class SpeechRecognizer: ObservableObject {
             request.requiresOnDeviceRecognition = true
             // Nudges the recognizer toward retail vocabulary and the invented brand
             // names in the demo catalogue, which a general model otherwise mangles.
-            request.contextualStrings = [
-                "AeroStride", "StrideLab", "GreenLeaf", "BluePeak", "PrimeChoice",
-                "FarmFresh", "dairy-free", "high-protein", "planogram", "aisle", "shelf",
+            var vocabulary = [
+                "GreenLeaf", "BluePeak", "PrimeChoice", "FarmFresh", "BudgetBest",
+                "GoLocal", "SilverValley", "dairy-free", "high-protein", "low-sugar",
+                "electrolyte", "planogram", "aisle", "shelf", "facings",
             ]
+            if AppConfig.footwearNarrativeEnabled {
+                vocabulary.append(contentsOf: ["AeroStride", "StrideLab", "Trailblaze"])
+            }
+            request.contextualStrings = vocabulary
             self.request = request
             isOnDevice = true
 

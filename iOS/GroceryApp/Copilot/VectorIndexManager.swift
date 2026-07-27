@@ -132,6 +132,8 @@ enum VectorIndexManager {
             minTrainingSize=\(config.minTrainingSize) maxTrainingSize=\(config.maxTrainingSize)
             """)
 
+        warmUp(spec, in: database)
+
         return Outcome(spec: spec, created: true, alreadyExisted: false,
                        vectorCount: vectorCount, centroids: centroids, skippedReason: nil)
     }
@@ -152,6 +154,39 @@ enum VectorIndexManager {
             }
         }
         return outcomes
+    }
+
+    /// Runs one throwaway vector query so the index trains here rather than on the
+    /// associate's first search.
+    ///
+    /// Couchbase Lite trains a vector index lazily, on the first query that uses it, and
+    /// training needs a write lock. If the first query happens to be a user search while a
+    /// replicator is writing, training loses the race and the search fails outright with
+    /// `vectorsearch exception: database is locked` — which reads as "vector search is
+    /// broken" rather than "try again". Training during setup avoids that entirely: this
+    /// runs from `openDatabase()`, before either replicator has started.
+    private static func warmUp(_ spec: IndexSpec, in database: Database) {
+        let sql = """
+            SELECT META().id
+            FROM `\(AppConfig.scopeName)`.`\(spec.collection)`
+            WHERE APPROX_VECTOR_DISTANCE(\(spec.expression), $probe, "cosine") IS VALUED
+            LIMIT 1
+            """
+        do {
+            let query = try database.createQuery(sql)
+            let params = Parameters()
+            // Any vector of the right dimension will do — only the training side effect
+            // matters, not the result.
+            params.setValue([Double](repeating: 0.05, count: Int(spec.dimensions)),
+                            forName: "probe")
+            query.parameters = params
+            _ = try query.execute().allResults()
+            print("🧭 [VectorIndex] '\(spec.name)' trained during setup")
+        } catch {
+            // Not fatal: the index will train on first use instead, and the query path
+            // retries on a lock error.
+            print("⚠️ [VectorIndex] warm-up of '\(spec.name)' failed: \(error.localizedDescription)")
+        }
     }
 
     /// Counts documents that actually carry a vector at `expression`.

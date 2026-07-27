@@ -69,6 +69,31 @@ final class CopilotSearchService: ObservableObject {
         self.databaseManager = databaseManager
     }
 
+    /// Executes a query, retrying briefly if the database is momentarily write-locked.
+    ///
+    /// The replicators write continuously, and an untrained vector index takes a write lock
+    /// to train on its first use, so a query can legitimately lose a short race and come
+    /// back with `database is locked`. Indexes are trained during setup to make that rare,
+    /// but "rare" is not "never" — retrying turns a hard failure into a few milliseconds of
+    /// delay instead of an error banner mid-demo.
+    static func executeWithRetry(_ query: Query, attempts: Int = 3) throws -> ResultSet {
+        var lastError: Error?
+        for attempt in 0..<attempts {
+            do {
+                return try query.execute()
+            } catch let error as NSError where error.code == 5 || error.code == 6 {
+                // 5 = SQLITE_BUSY, 6 = SQLITE_LOCKED, surfaced through LiteCore.
+                lastError = error
+                if attempt < attempts - 1 {
+                    Thread.sleep(forTimeInterval: 0.12 * Double(attempt + 1))
+                }
+            }
+        }
+        throw lastError ?? NSError(domain: "Copilot", code: 5, userInfo: [
+            NSLocalizedDescriptionKey: "The database stayed busy; try the search again."
+        ])
+    }
+
     // MARK: - Step 1: semantic product search
 
     /// Embeds `query` on-device and returns the nearest inventory items.
@@ -103,6 +128,11 @@ final class CopilotSearchService: ObservableObject {
         if inStockOnly {
             predicates.append("stockQty > 0")
         }
+        // Grocery-first narrative: keep hidden categories out of results even when the
+        // documents are present in the collection.
+        for (index, _) in AppConfig.hiddenCategories.enumerated() {
+            predicates.append("category != $hidden\(index)")
+        }
 
         // `IS VALUED` is the documented way to force the vector index to be used.
         // Distance is aliased once and ordered by the alias so the expensive function
@@ -127,10 +157,13 @@ final class CopilotSearchService: ObservableObject {
         if let category, !category.isEmpty {
             params.setValue(category, forName: "category")
         }
+        for (index, hidden) in AppConfig.hiddenCategories.enumerated() {
+            params.setValue(hidden, forName: "hidden\(index)")
+        }
         cblQuery.parameters = params
 
         var candidates: [SemanticHit] = []
-        for row in try cblQuery.execute() {
+        for row in try Self.executeWithRetry(cblQuery) {
             guard let id = row.string(forKey: "id"),
                   let item = GroceryItem.from(row, id: id) else { continue }
             candidates.append(SemanticHit(item: item, distance: row.double(forKey: "distance")))
@@ -172,11 +205,18 @@ final class CopilotSearchService: ObservableObject {
         let clauses = terms.enumerated().map { i, _ in
             "LOWER(name) LIKE $t\(i) OR LOWER(category) LIKE $t\(i)"
         }
+        // The same category exclusion the vector query uses. Without it the keyword
+        // baseline would be searching a larger catalogue than the semantic one, which would
+        // make the head-to-head comparison misleading in the demo's favour.
+        var predicates = ["(\(clauses.map { "(\($0))" }.joined(separator: " OR ")))"]
+        for (index, _) in AppConfig.hiddenCategories.enumerated() {
+            predicates.append("category != $hidden\(index)")
+        }
         let sql = """
             SELECT META().id AS id, name, category, price, imageURL, stockQty,
                    productId, sku, brand, unit, location, attributes, storeId, docType
             FROM `\(AppConfig.scopeName)`.`\(AppConfig.collectionName)`
-            WHERE \(clauses.map { "(\($0))" }.joined(separator: " OR "))
+            WHERE \(predicates.joined(separator: " AND "))
             ORDER BY name
             """
         do {
@@ -185,8 +225,11 @@ final class CopilotSearchService: ObservableObject {
             for (i, term) in terms.enumerated() {
                 params.setValue("%\(term)%", forName: "t\(i)")
             }
+            for (index, hidden) in AppConfig.hiddenCategories.enumerated() {
+                params.setValue(hidden, forName: "hidden\(index)")
+            }
             cblQuery.parameters = params
-            return try cblQuery.execute().compactMap { row in
+            return try Self.executeWithRetry(cblQuery).compactMap { row in
                 guard let id = row.string(forKey: "id") else { return nil }
                 return GroceryItem.from(row, id: id)
             }
@@ -216,6 +259,11 @@ final class CopilotSearchService: ObservableObject {
         if relatedCategory != nil {
             predicates.append("ARRAY_CONTAINS(relatedCategories, $category)")
         }
+        // Half the seeded knowledge chunks are footwear-scoped. Retrieving one for a
+        // grocery question would put shoe advice in a grocery answer.
+        for (index, _) in AppConfig.hiddenCategories.enumerated() {
+            predicates.append("NOT ARRAY_CONTAINS(relatedCategories, $hidden\(index))")
+        }
 
         let sql = """
             SELECT META().id AS id, title, chunkText, sourceDoc,
@@ -232,10 +280,13 @@ final class CopilotSearchService: ObservableObject {
         if let relatedCategory {
             params.setValue(relatedCategory, forName: "category")
         }
+        for (index, hidden) in AppConfig.hiddenCategories.enumerated() {
+            params.setValue(hidden, forName: "hidden\(index)")
+        }
         cblQuery.parameters = params
 
         var hits: [KnowledgeHit] = []
-        for row in try cblQuery.execute() {
+        for row in try Self.executeWithRetry(cblQuery) {
             guard let id = row.string(forKey: "id") else { continue }
             hits.append(KnowledgeHit(
                 id: id,

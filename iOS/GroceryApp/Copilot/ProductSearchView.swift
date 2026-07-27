@@ -36,14 +36,34 @@ struct ProductSearchView: View {
     private let accent = Color(hex: "FC9C0C")
     private let cream = Color(hex: "FFF0DB")
 
-    /// Scripted demo queries. Each is chosen because keyword search handles it badly:
-    /// the first returns a pile of irrelevant dairy, the second returns nothing at all.
-    private let suggestions = [
-        "high-protein shake that's low in sugar and dairy-free",
-        "breathable lightweight blue running shoes",
-        "waterproof shoes for hiking in the rain",
-        "something sweet for a kid's lunchbox",
-    ]
+    /// Categories offered in the hybrid filter. These are the real `category` values in the
+    /// extended dataset, and anything the copilot hides is excluded.
+    static var filterableCategories: [String] {
+        ["Beverages", "Dairy", "Produce", "Bakery", "Pantry", "Snacks",
+         "Meat", "Seafood", "Personal Care", "Household", "Footwear"]
+            .filter { !AppConfig.hiddenCategories.contains($0) }
+    }
+
+    /// Scripted demo queries, all grocery. Each was measured against the real corpus before
+    /// being put here — every one returns the right product first, and keyword search on the
+    /// same catalogue either misses it or buries it:
+    ///
+    ///   1. the hero query; keyword returns 23 unrelated dairy items
+    ///   2. exercises negation — the plant-based shake ranks above the whey one
+    ///   3. keyword's only hit is the wrong drink
+    ///   4. keyword returns nothing at all, semantic finds it at 0.44
+    private var suggestions: [String] {
+        var grocery = [
+            "high-protein shake that's low in sugar and dairy-free",
+            "plant-based protein with no whey",
+            "a drink with electrolytes for after a workout",
+            "sustainably sourced fish",
+        ]
+        if AppConfig.footwearNarrativeEnabled {
+            grocery.append("breathable lightweight blue running shoes")
+        }
+        return grocery
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -137,10 +157,9 @@ struct ProductSearchView: View {
                         Spacer()
                         Picker("Category", selection: $categoryFilter) {
                             Text("Any").tag("")
-                            Text("Beverages").tag("Beverages")
-                            Text("Footwear").tag("Footwear")
-                            Text("Dairy & Eggs").tag("Dairy & Eggs")
-                            Text("Snacks").tag("Snacks")
+                            ForEach(Self.filterableCategories, id: \.self) { category in
+                                Text(category).tag(category)
+                            }
                         }
                         .pickerStyle(.menu)
                         .tint(accent)

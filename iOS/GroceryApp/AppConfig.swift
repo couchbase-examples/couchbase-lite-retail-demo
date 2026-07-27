@@ -156,6 +156,28 @@ struct AppConfig {
     /// seeded copies normally, since they carry the same document IDs.
     static let enableLocalDatasetSeeding: Bool = true
 
+    /// Whether the Footwear category appears anywhere in the copilot.
+    ///
+    /// The demo narrative is grocery-first, and per review feedback (Jul 2026) the copilot
+    /// should not surface footwear at all — the point is semantic search over the store's
+    /// real grocery catalogue, and a shoe wall in a supermarket reads as contrived.
+    ///
+    /// Set this to `true` to restore the proposal's "same capability, new category" story,
+    /// which demonstrates that the design generalizes to any retail vertical. Nothing is
+    /// deleted to turn it off: the footwear documents, their vectors, their planograms and
+    /// their knowledge chunks all remain in the dataset and the tooling still generates them.
+    ///
+    /// When `false` this controls two things — the copilot excludes the Footwear category
+    /// from search, knowledge retrieval and the shelf list, and the local demo seeder omits
+    /// footwear documents so a backend-free run is entirely grocery. Footwear documents that
+    /// arrive over App Services are not removed; they simply are not featured.
+    static let footwearNarrativeEnabled: Bool = false
+
+    /// Categories the copilot hides. Empty unless the footwear narrative is switched off.
+    static var hiddenCategories: [String] {
+        footwearNarrativeEnabled ? [] : ["Footwear"]
+    }
+
     /// Cosine-distance ceiling for a result to count as relevant.
     ///
     /// NOT the spec's hardcoded 0.35 — that was written before real vectors existed.

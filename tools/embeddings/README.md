@@ -134,6 +134,31 @@ the threshold is 0.60 rather than the 0.35 in the data-model spec — 0.35 retur
    that comes up empty, using the same document IDs, so synced documents supersede the
    seeded ones normally.
 
+## Grocery-only by default
+
+The demo narrative is grocery-first, and the copilot does not surface Footwear at all.
+`AppConfig.footwearNarrativeEnabled` is `false`, which excludes the category from search,
+knowledge retrieval and the shelf list, and makes the local demo seeder omit footwear
+documents so a backend-free run is entirely grocery.
+
+**Nothing here changes.** These scripts still generate footwear descriptions, vectors, product
+images and planograms, and the dataset JSON still contains them — flipping the flag to `true`
+restores the proposal's "same capability, new category" story with no regeneration.
+
+One consequence worth knowing when reading the verification output below: it audits *every*
+planogram including the two footwear shelves, because it validates the pipeline rather than
+the demo script. With the flag off, the app only offers the Sports Nutrition shelf (C3), whose
+messy variant reports `expected Chocolate Recovery Shake, found Vanilla Whey Protein Shake`.
+
+> **Dataset gap this exposes.** Only the 6 sports-nutrition SKUs Priya added have prose
+> written for semantic search. The other 80 grocery descriptions are templated —
+> *"A dependable pantry pick for the weekly shop"*, and one even reads *"shelf-stable,
+> shelf-stable"* — so they carry almost no distinguishing signal, and semantic queries against
+> them return near-arbitrary results. The 18 footwear docs all had rich descriptions, so
+> dropping footwear removes most of the corpus that actually demonstrates the capability.
+> The four suggested queries in the app are the ones that measurably work; broadening beyond
+> them needs the base grocery descriptions enriched.
+
 ## Step 2 — the image side
 
 ### Why the imagery is generated

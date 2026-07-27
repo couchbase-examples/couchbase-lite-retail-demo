@@ -23,8 +23,12 @@ struct RAGAssistantView: View {
     private let accent = Color(hex: "FC9C0C")
     private let cream = Color(hex: "FFF0DB")
 
+    /// Grocery-scoped prompts. The seeded knowledge covers protein timing, low-sugar recovery
+    /// drinks, electrolytes, dairy-free protein and pre-run fuelling, so these are questions
+    /// the sources can actually answer — a RAG demo that retrieves nothing relevant is worse
+    /// than no demo.
     private var suggestions: [String] {
-        if let product, product.type == "Footwear" {
+        if AppConfig.footwearNarrativeEnabled, let product, product.type == "Footwear" {
             return ["Are these good for a beginner runner?",
                     "Will these hold up on wet trails?",
                     "How should I pick the right size?"]
@@ -36,7 +40,7 @@ struct RAGAssistantView: View {
         }
         return ["I'm training for my first 5k — what should I drink after a run?",
                 "How much protein do I need for endurance recovery?",
-                "What should I look for in a beginner running shoe?"]
+                "What are my dairy-free protein options?"]
     }
 
     var body: some View {

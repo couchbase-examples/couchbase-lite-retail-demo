@@ -211,12 +211,13 @@ enum CopilotDiagnostics {
     /// during the offline embedding run. If the Swift tokenizer disagrees, query vectors
     /// land in a different place than the stored product vectors.
     private static let expectations: [(text: String, ids: [Int32])] = [
-        // [CLS] high protein shake low sugar dairy free [SEP]
+        // [CLS] high protein shake low sugar dairy free [SEP] — the hero query
         ("high protein shake low sugar dairy free",
          [101, 2152, 5250, 6073, 2659, 5699, 11825, 2489, 102]),
-        // [CLS] breath ##able lightweight blue running shoes [SEP] — exercises subwording
-        ("breathable lightweight blue running shoes",
-         [101, 3052, 3085, 12038, 2630, 2770, 6007, 102]),
+        // "electrolytes" splits into electro ##ly ##tes — a three-piece subword chain, so
+        // this catches greedy-longest-match bugs a two-piece word would not.
+        ("a drink with electrolytes for after a workout",
+         [101, 1037, 4392, 2007, 16175, 2135, 4570, 2005, 2044, 1037, 27090, 102]),
         // [CLS] dairy - free [SEP] — exercises punctuation splitting
         ("dairy-free",
          [101, 11825, 1011, 2489, 102]),

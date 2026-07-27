@@ -41,8 +41,8 @@ extension GroceryItem {
         var attributes: Attributes?
         if let a = dict.dictionary(forKey: "attributes") {
             // `boolean(forKey:)` returns false for an absent key, which would turn
-            // "this footwear doc has no `organic` field" into "this shoe is not
-            // organic". Presence is checked so absent stays nil.
+            // "this document has no `organic` field" into "this product is not organic".
+            // Presence is checked so absent stays nil.
             func bool(_ key: String) -> Bool? {
                 a.contains(key: key) ? a.boolean(forKey: key) : nil
             }

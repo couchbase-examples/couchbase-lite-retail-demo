@@ -30,7 +30,8 @@ struct PositionFinding: Identifiable, Hashable {
     let foundName: String?
     let distance: Double
     /// Gap to the runner-up. A narrow margin means the visual call was close, which the UI
-    /// surfaces rather than hiding — two similar shoes genuinely are hard to tell apart.
+    /// surfaces rather than hiding — two similar-looking products genuinely are hard to tell
+    /// apart from a photograph.
     let margin: Double
 
     var id: String { position }
@@ -82,7 +83,8 @@ struct ShelfAuditResult {
 /// spatial detail a planogram check depends on. So instead each expected position is cropped
 /// out of the photo, embedded separately, and matched against the product-image vectors on
 /// the inventory documents via `APPROX_VECTOR_DISTANCE`. That is what makes
-/// "expected AeroStride Runner at A1-L, found WinterWarm Boot" possible at all.
+/// "expected Chocolate Recovery Shake at C3-L, found Vanilla Whey Protein Shake" possible
+/// at all.
 @MainActor
 final class ShelfAuditService: ObservableObject {
 
@@ -132,7 +134,9 @@ final class ShelfAuditService: ObservableObject {
                     expectedLayout: layout
                 ))
             }
-            planograms = loaded
+            // Two of the three seeded planograms are footwear shelves. With the grocery-only
+            // narrative they are filtered out here rather than removed from the dataset.
+            planograms = loaded.filter { !AppConfig.hiddenCategories.contains($0.section) }
         } catch {
             print("❌ [ShelfAudit] failed to load planograms: \(error)")
         }
@@ -210,7 +214,7 @@ final class ShelfAuditService: ObservableObject {
     }
 
     /// Nearest inventory products by product-image vector, scoped to the shelf's section so
-    /// a footwear crop is never matched against a beverage.
+    /// a sports-nutrition crop is never matched against a household cleaning product.
     private func nearestProducts(to vector: [Float], section: String,
                                  limit: Int) throws -> [ProductMatch] {
         guard let database = databaseManager.database else { return [] }
@@ -232,7 +236,7 @@ final class ShelfAuditService: ObservableObject {
         params.setValue(section, forName: "section")
         query.parameters = params
 
-        var matches = try query.execute().map {
+        var matches = try CopilotSearchService.executeWithRetry(query).map {
             ProductMatch(productId: $0.int(forKey: "productId"),
                          name: $0.string(forKey: "name") ?? "?",
                          distance: $0.double(forKey: "distance"))
@@ -252,7 +256,7 @@ final class ShelfAuditService: ObservableObject {
             let p = Parameters()
             p.setValue(vector.map { Double($0) }, forName: "queryVector")
             fallback.parameters = p
-            matches = try fallback.execute().map {
+            matches = try CopilotSearchService.executeWithRetry(fallback).map {
                 ProductMatch(productId: $0.int(forKey: "productId"),
                              name: $0.string(forKey: "name") ?? "?",
                              distance: $0.double(forKey: "distance"))
