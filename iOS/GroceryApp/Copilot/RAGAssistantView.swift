@@ -28,7 +28,9 @@ struct RAGAssistantView: View {
     /// the sources can actually answer — a RAG demo that retrieves nothing relevant is worse
     /// than no demo.
     private var suggestions: [String] {
-        if AppConfig.footwearNarrativeEnabled, let product, product.type == "Footwear" {
+        // Footwear is searchable even though the demo script is grocery, so a shoe the
+        // associate tapped "Ask" on still gets footwear-appropriate prompts.
+        if let product, product.type == "Footwear" {
             return ["Are these good for a beginner runner?",
                     "Will these hold up on wet trails?",
                     "How should I pick the right size?"]

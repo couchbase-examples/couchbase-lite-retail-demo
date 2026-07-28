@@ -67,7 +67,31 @@ struct AppConfig {
     private static var aaUser: String        { configValue(for: "CBL_AA_USER") }
     private static var nycUser: String       { configValue(for: "CBL_NYC_USER") }
     private static var passwordValue: String { configValue(for: "CBL_PASSWORD") }
-    
+
+    // The copilot's App Endpoint. Falls back to the inventory endpoint when unset, so a
+    // single-backend setup keeps working with no configuration at all.
+    private static var copilotBaseURL: String {
+        let value = configValue(for: "CBL_COPILOT_BASE_URL")
+        return value.isEmpty ? baseURL : value
+    }
+    private static var copilotAADB: String {
+        let value = configValue(for: "CBL_COPILOT_AA_DB")
+        return value.isEmpty ? aaDB : value
+    }
+    private static var copilotNYCDB: String {
+        let value = configValue(for: "CBL_COPILOT_NYC_DB")
+        return value.isEmpty ? nycDB : value
+    }
+    private static var copilotUserValue: String {
+        let value = configValue(for: currentStore == .aa
+                                ? "CBL_COPILOT_AA_USER" : "CBL_COPILOT_NYC_USER")
+        return value.isEmpty ? username : value
+    }
+    private static var copilotPasswordValue: String {
+        let value = configValue(for: "CBL_COPILOT_PASSWORD")
+        return value.isEmpty ? passwordValue : value
+    }
+
     static var syncGatewayURL: String {
         switch currentStore {
         case .aa:
@@ -75,6 +99,60 @@ struct AppConfig {
         case .nyc:
             return "\(baseURL)/\(nycDB)"
         }
+    }
+
+    /// Endpoint serving the copilot's collections.
+    static var copilotSyncGatewayURL: String {
+        switch currentStore {
+        case .aa:
+            return "\(copilotBaseURL)/\(copilotAADB)"
+        case .nyc:
+            return "\(copilotBaseURL)/\(copilotNYCDB)"
+        }
+    }
+
+    static var copilotUsername: String { copilotUserValue }
+    static var copilotPassword: String { copilotPasswordValue }
+
+    /// True when the copilot's collections come from a different App Endpoint than
+    /// inventory, which means two replicators rather than one.
+    static var usesSeparateCopilotEndpoint: Bool {
+        copilotSyncGatewayURL != syncGatewayURL
+    }
+
+    // MARK: - Which endpoint owns `inventory`
+    //
+    // `inventory` can only be replicated from ONE endpoint. Two replicators pulling the
+    // same collection into the same local collection would each treat the other's writes
+    // as remote changes and fight over every document.
+    //
+    // This matters because Step 1 searches `embedding.text.vector` ON inventory documents:
+    //
+    //   • `false` — inventory comes from the original endpoint. Safe for the existing app,
+    //     but if that endpoint's inventory has no embeddings then semantic search finds
+    //     nothing over synced data, and only the bundled seed works.
+    //   • `true`  — inventory comes from the copilot endpoint, whose dataset is a superset
+    //     (the data-model spec is explicitly additive, so every field the current app reads
+    //     is still present). This is what makes Step 1 work against live sync.
+    //
+    // Set to `true` once the copilot endpoint is confirmed to serve the full inventory
+    // superset. Until then the original endpoint keeps ownership and nothing regresses.
+    static let copilotEndpointOwnsInventory: Bool = false
+
+    /// Collections replicated from the inventory endpoint.
+    static var inventoryEndpointCollections: [String] {
+        var collections = [profileCollectionName, ordersCollectionName]
+        if !copilotEndpointOwnsInventory { collections.insert(collectionName, at: 0) }
+        return collections
+    }
+
+    /// Collections replicated from the copilot endpoint. When there is only one endpoint
+    /// these are simply added to the single replicator.
+    static var copilotEndpointCollections: [String] {
+        var collections = [planogramsCollectionName, knowledgeCollectionName,
+                           tasksCollectionName]
+        if copilotEndpointOwnsInventory { collections.insert(collectionName, at: 0) }
+        return collections
     }
     
     static var username: String {
@@ -156,27 +234,29 @@ struct AppConfig {
     /// seeded copies normally, since they carry the same document IDs.
     static let enableLocalDatasetSeeding: Bool = true
 
-    /// Whether the Footwear category appears anywhere in the copilot.
+    /// Whether footwear leads the *demo script* — suggested queries, the default planogram,
+    /// and example copy.
     ///
-    /// The demo narrative is grocery-first, and per review feedback (Jul 2026) the copilot
-    /// should not surface footwear at all — the point is semantic search over the store's
-    /// real grocery catalogue, and a shoe wall in a supermarket reads as contrived.
+    /// The narrative is grocery-first, so this is `false`: the suggestions, the shelf the
+    /// audit opens on, and the RAG prompts are all grocery. That is a presentation choice,
+    /// not a data rule.
     ///
-    /// Set this to `true` to restore the proposal's "same capability, new category" story,
-    /// which demonstrates that the design generalizes to any retail vertical. Nothing is
-    /// deleted to turn it off: the footwear documents, their vectors, their planograms and
-    /// their knowledge chunks all remain in the dataset and the tooling still generates them.
+    /// Deliberately does NOT filter the data. Per the Jul 2026 discussion the app is
+    /// generic — what it can find is decided by the documents and embeddings present, not by
+    /// a hardcoded category list. A real associate searching a Target or Walmart-style store
+    /// should be able to find a shoe if the store stocks one. So footwear stays searchable,
+    /// retrievable and seeded; it simply is not what the demo leads with.
     ///
-    /// When `false` this controls two things — the copilot excludes the Footwear category
-    /// from search, knowledge retrieval and the shelf list, and the local demo seeder omits
-    /// footwear documents so a backend-free run is entirely grocery. Footwear documents that
-    /// arrive over App Services are not removed; they simply are not featured.
+    /// Set to `true` to put footwear back in the scripted flow, which demonstrates the
+    /// "same capability, new category" generality claim.
     static let footwearNarrativeEnabled: Bool = false
 
-    /// Categories the copilot hides. Empty unless the footwear narrative is switched off.
-    static var hiddenCategories: [String] {
-        footwearNarrativeEnabled ? [] : ["Footwear"]
-    }
+    /// Categories excluded from copilot queries.
+    ///
+    /// Empty by design — see `footwearNarrativeEnabled`. The hook is kept because the query
+    /// builders read it, so a category can be suppressed for a specific demo without
+    /// touching the query code, but the default is to hide nothing.
+    static var hiddenCategories: [String] { [] }
 
     /// Cosine-distance ceiling for a result to count as relevant.
     ///

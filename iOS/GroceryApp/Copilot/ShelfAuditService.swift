@@ -134,9 +134,17 @@ final class ShelfAuditService: ObservableObject {
                     expectedLayout: layout
                 ))
             }
-            // Two of the three seeded planograms are footwear shelves. With the grocery-only
-            // narrative they are filtered out here rather than removed from the dataset.
-            planograms = loaded.filter { !AppConfig.hiddenCategories.contains($0.section) }
+            // Every shelf stays available — the app does not hide categories. Ordering just
+            // puts the demo's grocery shelf first so the audit opens on it, rather than
+            // relying on aisle numbers happening to sort that way.
+            let suppressed = AppConfig.hiddenCategories
+            let available = loaded.filter { !suppressed.contains($0.section) }
+            if AppConfig.footwearNarrativeEnabled {
+                planograms = available
+            } else {
+                planograms = available.filter { $0.section != "Footwear" }
+                    + available.filter { $0.section == "Footwear" }
+            }
         } catch {
             print("❌ [ShelfAudit] failed to load planograms: \(error)")
         }

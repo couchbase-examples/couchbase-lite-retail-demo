@@ -7,7 +7,7 @@ import CouchbaseLiteSwift
 ///
 ///  1. **Find** — semantic product lookup. The query is embedded with MiniLM and matched
 ///     against product description vectors.
-///  2. **Shelf** — visual audit. Each expected shelf position is cropped from a photo,
+///  2. **Planogram** — visual audit. Each expected shelf position is cropped from a photo,
 ///     embedded with CLIP, and matched against product image vectors.
 ///  3. **Ask** — retrieval-augmented answers. Knowledge chunks are retrieved by vector
 ///     search and passed to Apple's on-device language model.
@@ -20,7 +20,9 @@ struct CopilotView: View {
 
     enum Mode: String, CaseIterable {
         case find = "Find"
-        case shelf = "Shelf"
+        // Named "Planogram" rather than "Shelf" per review feedback — the planogram is the
+        // expected layout being checked against, which is the term the retail audience uses.
+        case shelf = "Planogram"
         case ask = "Ask"
 
         var icon: String {
