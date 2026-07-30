@@ -280,6 +280,14 @@ struct ProductSearchView: View {
     }
 
     private var comparisonExplanation: String {
+        // Claiming semantic "ranked the right products first" while showing zero results
+        // would be false. This happens for genuinely out-of-catalogue questions, and saying
+        // so plainly is the honest outcome for a 104-item store.
+        if hits.isEmpty {
+            return "Nothing in this store's catalogue came within the relevance cutoff, so "
+                 + "the copilot reports no match rather than guessing. Raise the cutoff in "
+                 + "Hybrid filters to inspect the nearest products anyway."
+        }
         if keywordHits.isEmpty {
             return "A keyword search over product names and categories returns nothing for this "
                  + "query — no product is literally named this. Semantic search matched against "
