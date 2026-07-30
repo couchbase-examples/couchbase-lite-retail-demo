@@ -63,11 +63,27 @@ enum VectorIndexManager {
         dimensions: 512
     )
 
-    /// Couchbase's recommendation is `centroids ≈ √(vector count)`, clamped so a
-    /// nearly-empty or very large collection still produces a legal configuration.
+    /// Centroid count that both follows the √N guidance and lets the index actually train.
+    ///
+    /// Couchbase's documented guidance is `centroids ≈ √(vector count)` — 10 for this
+    /// dataset's 104 inventory vectors. But Couchbase Lite enforces its own training floor of
+    /// **25 × centroids** vectors and silently raises whatever `minTrainingSize` is set to in
+    /// order to meet it. Asking for 10 centroids over 104 vectors logs
+    /// "minTrainingSize of 20 is too small; raising it to 250", then
+    /// "Untrained index; queries may be slow. 250 vectors needed for training; 104 present."
+    ///
+    /// An untrained index is not broken — queries fall back to an exact brute-force scan and
+    /// return correct results, which at ~100 vectors is both fine and fast. But the ANN code
+    /// path never runs, which is precisely what this app exists to demonstrate. Capping
+    /// centroids at `N / 25` keeps the index trainable: 104 vectors gives 4 centroids and a
+    /// training floor of 100, which the data clears.
+    ///
+    /// Collections genuinely too small to train at all (10 knowledge chunks, 3 planograms)
+    /// fall back to brute force, and that is the right answer for them.
     static func centroidCount(for vectorCount: Int) -> UInt32 {
-        let suggested = Int(Double(vectorCount).squareRoot().rounded())
-        return UInt32(min(max(suggested, 1), 64))
+        let bySqrt = Int(Double(vectorCount).squareRoot().rounded())
+        let trainable = vectorCount / 25
+        return UInt32(min(max(min(bySqrt, max(trainable, 1)), 1), 64))
     }
 
     /// Result of an index-creation attempt, for logging and the diagnostics screen.
@@ -117,10 +133,12 @@ enum VectorIndexManager {
         // Unquantized: ~100 vectors × 384 floats is ~160 KB, so there is nothing to save
         // by quantizing, and .none keeps distances exact.
         config.encoding = .none
-        // Training must be able to start with only the documents this store actually has.
-        // Leaving the defaults here is the single most likely way to end up with an index
-        // that never trains and a search screen that returns nothing.
-        config.minTrainingSize = UInt32(max(1, min(vectorCount, Int(centroids) * 2)))
+        // Training bounds sized to the data this store actually has. Note that Couchbase Lite
+        // treats minTrainingSize as a request, not a command: it raises anything below
+        // 25 × centroids. Setting it is still worth doing — it documents intent and keeps the
+        // value sane if the centroid count changes — but `centroidCount(for:)` is what
+        // actually determines whether the index can train.
+        config.minTrainingSize = UInt32(max(1, min(vectorCount, Int(centroids) * 25)))
         config.maxTrainingSize = UInt32(max(Int(config.minTrainingSize), vectorCount))
 
         try collection.createIndex(withName: spec.name, config: config)

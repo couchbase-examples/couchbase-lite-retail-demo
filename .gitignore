@@ -1,1 +1,10 @@
 .DS_Store
+
+# Intermediate ONNX export — the int8 model bundled in the Android assets is the shipped
+# artifact; the 86MB fp32 graph is only a comparison baseline, regenerate with
+# tools/embeddings/export_minilm_onnx.py when needed.
+tools/embeddings/minilm_l6_v2.onnx
+tools/embeddings/*.onnx.data
+tools/embeddings/minilm_l6_v2_int8.onnx
+tools/embeddings/*.mlpackage/
+tools/embeddings/generated-assets/

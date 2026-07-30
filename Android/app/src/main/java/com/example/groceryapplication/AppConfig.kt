@@ -77,6 +77,59 @@ object AppConfig {
     const val COLLECTION_NAME = "inventory"  // Main inventory collection
     const val ORDERS_COLLECTION_NAME = "orders"  // Orders collection
     const val PROFILE_COLLECTION_NAME = "profile"  // Store profile collection
+
+    // Collections added by the edge vector search / copilot extension. These sit in the
+    // existing per-store scopes and sync under the existing single App User per store —
+    // additive channel configuration, not an access-model change.
+    const val PLANOGRAMS_COLLECTION_NAME = "planograms"          // Step 2: shelf audit
+    const val KNOWLEDGE_COLLECTION_NAME = "product_knowledge"    // Step 3: RAG source chunks
+    const val TASKS_COLLECTION_NAME = "tasks"                    // Request Help
+
+    /**
+     * Every collection the replicator should carry, in one list so the sync manager and the
+     * local seeder cannot drift apart.
+     */
+    val allSyncedCollections: List<String>
+        get() = listOf(
+            COLLECTION_NAME, PROFILE_COLLECTION_NAME, ORDERS_COLLECTION_NAME,
+            PLANOGRAMS_COLLECTION_NAME, KNOWLEDGE_COLLECTION_NAME, TASKS_COLLECTION_NAME
+        )
+
+    // MARK: - Store Associate Copilot (edge vector search)
+
+    /**
+     * Seeds the bundled extended dataset into the local database when a collection comes up
+     * empty, so the copilot can be built and demoed with no Capella backend at all. Documents
+     * arriving over App Services supersede the seeded copies normally, since they carry the
+     * same document IDs.
+     */
+    const val ENABLE_LOCAL_DATASET_SEEDING = true
+
+    /**
+     * Cosine-distance ceiling for a result to count as relevant.
+     *
+     * Not the data-model spec's hardcoded 0.35 — that predates real vectors. Measured against
+     * the actual MiniLM corpus, the hero query's best match sits at 0.24 and the 5th
+     * percentile of all documents at 0.57, so 0.35 would surface almost nothing. Matches the
+     * iOS default; note the bundled int8 model reads roughly 0.02 higher than iOS's fp16
+     * CoreML model for the same query, which this threshold comfortably absorbs.
+     */
+    const val DEFAULT_RELEVANCE_THRESHOLD = 0.60
+
+    /** How many candidates a vector query returns before threshold filtering. */
+    const val COPILOT_SEARCH_LIMIT = 10
+
+    /** Chunks retrieved for a grounded answer. */
+    const val COPILOT_RAG_CHUNK_COUNT = 4
+
+    /**
+     * Whether footwear leads the demo script — suggested queries and example copy.
+     *
+     * The narrative is grocery-first, so this is false. It is a presentation choice, not a
+     * data rule: footwear stays searchable and seeded, because what the app can find is
+     * decided by the documents and embeddings present, not by a hardcoded category list.
+     */
+    const val FOOTWEAR_NARRATIVE_ENABLED = false
     
     // MARK: - Sync Configuration (Event-Driven, Real-Time)
     // NOTE: "Continuous" sync is EVENT-DRIVEN, not polling!

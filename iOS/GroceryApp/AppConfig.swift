@@ -68,8 +68,17 @@ struct AppConfig {
     private static var nycUser: String       { configValue(for: "CBL_NYC_USER") }
     private static var passwordValue: String { configValue(for: "CBL_PASSWORD") }
 
-    // The copilot's App Endpoint. Falls back to the inventory endpoint when unset, so a
-    // single-backend setup keeps working with no configuration at all.
+    // MARK: - One cluster, one endpoint
+    //
+    // A single App Endpoint serves every collection, per the Jul 2026 decision: a developer
+    // should not have to stand up or switch between two backends to run one app, and the
+    // Capella free tier only allows one cluster anyway. That is also why the extended
+    // dataset updates `inventory` in place rather than living in a separate collection.
+    //
+    // The override hooks below remain because they cost nothing and each falls back to the
+    // inventory endpoint, so pointing the copilot's collections elsewhere stays possible for
+    // a one-off experiment without touching the sync manager. By default they resolve to the
+    // same endpoint and only one replicator is created.
     private static var copilotBaseURL: String {
         let value = configValue(for: "CBL_COPILOT_BASE_URL")
         return value.isEmpty ? baseURL : value
@@ -122,21 +131,11 @@ struct AppConfig {
 
     // MARK: - Which endpoint owns `inventory`
     //
-    // `inventory` can only be replicated from ONE endpoint. Two replicators pulling the
-    // same collection into the same local collection would each treat the other's writes
-    // as remote changes and fight over every document.
-    //
-    // This matters because Step 1 searches `embedding.text.vector` ON inventory documents:
-    //
-    //   • `false` — inventory comes from the original endpoint. Safe for the existing app,
-    //     but if that endpoint's inventory has no embeddings then semantic search finds
-    //     nothing over synced data, and only the bundled seed works.
-    //   • `true`  — inventory comes from the copilot endpoint, whose dataset is a superset
-    //     (the data-model spec is explicitly additive, so every field the current app reads
-    //     is still present). This is what makes Step 1 work against live sync.
-    //
-    // Set to `true` once the copilot endpoint is confirmed to serve the full inventory
-    // superset. Until then the original endpoint keeps ownership and nothing regresses.
+    // Only meaningful if the override hooks above are used to split the backend. `inventory`
+    // can be replicated from exactly ONE endpoint — two replicators pulling the same
+    // collection into the same local collection would each treat the other's writes as
+    // remote changes and fight over every document. With the default single endpoint this
+    // is irrelevant, since that endpoint serves everything.
     static let copilotEndpointOwnsInventory: Bool = false
 
     /// Collections replicated from the inventory endpoint.
