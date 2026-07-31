@@ -39,7 +39,8 @@ private enum class CopilotMode(val label: String) {
     // Named "Planogram" rather than "Shelf" per review feedback — the planogram is the
     // expected layout being checked against, the term the retail audience uses.
     PLANOGRAM("Planogram"),
-    ASK("Ask")
+    ASK("Ask"),
+    TASKS("Tasks")
 }
 
 /**
@@ -61,6 +62,9 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
 
     val searchService = remember {
         CopilotSearchService(context) { databaseManager.getDatabase() }
+    }
+    val taskService = remember {
+        TaskService(context) { databaseManager.getDatabase() }
     }
 
     var mode by remember { mutableStateOf(CopilotMode.FIND) }
@@ -95,10 +99,13 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
                 ) {
                     Text(
                         candidate.label,
-                        modifier = Modifier.padding(vertical = 10.dp),
+                        modifier = Modifier
+                            .padding(vertical = 10.dp, horizontal = 2.dp)
+                            .fillMaxWidth(),
                         color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -115,6 +122,11 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
             )
             CopilotMode.PLANOGRAM -> PlanogramSection()
             CopilotMode.ASK -> AskSection(searchService = searchService, scope = scope)
+            CopilotMode.TASKS -> TasksSection(
+                taskService = taskService,
+                databaseManager = databaseManager,
+                scope = scope
+            )
         }
     }
 
@@ -510,6 +522,314 @@ private fun PlanogramSection() {
             }
         }
     }
+}
+
+// MARK: - Request Help
+
+/**
+ * The resolution half of Request Help — what the *second* associate sees.
+ *
+ * The whole lifecycle runs against the local database, so it works with no network and
+ * reconciles when sync returns. A change listener on the `tasks` collection keeps the list live,
+ * so a task raised on another device (including the iOS app) arrives here on its own.
+ */
+@Composable
+private fun TasksSection(
+    taskService: TaskService,
+    databaseManager: DatabaseManager,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    var tasks by remember { mutableStateOf<List<StoreTask>>(emptyList()) }
+    var showFinished by remember { mutableStateOf(false) }
+    var remoteChange by remember { mutableStateOf(false) }
+
+    fun reload() {
+        scope.launch {
+            tasks = withContext(Dispatchers.IO) { taskService.loadTasks() }
+        }
+    }
+
+    // Live updates: a task arriving over replication should appear without a manual refresh.
+    DisposableEffect(Unit) {
+        reload()
+        val collection = runCatching {
+            databaseManager.getDatabase()?.getCollection(
+                AppConfig.TASKS_COLLECTION_NAME, AppConfig.scopeName
+            )
+        }.getOrNull()
+        val token = collection?.addChangeListener { change ->
+            val known = tasks.map { it.id }.toSet()
+            if (change.documentIDs.any { it !in known }) remoteChange = true
+            reload()
+        }
+        onDispose { token?.remove() }
+    }
+
+    val open = tasks.filter { it.status == "open" }
+    val active = tasks.filter { it.status == "accepted" || it.status == "in_progress" }
+    val finished = tasks.filter { it.isTerminal }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Store tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Spacer(Modifier.weight(1f))
+                    Text("you are ${taskService.deviceLabel}",
+                        fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Color.Gray)
+                }
+                Text("Every device signed in to this store sees the same tasks — over App " +
+                    "Services when online, peer-to-peer when not. Accepting one claims it under " +
+                    "this device's label.",
+                    fontSize = 12.sp, color = Color.Gray)
+                if (remoteChange) {
+                    Surface(color = Color(0x1F2196F3), shape = RoundedCornerShape(8.dp)) {
+                        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Sync, null, tint = Color(0xFF1565C0),
+                                modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Updated from another device", fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (tasks.isEmpty()) {
+            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("No tasks yet", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text("Tasks are raised from a shelf-audit finding — that flow lives on iOS " +
+                        "today. Anything raised there syncs into this list, and can be accepted, " +
+                        "recounted and closed from here.",
+                        fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        } else {
+            if (open.isNotEmpty()) {
+                TaskGroupHeader("NEEDS AN ASSOCIATE", open.size, Accent)
+                open.forEach { TaskCard(it, taskService) { reload() } }
+            }
+            if (active.isNotEmpty()) {
+                TaskGroupHeader("BEING WORKED ON", active.size, Color(0xFF2196F3))
+                active.forEach { TaskCard(it, taskService) { reload() } }
+            }
+            if (finished.isNotEmpty()) {
+                Surface(onClick = { showFinished = !showFinished }, color = Color.Transparent) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (showFinished) Icons.Default.KeyboardArrowDown
+                            else Icons.Default.KeyboardArrowRight,
+                            null, tint = Color.Gray, modifier = Modifier.size(18.dp)
+                        )
+                        Text("${finished.size} finished", fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                    }
+                }
+                if (showFinished) finished.forEach { TaskCard(it, taskService) { reload() } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskGroupHeader(title: String, count: Int, tint: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Spacer(Modifier.width(6.dp))
+        Surface(color = tint.copy(alpha = 0.18f), shape = RoundedCornerShape(4.dp)) {
+            Text("$count", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
+        }
+    }
+}
+
+@Composable
+private fun TaskCard(task: StoreTask, taskService: TaskService, onChanged: () -> Unit) {
+    var showCountEditor by remember(task.id) { mutableStateOf(false) }
+    var stock by remember(task.id) { mutableStateOf<TaskStockContext?>(null) }
+    var draftCount by remember(task.id) { mutableStateOf<Int?>(null) }
+    var applied by remember(task.id) { mutableStateOf(false) }
+    var showMenu by remember(task.id) { mutableStateOf(false) }
+
+    Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(task.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TaskBadge(task.taskType.replaceFirstChar { it.uppercase() }, Accent)
+                if (task.priority != "normal") {
+                    TaskBadge(
+                        task.priority.replaceFirstChar { it.uppercase() },
+                        if (task.priority == "high") Color.Red else Color.Gray
+                    )
+                }
+                TaskBadge(statusLabel(task.status), statusTint(task.status))
+            }
+
+            if (task.detail.isNotEmpty()) {
+                Text(task.detail, fontSize = 12.sp, color = Color.Gray)
+            }
+
+            task.locationText?.let {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Place, null, tint = Accent, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(it, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("raised by ${task.createdBy}", fontSize = 11.sp, color = Color.Gray)
+                task.assignedTo?.let { assignee ->
+                    val mine = assignee == taskService.deviceLabel
+                    Text("  →  ", fontSize = 11.sp, color = Color.Gray)
+                    Text(
+                        if (mine) "you" else assignee,
+                        fontSize = 11.sp,
+                        fontWeight = if (mine) FontWeight.SemiBold else FontWeight.Normal,
+                        fontFamily = if (mine) FontFamily.Default else FontFamily.Monospace,
+                        color = if (mine) Accent else Color.Gray
+                    )
+                }
+            }
+
+            if (task.quantityDelta != 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Inventory2, null, tint = Color(0xFF2E7D32),
+                        modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("${if (task.quantityDelta > 0) "+" else ""}${task.quantityDelta} " +
+                        "recorded against stock",
+                        fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.width(4.dp))
+                    Text("(pn-counter)", fontSize = 11.sp, fontFamily = FontFamily.Monospace,
+                        color = Color.Gray)
+                }
+            }
+
+            if (showCountEditor) {
+                Surface(color = Cream, shape = RoundedCornerShape(8.dp)) {
+                    Column(Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val context = stock
+                        if (context == null) {
+                            Text("This task is not linked to a product in this store's " +
+                                "inventory, so there is no count to correct.",
+                                fontSize = 12.sp, color = Color.Gray)
+                        } else {
+                            Text(context.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("On shelf now", fontSize = 12.sp, color = Color.Gray)
+                                Spacer(Modifier.weight(1f))
+                                Text("${context.currentStock}", fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace)
+                            }
+                            val current = draftCount ?: context.currentStock
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Corrected count", fontSize = 12.sp)
+                                Spacer(Modifier.weight(1f))
+                                IconButton(
+                                    onClick = { draftCount = (current - 1).coerceAtLeast(0) },
+                                    modifier = Modifier.size(32.dp)
+                                ) { Icon(Icons.Default.Remove, "Decrease") }
+                                Text("$current", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.Monospace)
+                                IconButton(
+                                    onClick = { draftCount = current + 1 },
+                                    modifier = Modifier.size(32.dp)
+                                ) { Icon(Icons.Default.Add, "Increase") }
+                            }
+                            Button(
+                                onClick = {
+                                    if (taskService.applyStockCount(task, current)) {
+                                        applied = true
+                                        showCountEditor = false
+                                        draftCount = null
+                                        onChanged()
+                                    }
+                                },
+                                enabled = current != context.currentStock,
+                                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Save count", fontSize = 13.sp) }
+                        }
+                    }
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                task.nextStatusLabel?.let { label ->
+                    Button(
+                        onClick = { taskService.advance(task); onChanged() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    ) { Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                }
+
+                if (!task.isTerminal && task.relatedProductId != null) {
+                    OutlinedButton(
+                        onClick = {
+                            if (stock == null) stock = taskService.stockContext(task)
+                            showCountEditor = !showCountEditor
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(if (applied) "Count saved" else "Update count", fontSize = 13.sp)
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                if (!task.isTerminal) {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, "More", tint = Color.Gray)
+                        }
+                        DropdownMenu(showMenu, onDismissRequest = { showMenu = false }) {
+                            if (task.assignedTo != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Put back in the pool") },
+                                    onClick = {
+                                        showMenu = false
+                                        taskService.release(task); onChanged()
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Cancel task") },
+                                onClick = {
+                                    showMenu = false
+                                    taskService.cancel(task); onChanged()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskBadge(text: String, tint: Color) {
+    Surface(color = tint.copy(alpha = 0.16f), shape = RoundedCornerShape(4.dp)) {
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+    }
+}
+
+private fun statusLabel(status: String) =
+    if (status == "in_progress") "In progress" else status.replaceFirstChar { it.uppercase() }
+
+private fun statusTint(status: String) = when (status) {
+    "open" -> Color(0xFFEF6C00)
+    "accepted" -> Color(0xFF2196F3)
+    "in_progress" -> Color(0xFF7B1FA2)
+    "done" -> Color(0xFF2E7D32)
+    else -> Color.Gray
 }
 
 // MARK: - Step 3
