@@ -99,11 +99,19 @@ object AppConfig {
 
     /**
      * Seeds the bundled extended dataset into the local database when a collection comes up
-     * empty, so the copilot can be built and demoed with no Capella backend at all. Documents
-     * arriving over App Services supersede the seeded copies normally, since they carry the
-     * same document IDs.
+     * empty.
+     *
+     * **Off, because Capella is now the source of truth.** The App Endpoint serves all six
+     * collections with real MiniLM embeddings, so the app pulls everything over the
+     * replicator. Leaving this on was not wrong — synced documents carry the same IDs and
+     * supersede seeded ones — but it wrote a redundant revision to every document and made it
+     * impossible to tell from the UI whether sync was actually working.
+     *
+     * Set to `true` to work with no backend at all: useful offline, and a reasonable fallback
+     * if the free-tier cluster has hibernated, since a hibernated backend with seeding off
+     * means an empty inventory rather than a stale one.
      */
-    const val ENABLE_LOCAL_DATASET_SEEDING = true
+    const val ENABLE_LOCAL_DATASET_SEEDING = false
 
     /**
      * Cosine-distance ceiling for a result to count as relevant.

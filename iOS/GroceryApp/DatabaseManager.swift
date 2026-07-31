@@ -909,7 +909,17 @@ class DatabaseManager: ObservableObject {
         
         print("🌐 Setting up App Services integration...")
         appServicesSyncManager = AppServicesSyncManager(database: database)
-        
+
+        // Build the vector indexes once the initial pull has landed. On a cold start against
+        // a remote backend the collections are empty when the database opens, so there is
+        // nothing to index yet — and an index created against an empty collection can never
+        // train. Without this the copilot would report "requires a vector index" until the
+        // app was relaunched.
+        appServicesSyncManager?.onInitialSyncComplete = { [weak self] in
+            print("🧭 [Copilot] initial sync landed — building vector indexes")
+            self?.prepareCopilotData()
+        }
+
         print("✅ App Services integration ready")
     }
     

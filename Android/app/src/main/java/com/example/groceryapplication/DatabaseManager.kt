@@ -744,6 +744,17 @@ class DatabaseManager(private val context: Context) {
         database?.let { db ->
             Log.d("DatabaseManager", "🌐 Setting up App Services integration...")
             appServicesSyncManager = AppServicesSyncManager(context, db)
+
+            // Build the vector indexes once the initial pull has landed. On a cold start
+            // against a remote backend the collections are empty when the database opens, so
+            // there is nothing to index yet — and an index created against an empty collection
+            // can never train. Without this the copilot reports "requires a vector index"
+            // until the app is relaunched.
+            appServicesSyncManager?.onInitialSyncComplete = {
+                Log.i("DatabaseManager", "🧭 initial sync landed — building vector indexes")
+                prepareCopilotData()
+            }
+
             Log.d("DatabaseManager", "✅ App Services integration ready")
         } ?: run {
             Log.e("DatabaseManager", "❌ Database not ready for App Services integration")

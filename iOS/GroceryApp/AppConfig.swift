@@ -225,13 +225,19 @@ struct AppConfig {
 
     // MARK: - Store Associate Copilot (edge vector search)
 
-    /// Seeds the bundled extended dataset into the local database when a collection
-    /// comes up empty. This exists so the copilot can be built, demoed and explored
-    /// with no Capella backend at all — the extended dataset is not in Capella yet,
-    /// and a developer picking this app up should not need a cloud account to see
-    /// vector search work. Documents that arrive over App Services supersede the
-    /// seeded copies normally, since they carry the same document IDs.
-    static let enableLocalDatasetSeeding: Bool = true
+    /// Seeds the bundled extended dataset into the local database when a collection comes up
+    /// empty.
+    ///
+    /// **Off, because Capella is now the source of truth.** The App Endpoint serves all six
+    /// collections with real MiniLM embeddings, so the app pulls everything over the
+    /// replicator. Leaving this on was not wrong — synced documents carry the same IDs and
+    /// supersede seeded ones — but it wrote a redundant revision to every document and, more
+    /// importantly, made it impossible to tell from the UI whether sync was actually working.
+    ///
+    /// Set to `true` to work with no backend at all: useful offline, and a reasonable fallback
+    /// if the free-tier cluster has hibernated, since a hibernated backend with seeding off
+    /// means an empty inventory rather than a stale one.
+    static let enableLocalDatasetSeeding: Bool = false
 
     /// Whether footwear leads the *demo script* — suggested queries, the default planogram,
     /// and example copy.

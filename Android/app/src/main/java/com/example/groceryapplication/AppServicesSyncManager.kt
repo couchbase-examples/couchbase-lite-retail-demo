@@ -40,6 +40,17 @@ class AppServicesSyncManager(
     }
     
     // State management
+    /**
+     * Called the first time the replicator reaches idle, i.e. the initial pull has landed.
+     *
+     * This is what lets the copilot's vector indexes be built from synced data. Index creation
+     * is deliberately guarded on a collection having vectors — an index created against an
+     * empty collection can never train — so on a cold start against a remote backend there is
+     * nothing to index until this fires.
+     */
+    var onInitialSyncComplete: (() -> Unit)? = null
+    private var hasReportedInitialSync = false
+
     private val _syncState = MutableStateFlow(AppServicesSyncState())
     val syncState: StateFlow<AppServicesSyncState> = _syncState.asStateFlow()
     
@@ -293,6 +304,12 @@ class AppServicesSyncManager(
                     lastSyncTime = System.currentTimeMillis(),
                     progress = 1f
                 )
+                // The initial pull has landed, so synced documents are on disk and the
+                // copilot's vector indexes can be built from them. Fires once per session.
+                if (!hasReportedInitialSync) {
+                    hasReportedInitialSync = true
+                    onInitialSyncComplete?.invoke()
+                }
             }
             
             // Handle errors

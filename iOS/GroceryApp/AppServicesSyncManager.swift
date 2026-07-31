@@ -40,6 +40,15 @@ class AppServicesSyncManager: ObservableObject {
 
     /// Kept for source compatibility with callers that only care whether sync exists.
     private var replicator: Replicator? { replicators.values.first }
+
+    /// Called the first time every replicator reaches idle, i.e. the initial pull has landed.
+    ///
+    /// This is what lets the copilot's vector indexes be built from synced data. Index
+    /// creation is deliberately guarded on a collection having vectors — an index created
+    /// against an empty collection can never train — so on a cold start with an empty
+    /// database there is nothing to index until this fires.
+    var onInitialSyncComplete: (() -> Void)?
+    private var hasReportedInitialSync = false
     
     // MARK: - Sync Control
     private var isSyncActive = false
@@ -300,6 +309,13 @@ class AppServicesSyncManager: ObservableObject {
                 state.status = "☁️ Cloud sync ready"
                 state.lastSyncTime = Date()
                 state.progress = 1.0
+                // Every endpoint has settled, so synced documents are now on disk and the
+                // vector indexes can be built from them. Fires once per session.
+                if !hasReportedInitialSync {
+                    hasReportedInitialSync = true
+                    let callback = onInitialSyncComplete
+                    DispatchQueue.main.async { callback?() }
+                }
                 
             case .stopped:
                 state.status = "☁️ Sync stopped"
