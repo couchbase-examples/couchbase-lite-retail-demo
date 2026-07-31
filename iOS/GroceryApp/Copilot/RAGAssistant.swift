@@ -143,4 +143,27 @@ enum RAGBackend {
             "On-device answer generation is not available; showing the retrieved sources."
         }
     }
+
+    /// Turns a generation failure into something a viewer can act on.
+    ///
+    /// The case worth calling out: on the **Simulator**, `SystemLanguageModel.availability`
+    /// reports `.available` on iOS 26 — the OS supports the framework — but inference then
+    /// fails with `LanguageModelSession.GenerationError -1`, because the Simulator does not
+    /// ship the Apple Intelligence model assets. Availability is therefore not a reliable
+    /// pre-flight check, and the honest message is "this needs real hardware", not the raw
+    /// error. Retrieval is unaffected, so the sources stay on screen either way.
+    static func explain(generationError error: Error) -> String {
+        let description = String(describing: error)
+        let isMissingAssets = description.contains("FoundationModels")
+            || description.contains("GenerationError")
+
+        if isMissingAssets {
+            return "Retrieval worked and the sources below are what a grounded answer would be "
+                 + "written from. Generating that answer needs a physical device with Apple "
+                 + "Intelligence enabled — the Simulator reports the model as available but "
+                 + "does not ship its assets, so inference fails."
+        }
+        return "Could not generate an answer: \(error.localizedDescription). The retrieved "
+             + "sources are shown below."
+    }
 }

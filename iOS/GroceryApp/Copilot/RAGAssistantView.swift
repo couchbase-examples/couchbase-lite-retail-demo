@@ -290,7 +290,11 @@ struct RAGAssistantView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = error.localizedDescription
+                    // Retrieval already succeeded by this point, so a failure here is the
+                    // generation half. Explain it rather than surfacing a raw framework error.
+                    errorMessage = chunks.isEmpty
+                        ? error.localizedDescription
+                        : RAGBackend.explain(generationError: error)
                     showSources = !chunks.isEmpty
                     isWorking = false
                     stage = nil

@@ -36,7 +36,7 @@ The following requirements apply to both macOS and Windows:
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
-- **JDK**: 17 or later
+- **JDK**: 17 (see the note below — a *newer* JDK will fail the build, so this is not "17 or later")
 - **Kotlin**: 2.0.21
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
@@ -406,6 +406,31 @@ For production releases, configure signing in `app/build.gradle.kts`.
 
 ### Build Errors
 
+**"Incompatible Gradle JVM version" / "Gradle 8.11.1 supports Java versions between 1.8 and 23"**
+
+Recent Android Studio releases bundle JetBrains Runtime 25, and Studio defaults to it. Gradle
+8.11.1 refuses to run on anything above Java 23, so a fresh Studio install fails to sync even
+though the project itself is unchanged. Point Studio at JDK 17 instead.
+
+The setting Studio actually reads is `Android/.idea/gradle.xml` → `gradleJvm`. In this repo it is
+`#GRADLE_LOCAL_JAVA_HOME`, which resolves to `java.home` in `Android/.gradle/config.properties` —
+a machine-local, gitignored file, so each developer sets their own path:
+
+```bash
+# Find your JDK 17 (install it with `brew install openjdk@17` if you have none)
+/usr/libexec/java_home -v 17
+
+# Write it where Gradle's "local JAVA_HOME" setting reads from
+printf 'java.home=%s\n' "$(/usr/libexec/java_home -v 17)" > Android/.gradle/config.properties
+
+# Confirm — "Launcher JVM" must report 17.x, not 25.x
+cd Android && ./gradlew -version
+```
+
+Alternatively, set it through the UI: **Settings → Build, Execution, Deployment → Build Tools →
+Gradle → Gradle JDK**, and pick a 17 entry. Do not "upgrade" Gradle to satisfy Studio — the
+Android Gradle Plugin version here is matched to Gradle 8.11.1.
+
 **"Could not install Gradle distribution" or SSL/Certificate errors**
 
 If you see errors related to Gradle distribution or SSL certificates:
@@ -475,6 +500,30 @@ dependencyResolutionManagement {
 - Ensure the user credentials match those configured in Capella App Services
 - Verify the database name (`CBL_AA_DB` or `CBL_NYC_DB`) matches your App Endpoint
 - Check that the username format matches the expected pattern
+
+**Emulator cannot resolve the Capella hostname (`UnknownHostException`, sync never leaves
+`connecting`)**
+
+The emulator inherits the host's DNS servers, but it cannot use an IPv6-only resolver — a common
+setup on corporate and mobile-tethered networks. The host resolves the endpoint fine, so this
+looks like a Capella or credentials problem when it is purely DNS. Check whether your resolvers
+are IPv6-only:
+
+```bash
+scutil --dns | grep nameserver | head
+```
+
+If every entry is an IPv6 address, start the emulator with explicit IPv4 resolvers:
+
+```bash
+"$ANDROID_HOME/emulator/emulator" -avd <your_avd> -dns-server 8.8.8.8,1.1.1.1
+```
+
+Then confirm from inside the emulator:
+
+```bash
+adb shell ping -c1 <your-endpoint>.apps.cloud.couchbase.com
+```
 
 ### Runtime Issues
 
