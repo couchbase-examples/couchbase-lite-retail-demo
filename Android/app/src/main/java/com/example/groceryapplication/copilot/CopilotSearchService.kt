@@ -100,6 +100,30 @@ class CopilotSearchService(
         }
     }
 
+    /**
+     * Raised when the copilot is asked to search a database that has never synced.
+     *
+     * Without this the failure surfaces as "vector search with APPROX_VECTOR_DISTANCE requires a
+     * vector index", which reads like a broken build rather than "there is no data yet". The app
+     * is offline-first and ships with no bundled catalogue, so an empty database on first launch
+     * is an expected state, not an error.
+     */
+    class NoLocalDataException : Exception(
+        "No products on this device yet. Connect to the network so the catalogue can sync — " +
+            "after that it stays available offline."
+    )
+
+    /** Cheap COUNT, to tell "nothing has synced yet" apart from "the query failed". */
+    private fun localCount(collection: String): Int {
+        val database = databaseProvider() ?: return 0
+        val sql = "SELECT COUNT(*) AS n FROM `${AppConfig.scopeName}`.`$collection`"
+        return try {
+            database.createQuery(sql).execute().use { it.next()?.getInt("n") ?: 0 }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     // MARK: - Step 1: semantic product search
 
     /**
@@ -118,6 +142,10 @@ class CopilotSearchService(
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return emptyList()
         val database = databaseProvider() ?: return emptyList()
+
+        // An empty collection means nothing has synced yet, so the vector index does not exist
+        // and the query below would fail with an index error. Say what is actually wrong.
+        if (localCount(AppConfig.COLLECTION_NAME) == 0) throw NoLocalDataException()
 
         // ---- on-device query embedding (the live edge inference) ----
         val vector = embedder.embed(trimmed)
@@ -229,6 +257,9 @@ class CopilotSearchService(
         val database = databaseProvider() ?: return emptyList()
         val trimmed = question.trim()
         if (trimmed.isEmpty()) return emptyList()
+
+        // Same reasoning as `search`: an unsynced knowledge collection has no index.
+        if (localCount(AppConfig.KNOWLEDGE_COLLECTION_NAME) == 0) throw NoLocalDataException()
 
         val vector = embedder.embed(trimmed)
         val distanceExpr =

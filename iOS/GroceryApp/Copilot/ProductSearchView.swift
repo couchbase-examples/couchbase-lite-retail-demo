@@ -440,7 +440,11 @@ struct ProductSearchView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "Search failed: \(error.localizedDescription)"
+                    // "No data synced yet" is an expected first-launch state, not a failure,
+                    // so it is shown as-is rather than dressed up as an error.
+                    errorMessage = error is CopilotSearchService.NoLocalDataError
+                        ? error.localizedDescription
+                        : "Search failed: \(error.localizedDescription)"
                     isSearching = false
                     hasSearched = true
                     hits = []

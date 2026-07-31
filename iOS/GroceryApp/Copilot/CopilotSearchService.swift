@@ -94,6 +94,43 @@ final class CopilotSearchService: ObservableObject {
         ])
     }
 
+    /// Raised when the copilot is asked to search a database that has never synced.
+    ///
+    /// Without this the failure surfaces as "vector search with APPROX_VECTOR_DISTANCE requires
+    /// a vector index", which reads like a broken build rather than "there is no data yet".
+    /// Since the app is offline-first and ships with no bundled catalogue, an empty database on
+    /// first launch is an expected state, not an error condition.
+    struct NoLocalDataError: LocalizedError {
+        var errorDescription: String? {
+            "No products on this device yet. Connect to the network so the catalogue can sync — "
+            + "after that it stays available offline."
+        }
+    }
+
+    /// Documents currently in the local inventory collection.
+    ///
+    /// Cheap COUNT, used to tell "nothing has synced yet" apart from "the query failed".
+    func localInventoryCount() -> Int {
+        guard let database = databaseManager.database else { return 0 }
+        let sql = """
+            SELECT COUNT(*) AS n
+            FROM `\(AppConfig.scopeName)`.`\(AppConfig.collectionName)`
+            """
+        return (try? database.createQuery(sql).execute())?
+            .compactMap { $0.int(forKey: "n") }.first ?? 0
+    }
+
+    /// Documents currently in the local knowledge collection.
+    func localKnowledgeCount() -> Int {
+        guard let database = databaseManager.database else { return 0 }
+        let sql = """
+            SELECT COUNT(*) AS n
+            FROM `\(AppConfig.scopeName)`.`\(AppConfig.knowledgeCollectionName)`
+            """
+        return (try? database.createQuery(sql).execute())?
+            .compactMap { $0.int(forKey: "n") }.first ?? 0
+    }
+
     // MARK: - Step 1: semantic product search
 
     /// Embeds `query` on-device and returns the nearest inventory items.
@@ -111,6 +148,10 @@ final class CopilotSearchService: ObservableObject {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
         guard let database = databaseManager.database else { return [] }
+
+        // An empty collection means nothing has synced yet, so the vector index does not exist
+        // and the query below would fail with an index error. Say what is actually wrong.
+        guard localInventoryCount() > 0 else { throw NoLocalDataError() }
 
         // ---- on-device query embedding (the live edge inference) ----
         let vector = try await embedder.embed(trimmed)
@@ -249,6 +290,9 @@ final class CopilotSearchService: ObservableObject {
         guard let database = databaseManager.database else { return [] }
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
+
+        // Same reasoning as `search`: an unsynced knowledge collection has no index.
+        guard localKnowledgeCount() > 0 else { throw NoLocalDataError() }
 
         let vector = try await embedder.embed(trimmed)
 

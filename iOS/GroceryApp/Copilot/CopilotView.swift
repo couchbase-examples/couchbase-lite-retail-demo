@@ -257,23 +257,26 @@ struct SemanticResultCard: View {
     }
 }
 
-/// Product image, preferring a bundled render over the remote URL.
+/// Product image, fetched from the document's `imageURL` and cached to disk.
 ///
-/// The S3 images for the new Footwear and sports-nutrition SKUs do not exist — those URLs
-/// return 403 — so without this the new products all show a placeholder cart icon. Bundled
-/// renders are keyed by productId.
+/// Deliberately does NOT fall back to a bundled render. This app is offline-first, and the
+/// promise is that a first launch with no network shows nothing at all — so every pixel of
+/// product data has to arrive from the server and then persist locally. Shipping renders
+/// inside the binary would quietly break that: products would appear to have images before
+/// anything had ever synced.
+///
+/// The consequence is visible and correct: the new Footwear and sports-nutrition SKUs show a
+/// placeholder icon, because their S3 images genuinely do not exist yet (those URLs return
+/// 403). See tools/embeddings/IMAGE-ASSET-REQUEST.md — that gap closes when the real photos
+/// land, with no app change.
+///
+/// `CachedAsyncImage` writes to the on-disk image cache, which is what makes images survive a
+/// relaunch with no network.
 struct ProductThumbnail: View {
     let item: GroceryItem
 
     var body: some View {
-        if let productId = item.productId,
-           let url = Bundle.main.url(forResource: "\(productId)", withExtension: "png"),
-           let data = try? Data(contentsOf: url),
-           let image = UIImage(data: data) {
-            Image(uiImage: image).resizable().scaledToFit()
-        } else {
-            CachedAsyncImage(url: item.imageURL, placeholder: Image(systemName: "cart.fill"))
-        }
+        CachedAsyncImage(url: item.imageURL, placeholder: Image(systemName: "cart.fill"))
     }
 }
 
