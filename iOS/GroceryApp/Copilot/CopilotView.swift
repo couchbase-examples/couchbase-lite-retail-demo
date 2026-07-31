@@ -24,12 +24,14 @@ struct CopilotView: View {
         // expected layout being checked against, which is the term the retail audience uses.
         case shelf = "Planogram"
         case ask = "Ask"
+        case tasks = "Tasks"
 
         var icon: String {
             switch self {
             case .find: return "sparkle.magnifyingglass"
             case .shelf: return "camera.viewfinder"
             case .ask: return "bubble.left.and.text.bubble.right"
+            case .tasks: return "checklist"
             }
         }
     }
@@ -55,7 +57,7 @@ struct CopilotView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     modePicker
 
-                    if let searchService, let auditService {
+                    if let searchService, let auditService, let taskService {
                         switch mode {
                         case .find:
                             ProductSearchView(
@@ -78,6 +80,8 @@ struct CopilotView: View {
                                 searchService: searchService,
                                 product: askAbout
                             )
+                        case .tasks:
+                            TaskListView(taskService: taskService)
                         }
                     } else {
                         ProgressView("Preparing copilot…")
@@ -112,7 +116,10 @@ struct CopilotView: View {
                     RequestHelpView(
                         finding: helpRequest.finding,
                         planogram: helpRequest.planogram,
-                        taskService: taskService
+                        taskService: taskService,
+                        // Land on the task list so the raised task is visible immediately —
+                        // this is the handover the demo is about.
+                        onDismissAfterCreating: { mode = .tasks }
                     )
                 }
             }
@@ -136,12 +143,15 @@ struct CopilotView: View {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { mode = candidate }
                 } label: {
-                    HStack(spacing: 5) {
+                    VStack(spacing: 3) {
                         Image(systemName: candidate.icon).font(.caption)
-                        Text(candidate.rawValue).font(.caption.weight(.semibold))
+                        Text(candidate.rawValue)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
+                    .padding(.vertical, 8)
                     .background(mode == candidate ? accent : Color(UIColor.systemBackground))
                     .foregroundColor(mode == candidate ? .white : .primary)
                     .cornerRadius(9)

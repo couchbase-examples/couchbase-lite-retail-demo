@@ -9,6 +9,8 @@ struct RequestHelpView: View {
     let finding: PositionFinding
     let planogram: Planogram
     @ObservedObject var taskService: TaskService
+    /// Called on dismiss only when a task was actually created, so the caller can show it.
+    var onDismissAfterCreating: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -94,7 +96,10 @@ struct RequestHelpView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(created == nil ? "Cancel" : "Done") { dismiss() }
+                    Button(created == nil ? "Cancel" : "Done") {
+                        if created != nil { onDismissAfterCreating?() }
+                        dismiss()
+                    }
                 }
                 if created == nil {
                     ToolbarItem(placement: .topBarTrailing) {
