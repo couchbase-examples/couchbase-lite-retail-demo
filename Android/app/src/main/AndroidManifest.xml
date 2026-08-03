@@ -11,6 +11,17 @@
     
     <!-- Background sync permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Copilot voice input. Recognition runs on-device, so no audio leaves the phone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Android 11+ requires declaring the speech-recognition service to see whether one is
+         installed; without this `isRecognitionAvailable` reports false on a device that has it. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
     
     <!-- P2P Sync permissions (DNS-SD/Bonjour service discovery) -->
     <!-- Location is only needed for Android 12 and below for mDNS discovery -->

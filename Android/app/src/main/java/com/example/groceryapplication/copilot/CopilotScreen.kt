@@ -1,5 +1,10 @@
 package com.example.groceryapplication.copilot
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -178,6 +183,7 @@ private fun ProductSearchSection(
     var showKeywordDetail by remember { mutableStateOf(false) }
     var categoryFilter by remember { mutableStateOf("") }
     var inStockOnly by remember { mutableStateOf(false) }
+    val speech = rememberSpeechInput()
 
     fun runSearch(text: String) {
         val query = text.trim()
@@ -220,11 +226,14 @@ private fun ProductSearchSection(
                 placeholder = { Text("Describe what the shopper wants…") },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
                 trailingIcon = {
-                    if (queryText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            queryText = ""; hits = emptyList()
-                            keywordHits = emptyList(); hasSearched = false
-                        }) { Icon(Icons.Default.Clear, "Clear") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (queryText.isNotEmpty() && speech?.isListening != true) {
+                            IconButton(onClick = {
+                                queryText = ""; hits = emptyList()
+                                keywordHits = emptyList(); hasSearched = false
+                            }) { Icon(Icons.Default.Clear, "Clear") }
+                        }
+                        speech?.let { MicButton(it) { spoken -> runSearch(spoken) } }
                     }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -232,6 +241,21 @@ private fun ProductSearchSection(
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3
             )
+
+            // Spoken words appear in the field as they are recognised, matching iOS, so the
+            // associate reads them where they would have typed and can edit before searching.
+            if (speech != null) {
+                LaunchedEffect(speech.transcript) {
+                    if (speech.isListening && speech.transcript.isNotEmpty()) {
+                        queryText = speech.transcript
+                    }
+                }
+                ListeningRow(speech)
+                speech.errorMessage?.let { message ->
+                    Text(message, fontSize = 12.sp, color = Color(0xFFE65100))
+                }
+            }
+
             Button(
                 onClick = { runSearch(queryText) },
                 enabled = queryText.isNotBlank() && !isSearching,
@@ -844,6 +868,7 @@ private fun AskSection(
     var isWorking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var retrieveMillis by remember { mutableStateOf(0.0) }
+    val speech = rememberSpeechInput()
 
     val prompts = listOf(
         "I'm training for my first 5k — what should I drink after a run?",
@@ -883,10 +908,26 @@ private fun AskSection(
                 onValueChange = { question = it },
                 placeholder = { Text("Ask a question…") },
                 leadingIcon = { Icon(Icons.Default.QuestionAnswer, null, tint = Accent) },
+                trailingIcon = {
+                    speech?.let { MicButton(it) { spoken -> ask(spoken) } }
+                },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { ask(question) }),
                 modifier = Modifier.fillMaxWidth(), maxLines = 3
             )
+
+            if (speech != null) {
+                LaunchedEffect(speech.transcript) {
+                    if (speech.isListening && speech.transcript.isNotEmpty()) {
+                        question = speech.transcript
+                    }
+                }
+                ListeningRow(speech)
+                speech.errorMessage?.let { message ->
+                    Text(message, fontSize = 12.sp, color = Color(0xFFE65100))
+                }
+            }
+
             Button(
                 onClick = { ask(question) },
                 enabled = question.isNotBlank() && !isWorking,
@@ -1067,6 +1108,91 @@ private fun DiagnosticsSheet(
             }
         }
     )
+}
+
+// MARK: - Voice input
+
+/**
+ * A [SpeechInput] for this composition, or null when the device has no recogniser at all — in
+ * which case callers simply do not draw a mic rather than offering a button that cannot work.
+ */
+@Composable
+private fun rememberSpeechInput(): SpeechInput? {
+    val context = LocalContext.current
+    return remember { if (SpeechInput.isSupported(context)) SpeechInput(context) else null }
+}
+
+/**
+ * Mic toggle, including the RECORD_AUDIO permission request.
+ *
+ * The permission is asked for on first tap rather than at launch, so the prompt arrives with
+ * obvious context instead of during startup alongside the sync permissions.
+ */
+@Composable
+private fun MicButton(speech: SpeechInput, onFinal: (String) -> Unit) {
+    val context = LocalContext.current
+    var startAfterGrant by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && startAfterGrant) speech.start(onFinal)
+        startAfterGrant = false
+    }
+
+    IconButton(onClick = {
+        if (speech.isListening) {
+            speech.stop()
+        } else {
+            speech.clearError()
+            val granted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                speech.start(onFinal)
+            } else {
+                startAfterGrant = true
+                permission.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }) {
+        Icon(
+            if (speech.isListening) Icons.Default.Stop else Icons.Default.Mic,
+            contentDescription = if (speech.isListening) "Stop listening" else "Search by voice",
+            tint = if (speech.isListening) Color.Red else Accent
+        )
+    }
+}
+
+/**
+ * Listening state. Deliberately does not repeat the words — those go into the text field, so
+ * showing them here too would put the same sentence on screen twice.
+ *
+ * The badge reports what actually happened: "on-device" only when the recogniser genuinely
+ * cannot reach the network, and "cloud" otherwise, because Android's default recogniser is
+ * network-backed and claiming otherwise would be untrue.
+ */
+@Composable
+private fun ListeningRow(speech: SpeechInput) {
+    if (!speech.isListening) return
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.GraphicEq, null, tint = Color.Red, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Listening — tap stop when done", fontSize = 12.sp, color = Color.Gray)
+        Spacer(Modifier.weight(1f))
+        val onDevice = speech.isOnDevice
+        Surface(
+            color = if (onDevice) Color(0x2600C853) else Color(0x26FF6D00),
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Text(
+                if (onDevice) "on-device" else "cloud fallback",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (onDevice) Color(0xFF1B5E20) else Color(0xFFE65100),
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+    }
 }
 
 @Composable
