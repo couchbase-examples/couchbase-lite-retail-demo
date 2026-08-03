@@ -73,6 +73,8 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
     }
 
     var mode by remember { mutableStateOf(CopilotMode.FIND) }
+    /** Product carried from a Find result into Ask, so the question has context. */
+    var askAbout by remember { mutableStateOf<GroceryItem?>(null) }
     var threshold by remember { mutableStateOf(AppConfig.DEFAULT_RELEVANCE_THRESHOLD) }
     var showDiagnostics by remember { mutableStateOf(false) }
 
@@ -123,10 +125,18 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
                 threshold = threshold,
                 onThresholdChange = { threshold = it },
                 onSearchStart = { keyboard?.hide() },
+                onAskAbout = { item ->
+                    askAbout = item
+                    mode = CopilotMode.ASK
+                },
                 scope = scope
             )
             CopilotMode.PLANOGRAM -> PlanogramSection()
-            CopilotMode.ASK -> AskSection(searchService = searchService, scope = scope)
+            CopilotMode.ASK -> AskSection(
+                searchService = searchService,
+                product = askAbout,
+                scope = scope
+            )
             CopilotMode.TASKS -> TasksSection(
                 taskService = taskService,
                 databaseManager = databaseManager,
@@ -171,6 +181,8 @@ private fun ProductSearchSection(
     threshold: Double,
     onThresholdChange: (Double) -> Unit,
     onSearchStart: () -> Unit,
+    /** Carries the tapped product into the Ask step, matching the iOS result card. */
+    onAskAbout: (GroceryItem) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
     var queryText by remember { mutableStateOf("") }
@@ -329,7 +341,9 @@ private fun ProductSearchSection(
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         } else {
-            hits.forEachIndexed { index, hit -> SemanticResultCard(hit, index + 1) }
+            hits.forEachIndexed { index, hit ->
+                SemanticResultCard(hit, index + 1) { onAskAbout(hit.item) }
+            }
         }
     }
 
@@ -449,7 +463,7 @@ private fun ComparisonStrip(
 
 /** A single semantic match. Leads with location, because that is what the associate acts on. */
 @Composable
-private fun SemanticResultCard(hit: SemanticHit, rank: Int) {
+private fun SemanticResultCard(hit: SemanticHit, rank: Int, onAsk: (() -> Unit)? = null) {
     val item = hit.item
     Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
         Row(Modifier.padding(12.dp)) {
@@ -510,6 +524,24 @@ private fun SemanticResultCard(hit: SemanticHit, rank: Int) {
                     Spacer(Modifier.width(6.dp))
                     Text("distance ${"%.4f".format(hit.distance)}", fontSize = 11.sp,
                         color = Color.Gray, fontFamily = FontFamily.Monospace)
+                    if (onAsk != null) {
+                        Spacer(Modifier.weight(1f))
+                        Surface(
+                            onClick = onAsk,
+                            color = Accent.copy(alpha = 0.16f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.QuestionAnswer, null,
+                                    modifier = Modifier.size(13.dp))
+                                Spacer(Modifier.width(3.dp))
+                                Text("Ask", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -861,14 +893,21 @@ private fun statusTint(status: String) = when (status) {
 @Composable
 private fun AskSection(
     searchService: CopilotSearchService,
+    /** Set when the associate tapped Ask on a search result. */
+    product: GroceryItem?,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
+    val context = LocalContext.current
     var question by remember { mutableStateOf("") }
     var chunks by remember { mutableStateOf<List<KnowledgeHit>>(emptyList()) }
     var isWorking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var retrieveMillis by remember { mutableStateOf(0.0) }
+    var answer by remember { mutableStateOf("") }
+    var generateMillis by remember { mutableStateOf(0.0) }
+    var stage by remember { mutableStateOf<String?>(null) }
     val speech = rememberSpeechInput()
+    val llmAvailability = remember { LocalLanguageModel.availability(context) }
 
     val prompts = listOf(
         "I'm training for my first 5k — what should I drink after a run?",
@@ -882,21 +921,87 @@ private fun AskSection(
         isWorking = true
         errorMessage = null
         chunks = emptyList()
+        answer = ""
+        generateMillis = 0.0
+        stage = "Searching the knowledge collection…"
         scope.launch {
             try {
                 val started = System.nanoTime()
                 val retrieved = withContext(Dispatchers.Default) {
-                    searchService.retrieveKnowledge(trimmed)
+                    searchService.retrieveKnowledge(trimmed, relatedCategory = product?.type)
                 }
                 retrieveMillis = (System.nanoTime() - started) / 1_000_000.0
                 chunks = retrieved
                 if (retrieved.isEmpty()) {
                     errorMessage = "Nothing in this store's knowledge collection covers that."
+                    stage = null
+                    isWorking = false
+                    return@launch
+                }
+
+                // ---- generate ----
+                val unavailable = llmAvailability as? LocalLanguageModel.Availability.RetrievalOnly
+                if (unavailable != null) {
+                    errorMessage = unavailable.reason
+                    stage = null
+                    isWorking = false
+                    return@launch
+                }
+
+                stage = "Writing an answer from ${retrieved.size} sources…"
+                val generateStarted = System.nanoTime()
+                val generated = withContext(Dispatchers.Default) {
+                    LocalLanguageModel.generate(
+                        context,
+                        LocalLanguageModel.buildPrompt(
+                            question = trimmed,
+                            chunks = retrieved,
+                            product = product?.let {
+                                LocalLanguageModel.GroceryItemContext(
+                                    name = it.name,
+                                    brand = it.brand,
+                                    description = it.description,
+                                    badges = it.attributes?.displayBadges ?: emptyList()
+                                )
+                            }
+                        )
+                    )
+                }
+                generateMillis = (System.nanoTime() - generateStarted) / 1_000_000.0
+                if (generated == null) {
+                    errorMessage = "Retrieval worked and the sources below are what a grounded " +
+                        "answer would be written from, but generation failed on this device. " +
+                        "Check logcat for LocalLLM."
+                } else {
+                    answer = generated
                 }
             } catch (e: Exception) {
-                errorMessage = "Retrieval failed: ${e.message}"
+                errorMessage = if (chunks.isEmpty()) {
+                    "Retrieval failed: ${e.message}"
+                } else {
+                    "Could not generate an answer: ${e.message}. The retrieved sources are shown."
+                }
             } finally {
+                stage = null
                 isWorking = false
+            }
+        }
+    }
+
+    product?.let { item ->
+        Surface(color = Accent.copy(alpha = 0.12f), shape = RoundedCornerShape(10.dp)) {
+            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = item.imageURL,
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(44.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text("Asking about", fontSize = 11.sp, color = Color.Gray)
+                    Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -937,24 +1042,60 @@ private fun AskSection(
         }
     }
 
-    // Retrieval is real vector search; generation is not wired up on Android yet. Saying so
-    // is better than implying an answer was withheld.
+    // Says which half is running. Both halves are on-device: retrieval by vector search over
+    // `product_knowledge`, generation by MediaPipe over a side-loaded Gemma model. When no model
+    // is installed the screen says so rather than implying an answer was withheld.
     Surface(color = Color(0x1F2196F3), shape = RoundedCornerShape(10.dp)) {
         Row(Modifier.padding(12.dp)) {
             Icon(Icons.Default.Info, null, tint = Color(0xFF1565C0),
                 modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Retrieval runs on-device by vector search over the store's " +
-                "`product_knowledge` collection. Answer generation is not wired up on Android " +
-                "yet, so the retrieved sources are shown as-is — the retrieval half of RAG.",
-                fontSize = 12.sp)
+            Text(
+                if (llmAvailability is LocalLanguageModel.Availability.Ready) {
+                    "Retrieval and generation both run on-device: vector search over the store's " +
+                        "`product_knowledge` collection, then " +
+                        "${LocalLanguageModel.modelName(context)} via MediaPipe. No cloud " +
+                        "round-trip in either half."
+                } else {
+                    "Retrieval runs on-device by vector search over the store's " +
+                        "`product_knowledge` collection. No language model is installed, so the " +
+                        "retrieved sources are shown as-is — the retrieval half of RAG."
+                },
+                fontSize = 12.sp
+            )
         }
     }
 
-    if (isWorking) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 18.dp),
-            horizontalArrangement = Arrangement.Center) {
-            CircularProgressIndicator(color = Accent, modifier = Modifier.size(20.dp))
+    if (isWorking || answer.isNotEmpty()) {
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AutoAwesome, null, tint = Accent,
+                        modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        LocalLanguageModel.modelName(context) ?: "retrieval only",
+                        fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray
+                    )
+                    Spacer(Modifier.weight(1f))
+                    if (isWorking) {
+                        CircularProgressIndicator(color = Accent, modifier = Modifier.size(14.dp))
+                    }
+                }
+                stage?.takeIf { answer.isEmpty() }?.let {
+                    Text(it, fontSize = 12.sp, color = Color.Gray)
+                }
+                if (answer.isNotEmpty()) {
+                    Text(answer, fontSize = 14.sp)
+                }
+                if (generateMillis > 0.0) {
+                    Text(
+                        "Retrieved ${chunks.size} chunks in ${"%.1f".format(retrieveMillis)} ms, " +
+                            "generated in ${"%.0f".format(generateMillis)} ms",
+                        fontSize = 11.sp, color = Color.Gray, fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
         }
     }
 

@@ -103,6 +103,12 @@ dependencies {
     // counterpart to CoreML on iOS. Same checkpoint and the same in-graph mean pooling,
     // so both platforms produce vectors comparable to the ones authored offline.
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+
+    // MediaPipe LLM Inference — Step 3 answer generation, the Android counterpart to Apple
+    // Foundation Models on iOS. The model itself is NOT bundled: Gemma weights are ~0.5-1.5GB
+    // and licence-gated, so they are side-loaded to app-external storage. See
+    // LocalLanguageModel for the expected path and how a missing model degrades.
+    implementation("com.google.mediapipe:tasks-genai:0.10.35")
     
     // Coil - Image loading library for Compose
     implementation("io.coil-kt:coil-compose:2.5.0")
