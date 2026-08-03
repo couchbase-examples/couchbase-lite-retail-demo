@@ -35,14 +35,26 @@ class TextEmbedder private constructor(
 
     companion object {
         private const val TAG = "TextEmbedder"
-        private const val MODEL_ASSET = "copilot/minilm_l6_v2_int8.onnx"
+        /**
+         * Priya's fp32 export, which is the same checkpoint the dataset's stored embeddings
+         * were generated from. Both this and the int8 build below take `input_ids` /
+         * `attention_mask` and return one L2-normalised `[1, 384]` vector, so they are
+         * interchangeable at the call site.
+         *
+         * fp32 is the default because it matches iOS: quantising to int8 costs ~0.03 cosine
+         * against the stored vectors, which is enough to move a borderline result across the
+         * relevance threshold. The price is APK size — 86MB against 22MB. Switch to
+         * [MODEL_ASSET_INT8] if size ever matters more than matching iOS exactly.
+         */
+        private const val MODEL_ASSET = "copilot/minilm_l6_v2_fp32.onnx"
+        private const val MODEL_ASSET_INT8 = "copilot/minilm_l6_v2_int8.onnx"
 
         /** Must match SEQ_LEN in the export script and iOS — the graph has a fixed shape. */
         const val SEQUENCE_LENGTH = 128
         const val DIMENSIONS = 384
         const val MODEL_NAME = "all-MiniLM-L6-v2"
         const val METRIC = "cosine"
-        const val RUNTIME = "ONNX Runtime, int8 weights"
+        const val RUNTIME = "ONNX Runtime, fp32 weights"
 
         @Volatile
         private var instance: TextEmbedder? = null

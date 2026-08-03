@@ -8,3 +8,4 @@ tools/embeddings/*.onnx.data
 tools/embeddings/minilm_l6_v2_int8.onnx
 tools/embeddings/*.mlpackage/
 tools/embeddings/generated-assets/
+tools/embeddings/s3-upload/
