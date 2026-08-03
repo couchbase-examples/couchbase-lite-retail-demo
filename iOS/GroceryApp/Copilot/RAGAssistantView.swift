@@ -11,6 +11,11 @@ struct RAGAssistantView: View {
     /// Set when the associate tapped "Ask" on a search result.
     let product: GroceryItem?
 
+    /// The associate is holding a phone in a shop aisle, so the question is more likely to be
+    /// spoken than typed. Same on-device recogniser as Step 1 — nothing is sent off the device
+    /// in either half of the flow, which is the whole claim of this screen.
+    @StateObject private var speech = SpeechRecognizer()
+
     @State private var question = ""
     @State private var answer = ""
     @State private var chunks: [KnowledgeHit] = []
@@ -84,15 +89,43 @@ struct RAGAssistantView: View {
                     .lineLimit(1...3)
                     .submitLabel(.send)
                     .onSubmit { ask() }
-                if !question.isEmpty {
+                    // Spoken words land in the field as they are recognised, matching Step 1.
+                    .onChange(of: speech.transcript) { _, latest in
+                        if speech.isListening && !latest.isEmpty { question = latest }
+                    }
+                if !question.isEmpty && !speech.isListening {
                     Button { question = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                     }
                 }
+                Button { toggleVoice() } label: {
+                    Image(systemName: speech.isListening ? "stop.circle.fill" : "mic.fill")
+                        .font(.title3)
+                        .foregroundColor(speech.isListening ? .red : accent)
+                }
+                .accessibilityLabel(speech.isListening ? "Stop listening" : "Ask by voice")
             }
             .padding(12)
             .background(Color(UIColor.systemBackground))
             .cornerRadius(12)
+
+            if speech.isListening {
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform")
+                        .foregroundColor(.red)
+                        .symbolEffect(.variableColor.iterative)
+                    Text("Listening — tap stop when done")
+                        .font(.caption).foregroundColor(.secondary)
+                    Spacer()
+                    Text("on-device")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.green.opacity(0.15))
+                        .foregroundColor(.green)
+                        .cornerRadius(4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Button { ask() } label: {
                 Text("Ask")
@@ -226,6 +259,28 @@ struct RAGAssistantView: View {
             Spacer()
         }
         .padding(12).background(tint.opacity(0.12)).cornerRadius(10)
+    }
+
+    // MARK: - Voice
+
+    private func toggleVoice() {
+        if speech.isListening {
+            speech.finish { transcript in
+                question = transcript
+                ask()
+            }
+        } else {
+            errorMessage = nil
+            Task {
+                await speech.start { transcript in
+                    question = transcript
+                    ask()
+                }
+                if case .unavailable(let reason) = speech.state {
+                    errorMessage = reason
+                }
+            }
+        }
     }
 
     // MARK: - Ask

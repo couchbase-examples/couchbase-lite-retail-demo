@@ -91,6 +91,12 @@ struct ProductSearchView: View {
                     .lineLimit(1...3)
                     .submitLabel(.search)
                     .onSubmit { runSearch(mode: "text") }
+                    // Speech lands in the field as it is recognised, so the associate reads
+                    // their words where they would have typed them and can edit before
+                    // searching. Guarded on `isListening` so it never clobbers typed text.
+                    .onChange(of: speech.transcript) { _, latest in
+                        if speech.isListening && !latest.isEmpty { queryText = latest }
+                    }
 
                 if !queryText.isEmpty {
                     Button {
@@ -116,12 +122,17 @@ struct ProductSearchView: View {
             .background(Color(UIColor.systemBackground))
             .cornerRadius(12)
 
+            // While listening, the words themselves go into the text field above (see the
+            // `speech.transcript` observer) rather than being echoed here. Showing them in both
+            // places read as two competing versions of the same sentence. What is left is the
+            // state — that it is listening, and that the recognition is on-device, which is the
+            // claim worth making visible.
             if speech.isListening {
                 HStack(spacing: 8) {
                     Image(systemName: "waveform")
                         .foregroundColor(.red)
                         .symbolEffect(.variableColor.iterative)
-                    Text(speech.transcript.isEmpty ? "Listening…" : speech.transcript)
+                    Text(speech.transcript.isEmpty ? "Listening…" : "Listening — tap stop when done")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
