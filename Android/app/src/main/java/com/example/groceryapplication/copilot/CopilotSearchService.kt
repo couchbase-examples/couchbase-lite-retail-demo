@@ -124,6 +124,36 @@ class CopilotSearchService(
         }
     }
 
+    /** Scope the indexes were last built for, so a store switch rebuilds them. */
+    private var indexedScope: String? = null
+
+    /**
+     * Guarantees the vector indexes exist for the *current* scope before a query runs.
+     *
+     * Index creation used to happen only at database-open time and again when the replicator
+     * reported idle. Both are unreliable, and on a physical device both failed:
+     *
+     *  - At open, `AppConfig.currentStore` is still the default, because the store is only known
+     *    once the associate signs in. Indexes are scope-qualified, so anything built at open is
+     *    built against the wrong scope.
+     *  - The idle hook never fires on a device that syncs continuously and also runs P2P — the
+     *    replicator stays busy indefinitely. It reached idle on the emulator, which is exactly
+     *    why this passed there and failed on hardware.
+     *
+     * Doing it here instead means the guarantee holds at the only moment that matters: just
+     * before a vector query. `ensureAllIndexes` is idempotent and returns quickly when the
+     * indexes already exist, so the cost after the first call is negligible.
+     */
+    private fun ensureIndexes(database: Database) {
+        if (indexedScope == AppConfig.scopeName) return
+        try {
+            VectorIndexManager.ensureAllIndexes(database)
+            indexedScope = AppConfig.scopeName
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ could not ensure vector indexes for ${AppConfig.scopeName}", e)
+        }
+    }
+
     // MARK: - Step 1: semantic product search
 
     /**
@@ -146,6 +176,9 @@ class CopilotSearchService(
         // An empty collection means nothing has synced yet, so the vector index does not exist
         // and the query below would fail with an index error. Say what is actually wrong.
         if (localCount(AppConfig.COLLECTION_NAME) == 0) throw NoLocalDataException()
+
+        // Data is present, so the index can be trained. Build it now if it is not there yet.
+        ensureIndexes(database)
 
         // ---- on-device query embedding (the live edge inference) ----
         val vector = embedder.embed(trimmed)
@@ -260,6 +293,8 @@ class CopilotSearchService(
 
         // Same reasoning as `search`: an unsynced knowledge collection has no index.
         if (localCount(AppConfig.KNOWLEDGE_COLLECTION_NAME) == 0) throw NoLocalDataException()
+
+        ensureIndexes(database)
 
         val vector = embedder.embed(trimmed)
         val distanceExpr =
