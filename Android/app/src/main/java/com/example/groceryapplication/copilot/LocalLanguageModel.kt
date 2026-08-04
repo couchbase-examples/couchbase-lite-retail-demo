@@ -30,8 +30,12 @@ object LocalLanguageModel {
     private const val TAG = "LocalLLM"
     private const val MODEL_DIR = "llm"
 
-    /** Generation caps. Short answers, because this is read aloud to a shopper in an aisle. */
-    private const val MAX_TOKENS = 1024
+    /**
+     * Total context, prompt included — not a response budget. The grounded prompt runs 700-900
+     * tokens with four retrieved chunks, so 1024 left almost nothing for the answer and produced
+     * fragments. Matched to the ekv2048 model variant.
+     */
+    private const val MAX_TOKENS = 2048
     private const val TOP_K = 40
     private const val TEMPERATURE = 0.4f
 
@@ -46,15 +50,33 @@ object LocalLanguageModel {
     @Volatile
     private var loadedPath: String? = null
 
-    /** Directory the model is expected in, surfaced so the UI can name it exactly. */
+    /**
+     * Directory the model is expected in, surfaced so the UI can name it exactly.
+     *
+     * Created here, by the app, on purpose. If `adb shell mkdir` gets there first the directory
+     * ends up owned by `shell` with mode `drwxrws---`, and the app cannot list its own
+     * subdirectory — the model is present, readable by adb, and invisible to the app. Creating
+     * it from inside the app means it is app-owned, and adb can still push into it.
+     */
     fun modelDirectory(context: Context): File =
-        File(context.getExternalFilesDir(null), MODEL_DIR)
+        File(context.getExternalFilesDir(null), MODEL_DIR).apply {
+            if (!exists()) mkdirs()
+        }
 
-    private fun modelFile(context: Context): File? =
-        modelDirectory(context)
-            .takeIf { it.isDirectory }
-            ?.listFiles { f -> f.isFile && f.name.endsWith(".task") }
-            ?.maxByOrNull { it.length() }
+    /**
+     * Finds the model, tolerating either layout: inside `llm/`, or dropped straight into the
+     * app's external files root. The second is worth accepting because it is the directory adb
+     * can always write to, so it is what people reach for when a push into the subdirectory
+     * fails.
+     */
+    private fun modelFile(context: Context): File? {
+        val isTask = { f: File -> f.isFile && f.name.endsWith(".task") }
+        val candidates = buildList {
+            modelDirectory(context).listFiles()?.filter(isTask)?.let { addAll(it) }
+            context.getExternalFilesDir(null)?.listFiles()?.filter(isTask)?.let { addAll(it) }
+        }
+        return candidates.maxByOrNull { it.length() }
+    }
 
     /** Name of the model in use, for the behind-the-scenes screen. */
     fun modelName(context: Context): String? = modelFile(context)?.name
@@ -113,12 +135,23 @@ object LocalLanguageModel {
     fun generate(context: Context, prompt: String): String? {
         val llm = ensureLoaded(context) ?: return null
         return try {
-            llm.generateResponse(prompt)?.trim()?.takeIf { it.isNotEmpty() }
+            llm.generateResponse(prompt)?.let(::tidy)?.takeIf { it.isNotEmpty() }
         } catch (e: Throwable) {
             Log.e(TAG, "❌ generation failed", e)
             null
         }
     }
+
+    /**
+     * Cleans up generation artefacts before display. Gemma emits markdown emphasis and
+     * occasionally echoes a turn marker, neither of which means anything in a plain Text view —
+     * `**20-40g of protein**` renders with the asterisks visible.
+     */
+    private fun tidy(raw: String): String = raw
+        .replace("<end_of_turn>", "")
+        .replace("<start_of_turn>", "")
+        .replace(Regex("\\*{1,2}"), "")
+        .trim()
 
     fun close() {
         try {
@@ -141,6 +174,11 @@ object LocalLanguageModel {
         chunks: List<KnowledgeHit>,
         product: GroceryItemContext? = null
     ): String = buildString {
+        // Gemma's instruction-tuned turn markers. Without them the model treats the prompt as
+        // text to continue rather than a question to answer, and returns a fragment that looks
+        // like a truncation bug — the first run here came back as `20-40g of protein."`, which
+        // is Gemma completing the last source it was shown.
+        append("<start_of_turn>user\n")
         append(
             "You are a retail store associate's assistant. Answer only from the SOURCES below. " +
                 "If the sources do not contain the answer, say so plainly instead of guessing. " +
@@ -156,6 +194,7 @@ object LocalLanguageModel {
             append("[${index + 1}] ${chunk.title}\n${chunk.chunkText}\n\n")
         }
         append("QUESTION: $question")
+        append("<end_of_turn>\n<start_of_turn>model\n")
     }
 
     /** The few product fields worth putting in the prompt. */
