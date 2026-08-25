@@ -1,11 +1,18 @@
 package com.example.groceryapplication.copilot
 
 import android.Manifest
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import com.example.groceryapplication.StoreLocation
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,6 +80,8 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
     }
 
     var mode by remember { mutableStateOf(CopilotMode.FIND) }
+    // Aisle and shelf carried from a Find result into the planogram audit (PRD Case 1).
+    var shelfContext by remember { mutableStateOf<ShelfContext?>(null) }
     /** Product carried from a Find result into Ask, so the question has context. */
     var askAbout by remember { mutableStateOf<GroceryItem?>(null) }
     var threshold by remember { mutableStateOf(AppConfig.DEFAULT_RELEVANCE_THRESHOLD) }
@@ -129,9 +138,15 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
                     askAbout = item
                     mode = CopilotMode.ASK
                 },
+                // Case 1: the associate looked the product up, now they walk to the shelf.
+                // Tapping the location carries it straight into the audit.
+                onAuditShelf = { context ->
+                    shelfContext = context
+                    mode = CopilotMode.PLANOGRAM
+                },
                 scope = scope
             )
-            CopilotMode.PLANOGRAM -> PlanogramSection()
+            CopilotMode.PLANOGRAM -> PlanogramStep(databaseManager, shelfContext) { shelfContext = it }
             CopilotMode.ASK -> AskSection(
                 searchService = searchService,
                 product = askAbout,
@@ -183,6 +198,8 @@ private fun ProductSearchSection(
     onSearchStart: () -> Unit,
     /** Carries the tapped product into the Ask step, matching the iOS result card. */
     onAskAbout: (GroceryItem) -> Unit,
+    /** Carries the product's aisle/shelf into the planogram audit (PRD Case 1). */
+    onAuditShelf: (ShelfContext) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
     var queryText by remember { mutableStateOf("") }
@@ -342,7 +359,18 @@ private fun ProductSearchSection(
             }
         } else {
             hits.forEachIndexed { index, hit ->
-                SemanticResultCard(hit, index + 1) { onAskAbout(hit.item) }
+                SemanticResultCard(
+                    hit = hit,
+                    rank = index + 1,
+                    onAsk = { onAskAbout(hit.item) },
+                    // Only offered when the product's location names a shelf — without one there
+                    // is no planogram to open.
+                    onAuditShelf = hit.item.location?.let { loc ->
+                        loc.shelf?.let { shelf ->
+                            { onAuditShelf(ShelfContext(loc.aisle, shelf)) }
+                        }
+                    }
+                )
             }
         }
     }
@@ -463,7 +491,12 @@ private fun ComparisonStrip(
 
 /** A single semantic match. Leads with location, because that is what the associate acts on. */
 @Composable
-private fun SemanticResultCard(hit: SemanticHit, rank: Int, onAsk: (() -> Unit)? = null) {
+private fun SemanticResultCard(
+    hit: SemanticHit,
+    rank: Int,
+    onAsk: (() -> Unit)? = null,
+    onAuditShelf: (() -> Unit)? = null
+) {
     val item = hit.item
     Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
         Row(Modifier.padding(12.dp)) {
@@ -492,7 +525,12 @@ private fun SemanticResultCard(hit: SemanticHit, rank: Int, onAsk: (() -> Unit)?
                         color = if (item.quantity > 0) Color.Gray else Color.Red)
                 }
                 item.location?.let { loc ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = if (onAuditShelf != null) {
+                            Modifier.clickable { onAuditShelf() }
+                        } else Modifier
+                    ) {
                         Icon(Icons.Default.Place, null, tint = Accent,
                             modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
@@ -505,6 +543,13 @@ private fun SemanticResultCard(hit: SemanticHit, rank: Int, onAsk: (() -> Unit)?
                             },
                             fontSize = 12.sp, fontWeight = FontWeight.Medium
                         )
+                        if (onAuditShelf != null) {
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                Icons.Default.ChevronRight, null, tint = Accent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
                 item.attributes?.displayBadges?.takeIf { it.isNotEmpty() }?.let { badges ->
@@ -550,31 +595,658 @@ private fun SemanticResultCard(hit: SemanticHit, rank: Int, onAsk: (() -> Unit)?
 
 // MARK: - Step 2 (UI only on Android)
 
+/**
+ * Step 2 has two entry points, per the PRD: identify a product with the camera and be told where
+ * it belongs (Case 1), or audit a shelf you already picked (Case 2).
+ */
+private enum class PlanogramTab(val label: String) { SCAN("Scan Product"), AUDIT("Check Shelf") }
+
 @Composable
-private fun PlanogramSection() {
-    Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Visual planogram audit", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("The associate photographs a shelf, each expected position is cropped out and " +
-                "embedded with CLIP, and the crops are matched against product image vectors " +
-                "to name what is actually sitting there — for example “expected Chocolate " +
-                "Recovery Shake, found Vanilla Whey Protein Shake”.",
-                fontSize = 12.sp, color = Color.Gray)
-            Surface(color = Color(0x1F2196F3), shape = RoundedCornerShape(10.dp)) {
-                Row(Modifier.padding(12.dp)) {
-                    Icon(Icons.Default.Info, null, tint = Color(0xFF1565C0),
-                        modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Implemented and working on iOS. On Android this is the UI placeholder " +
-                        "only — the image model and crop matching are not wired up yet, so no " +
-                        "audit runs from this screen.",
-                        fontSize = 12.sp)
+private fun PlanogramStep(
+    databaseManager: DatabaseManager,
+    incoming: ShelfContext?,
+    onShelfContext: (ShelfContext) -> Unit
+) {
+    var tab by remember { mutableStateOf(PlanogramTab.AUDIT) }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // A segmented control rather than a second row of big tabs: this is a choice *within*
+        // Step 2 and should not compete with the top-level step picker.
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PlanogramTab.entries.forEach { candidate ->
+                val on = tab == candidate
+                Surface(
+                    onClick = { tab = candidate },
+                    color = if (on) Accent else MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        Modifier.padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (candidate == PlanogramTab.SCAN) Icons.Default.CameraAlt
+                            else Icons.Default.GridView,
+                            null,
+                            tint = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            candidate.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                            color = if (on) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
-            OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Photograph this shelf")
+        }
+        when (tab) {
+            // Completes Case 1: identified product → its shelf → straight into the check.
+            PlanogramTab.SCAN -> ProductScanSection(databaseManager) { ctx ->
+                onShelfContext(ctx); tab = PlanogramTab.AUDIT
+            }
+            PlanogramTab.AUDIT -> PlanogramSection(databaseManager, incoming)
+        }
+    }
+}
+
+@Composable
+private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfContext? = null) {
+    // Real now, not a placeholder: this wires Priya's own PlanogramSearch.kt / ClipImageEmbedder
+    // — the grid-tiling, per-cell APPROX_VECTOR_DISTANCE, per-column median verdict logic she
+    // documented and tested — rather than reinventing it. The screen layout is the merge she
+    // asked for on Aug 6: her shelf-map grid and per-product findings, combined with the golden
+    // reference card and dropdown from the review-feedback rebuild, so nothing from either design
+    // is dropped.
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var shelves by remember { mutableStateOf<List<ShelfRef>>(emptyList()) }
+    var selectedShelf by remember { mutableStateOf<ShelfRef?>(null) }
+    var shelfMenuOpen by remember { mutableStateOf(false) }
+    var goldenUrl by remember { mutableStateOf<String?>(null) }
+    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var previewLabel by remember { mutableStateOf<String?>(null) }
+    // Which sample variant is loaded. Without this the two check buttons cannot show
+    // which one produced the result on screen.
+    var previewVariant by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<PlanogramAuditResult?>(null) }
+    var isAuditing by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var elapsedMs by remember { mutableStateOf(0L) }
+
+    fun loadSample(store: String, shelf: ShelfRef, variant: String, label: String) {
+        val name = "shelf_samples/${store}_aisle${shelf.aisle}_${shelf.shelf}_${variant}.png"
+        val bmp = try {
+            context.assets.open(name).use { BitmapFactory.decodeStream(it) }
+        } catch (e: Exception) {
+            null
+        }
+        if (bmp == null) {
+            errorMessage = "Sample image $name is not in assets. All 24 shelves ship golden " +
+                "and missing-stock views for both stores, so this usually means the asset " +
+                "folder is incomplete."
+            return
+        }
+        errorMessage = null
+        previewBitmap = bmp
+        previewLabel = label
+        previewVariant = variant
+        result = null
+    }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            shelves = databaseManager.planogramShelves()
+        }
+        // Case 1 hands us a location from the product just looked up; Case 2 is a cold open,
+        // where there is nothing to infer and the first shelf is as good as any.
+        if (selectedShelf == null) {
+            selectedShelf = incoming?.let { ctx ->
+                shelves.firstOrNull { it.aisle == ctx.aisle && it.shelf == ctx.shelf }
+            } ?: shelves.firstOrNull()
+        }
+    }
+    LaunchedEffect(selectedShelf) {
+        val shelf = selectedShelf ?: return@LaunchedEffect
+        goldenUrl = null
+        previewBitmap = null
+        previewLabel = null
+        previewVariant = null
+        result = null
+        errorMessage = null
+        goldenUrl = withContext(Dispatchers.IO) { databaseManager.planogramGoldenUrl(shelf.shelf) }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Shelf picker
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("SHELF TO AUDIT", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = Color.Gray)
+                Box {
+                    Surface(
+                        onClick = { shelfMenuOpen = true },
+                        color = Color(0x14000000), shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 14.dp, vertical = 11.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                selectedShelf?.label ?: "Choose a shelf",
+                                fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(Icons.Default.UnfoldMore, null, tint = Color.Gray,
+                                modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    DropdownMenu(shelfMenuOpen, onDismissRequest = { shelfMenuOpen = false }) {
+                        shelves.forEach { shelf ->
+                            DropdownMenuItem(
+                                text = { Text(shelf.label) },
+                                onClick = { selectedShelf = shelf; shelfMenuOpen = false }
+                            )
+                        }
+                    }
+                }
+                if (incoming != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.SubdirectoryArrowRight, null,
+                            tint = Color(0xFF1565C0), modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "Carried over from the product you looked up in Find.",
+                            fontSize = 11.sp, color = Color(0xFF1565C0)
+                        )
+                    }
+                }
+            }
+        }
+
+        val shelf = selectedShelf
+        if (shelf != null) {
+            // Golden reference — same framing as iOS, no "Photograph this shelf": golden imagery
+            // is shot from one fixed angle, so a live camera capture could never line up with it.
+            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("GOLDEN IMAGE REFERENCE (IDEAL LAYOUT)", fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, color = Color.Gray)
+                    if (goldenUrl != null) {
+                        AsyncImage(
+                            model = goldenUrl, contentDescription = "Golden layout",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxWidth().height(150.dp)
+                                .background(Color(0x0D000000)).clip(RoundedCornerShape(8.dp))
+                        )
+                    } else {
+                        Box(
+                            Modifier.fillMaxWidth().height(150.dp)
+                                .background(Color(0x0D000000), RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) { Text("Golden image not reachable", fontSize = 11.sp, color = Color.Gray) }
+                    }
+
+                    Divider()
+                    Text(
+                        "Pick a shelf image to check against this reference. Each cell is " +
+                            "embedded on-device with CLIP and matched against the golden layout " +
+                            "cell by cell.",
+                        fontSize = 12.sp, color = Color.Gray
+                    )
+
+                    val store = if (AppConfig.currentStore == StoreLocation.AA) "aa" else "nyc"
+                    // Styled as a selection, not as two competing calls to action. Hard-coding
+                    // Organized as the filled primary made it look active even while the screen
+                    // showed disorganized results. Accent now follows the selection; the real
+                    // primary action is "Audit shelf" below.
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        checkVariantButton(
+                            title = "Check Organized Shelf",
+                            subtitle = "Should come back fully compliant",
+                            selected = previewVariant == "golden",
+                            modifier = Modifier.weight(1f)
+                        ) { loadSample(store, shelf, "golden", "Check Organized Shelf") }
+                        checkVariantButton(
+                            title = "Check Disorganized Shelf",
+                            subtitle = "Should flag the gap",
+                            selected = previewVariant == "actual_missing",
+                            modifier = Modifier.weight(1f)
+                        ) { loadSample(store, shelf, "actual_missing", "Check Disorganized Shelf") }
+                    }
+                }
+            }
+        }
+
+        if (previewBitmap != null && shelf != null) {
+            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    previewLabel?.let {
+                        Text(it.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            color = Color.Gray)
+                    }
+                    Image(
+                        previewBitmap!!.asImageBitmap(), contentDescription = "Selected view",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Button(
+                        onClick = {
+                            val bmp = previewBitmap ?: return@Button
+                            // The 335MB CLIP graph loads on a background thread at app start, so
+                            // an early tap can arrive before it is usable. Say so plainly instead
+                            // of letting every cell silently fail to embed and reporting the
+                            // shelf as empty — which looks like a real audit result.
+                            if (!ClipImageEmbedder.isReady) {
+                                errorMessage = "CLIP model not ready yet " +
+                                    "(${ClipImageEmbedder.status}). It loads in the background " +
+                                    "at startup — wait a moment and try again."
+                                return@Button
+                            }
+                            isAuditing = true
+                            errorMessage = null
+                            scope.launch {
+                                val started = System.nanoTime()
+                                val audit = withContext(Dispatchers.Default) {
+                                    databaseManager.auditShelf(shelf.shelf, bmp)
+                                }
+                                elapsedMs = (System.nanoTime() - started) / 1_000_000
+                                isAuditing = false
+                                if (audit == null) {
+                                    errorMessage = "Audit failed — is the CLIP model loaded? " +
+                                        "Status: ${ClipImageEmbedder.status}"
+                                } else {
+                                    result = audit
+                                }
+                            }
+                        },
+                        enabled = !isAuditing,
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isAuditing) {
+                            CircularProgressIndicator(Modifier.size(16.dp), color = Color.White,
+                                strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(if (isAuditing) "Auditing…" else "Audit shelf",
+                            fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+
+        errorMessage?.let {
+            Card(colors = CardDefaults.cardColors(Color(0xFFFFE0B2))) {
+                Text(it, Modifier.padding(12.dp), fontSize = 12.sp)
+            }
+        }
+
+        result?.let { r -> auditResultCard(r, elapsedMs) }
+    }
+}
+
+/** One of the two sample-view choices. Filled when selected so the active view is unambiguous. */
+@Composable
+private fun checkVariantButton(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val content = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+    Surface(
+        onClick = onClick,
+        color = if (selected) Accent else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+    ) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
+            Icon(
+                if (selected) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
+                null,
+                tint = if (selected) Color.White else Color.Gray,
+                modifier = Modifier.size(15.dp).padding(top = 1.dp)
+            )
+            Spacer(Modifier.width(7.dp))
+            Column {
+                Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = content)
+                Text(
+                    subtitle, fontSize = 10.sp,
+                    color = if (selected) Color.White.copy(alpha = 0.9f) else Color.Gray
+                )
+            }
+        }
+    }
+}
+
+/** Step 2, Case 1: camera → on-device CLIP → nearest catalogue product → where it belongs. */
+@Composable
+private fun ProductScanSection(
+    databaseManager: DatabaseManager,
+    onAuditShelf: (ShelfContext) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var captured by remember { mutableStateOf<Bitmap?>(null) }
+    var matches by remember { mutableStateOf<List<ScanMatch>>(emptyList()) }
+    var isScanning by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var vectorsMissing by remember { mutableStateOf(false) }
+    var elapsedMs by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        vectorsMissing = withContext(Dispatchers.IO) { !databaseManager.hasProductImageVectors() }
+    }
+
+    fun run(bmp: Bitmap) {
+        captured = bmp
+        matches = emptyList()
+        errorMessage = null
+        if (!ClipImageEmbedder.isReady) {
+            errorMessage = "CLIP model not ready yet (${ClipImageEmbedder.status}). It loads in " +
+                "the background at startup — wait a moment and try again."
+            return
+        }
+        isScanning = true
+        scope.launch {
+            val t0 = System.nanoTime()
+            val found = withContext(Dispatchers.Default) { databaseManager.identifyProduct(bmp) }
+            elapsedMs = (System.nanoTime() - t0) / 1_000_000
+            matches = found
+            isScanning = false
+            if (found.isEmpty()) {
+                errorMessage = "Nothing to match against — the inventory documents in this " +
+                    "store have no image vectors."
+            }
+        }
+    }
+
+    // TakePicturePreview hands back a thumbnail Bitmap directly, so there is no FileProvider or
+    // temp-file plumbing to get wrong for what is only ever a CLIP input.
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+        if (it != null) run(it)
+    }
+    val cameraPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) camera.launch(null)
+        else errorMessage = "Camera permission is needed to scan a product."
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (vectorsMissing) {
+            Card(colors = CardDefaults.cardColors(Color(0xFFF5A623).copy(alpha = 0.14f))) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF5A623),
+                        modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "No product image vectors in this store's inventory yet. Scanning needs " +
+                            "embedding.image on the inventory documents — re-import the dataset " +
+                            "produced by tools/embeddings/embed_product_images_onnx.py.",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("SCAN A PRODUCT", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = Color.Gray)
+                Text(
+                    "Point the camera at an item on the shelf. It is embedded on-device with " +
+                        "CLIP and matched against the product catalogue by vector search — no " +
+                        "network round-trip.",
+                    fontSize = 12.sp, color = Color.Gray
+                )
+                captured?.let { bmp ->
+                    Image(
+                        bmp.asImageBitmap(), null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth().height(170.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                }
+                Button(
+                    onClick = {
+                        if (ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) camera.launch(null)
+                        else cameraPermission.launch(Manifest.permission.CAMERA)
+                    },
+                    enabled = !isScanning,
+                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (captured == null) "Scan product" else "Scan another",
+                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        if (isScanning) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 18.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text("Embedding the frame on-device…", fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+
+        errorMessage?.let { msg ->
+            Card(colors = CardDefaults.cardColors(Color(0xFFF5A623).copy(alpha = 0.14f))) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF5A623),
+                        modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(msg, fontSize = 12.sp)
+                }
+            }
+        }
+
+        if (matches.isNotEmpty() && !isScanning) {
+            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("IDENTIFIED", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = Color.Gray)
+                    matches.firstOrNull()?.takeIf { it.distance > SCAN_NO_MATCH_THRESHOLD }?.let { b ->
+                        // The nearest neighbour is always something; say so rather than
+                        // presenting a row the model is not actually confident about.
+                        Text(
+                            "No confident match — closest is ${b.name} at " +
+                                "%.2f".format(b.distance) + ". Try filling more of the frame " +
+                                "with the product.",
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                    }
+                    matches.forEachIndexed { i, m -> scanMatchRow(m, i == 0, onAuditShelf) }
+                    Text(
+                        "On-device: CLIP embed + vector search · $elapsedMs ms",
+                        fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun scanMatchRow(m: ScanMatch, isTop: Boolean, onAuditShelf: (ShelfContext) -> Unit) {
+    Surface(
+        color = if (isTop) Color(0xFF0F9D58).copy(alpha = 0.14f)
+                else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(9.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                AsyncImage(
+                    m.imageUrl, null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(m.name, fontSize = 14.sp,
+                        fontWeight = if (isTop) FontWeight.SemiBold else FontWeight.Normal)
+                    Row {
+                        m.brand?.let {
+                            Text(it, fontSize = 11.sp, color = Color.Gray)
+                            Text(" · ", fontSize = 11.sp, color = Color.Gray)
+                        }
+                        Text("$%.2f".format(m.price), fontSize = 11.sp)
+                        Text(" · ", fontSize = 11.sp, color = Color.Gray)
+                        Text("${m.quantity} in stock", fontSize = 11.sp,
+                            color = if (m.quantity > 0) Color.Gray else Color.Red)
+                    }
+                    Row {
+                        Text("${m.similarityPercent}% match", fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold, color = Accent)
+                        Spacer(Modifier.width(6.dp))
+                        Text("distance %.4f".format(m.distance), fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace, color = Color.Gray)
+                    }
+                }
+            }
+            // The payoff: where to put it back, and one tap into the compliance check.
+            m.shelfContext?.let { ctx ->
+                Surface(
+                    onClick = { onAuditShelf(ctx) },
+                    color = Accent.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Place, null, tint = Accent,
+                            modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(m.locationLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.weight(1f))
+                        Text("Check shelf", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                            color = Accent)
+                        Icon(Icons.Default.ChevronRight, null, tint = Accent,
+                            modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Status colour for one shelf-map cell. Matches iOS `CopilotTheme` so the two read alike. */
+private fun cellColor(status: CellStatus): Color = when (status) {
+    CellStatus.CORRECT -> Color(0xFF0F9D58)
+    CellStatus.MISPLACED -> Color(0xFFF5A623)
+    CellStatus.EMPTY -> Color(0xFFEA2328)
+}
+
+@Composable
+private fun mapLegend(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(color = color, shape = RoundedCornerShape(2.dp), modifier = Modifier.size(9.dp)) {}
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 10.sp, color = Color.Gray)
+    }
+}
+
+/** Priya's shelf-map grid, merged with a per-product findings list underneath it. */
+@Composable
+private fun auditResultCard(result: PlanogramAuditResult, elapsedMs: Long) {
+    val flagged = result.verdicts.count { !it.ok }
+    Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (flagged == 0) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    null,
+                    tint = if (flagged == 0) Color(0xFF0F9D58) else Color(0xFFF5A623),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "$flagged of ${result.verdicts.size} products flagged · ${elapsedMs} ms",
+                    fontSize = 13.sp, fontWeight = FontWeight.Medium
+                )
+            }
+
+            // One column per product with the product named underneath, rather than an anonymous
+            // row×col matrix: a shelf's tiers hold the same product top to bottom, so the column
+            // is the unit that maps onto something the associate can actually go and fix.
+            Text(
+                "SHELF MAP (PER PRODUCT)",
+                fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (col in 0 until result.grid.cols) {
+                    val columnCells = result.cells.filter { it.col == col }.sortedBy { it.row }
+                    Column(
+                        Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        columnCells.forEach { cell ->
+                            Surface(
+                                color = cellColor(cell.status),
+                                shape = RoundedCornerShape(5.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    "%.2f".format(cell.distance),
+                                    Modifier.padding(vertical = 9.dp).fillMaxWidth(),
+                                    color = Color.White, fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                        Text(
+                            columnCells.firstOrNull()?.expectedProduct ?: "",
+                            fontSize = 9.sp, color = Color.Gray, maxLines = 2,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                mapLegend("In place", Color(0xFF0F9D58))
+                mapLegend("Misplaced", Color(0xFFF5A623))
+                mapLegend("Empty", Color(0xFFEA2328))
+            }
+
+            Text("FINDINGS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            result.verdicts.forEach { v ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        if (v.ok) Icons.Default.CheckCircle else Icons.Default.Warning,
+                        null,
+                        tint = if (v.ok) Color(0xFF0F9D58) else Color(0xFFF5A623),
+                        modifier = Modifier.size(16.dp).padding(top = 2.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(v.product, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${v.note} · median d ${"%.3f".format(v.medianDistance)}",
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                    }
+                }
             }
         }
     }
@@ -907,7 +1579,31 @@ private fun AskSection(
     var generateMillis by remember { mutableStateOf(0.0) }
     var stage by remember { mutableStateOf<String?>(null) }
     val speech = rememberSpeechInput()
-    val llmAvailability = remember { LocalLanguageModel.availability(context) }
+    var llmAvailability by remember { mutableStateOf(LocalLanguageModel.availability(context)) }
+    var downloadProgress by remember { mutableStateOf<LocalLanguageModel.DownloadProgress?>(null) }
+    var downloadError by remember { mutableStateOf<String?>(null) }
+
+    fun downloadModel(url: String) {
+        downloadError = null
+        downloadProgress = LocalLanguageModel.DownloadProgress(0, 0)
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                LocalLanguageModel.download(context, url) { progress ->
+                    // download() runs on this IO thread; hop back to the UI thread per update
+                    // rather than letting Compose observe state written off the main thread.
+                    scope.launch(Dispatchers.Main) { downloadProgress = progress }
+                }
+            }
+            downloadProgress = null
+            result.fold(
+                onSuccess = { llmAvailability = LocalLanguageModel.availability(context) },
+                onFailure = { e ->
+                    downloadError = "Download failed: ${e.message ?: "unknown error"}. Check " +
+                        "your connection and try again."
+                }
+            )
+        }
+    }
 
     val prompts = listOf(
         "I'm training for my first 5k — what should I drink after a run?",
@@ -940,9 +1636,9 @@ private fun AskSection(
                 }
 
                 // ---- generate ----
-                val unavailable = llmAvailability as? LocalLanguageModel.Availability.RetrievalOnly
-                if (unavailable != null) {
-                    errorMessage = unavailable.reason
+                if (llmAvailability !is LocalLanguageModel.Availability.Ready) {
+                    // Retrieval already succeeded, so just stop before generation rather than
+                    // erroring the whole ask — the sources retrieved above are still shown.
                     stage = null
                     isWorking = false
                     return@launch
@@ -1051,18 +1747,70 @@ private fun AskSection(
                 modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                if (llmAvailability is LocalLanguageModel.Availability.Ready) {
-                    "Retrieval and generation both run on-device: vector search over the store's " +
-                        "`product_knowledge` collection, then " +
-                        "${LocalLanguageModel.modelName(context)} via MediaPipe. No cloud " +
-                        "round-trip in either half."
-                } else {
-                    "Retrieval runs on-device by vector search over the store's " +
-                        "`product_knowledge` collection. No language model is installed, so the " +
-                        "retrieved sources are shown as-is — the retrieval half of RAG."
+                when (llmAvailability) {
+                    is LocalLanguageModel.Availability.Ready ->
+                        "Retrieval and generation both run on-device: vector search over the " +
+                            "store's `product_knowledge` collection, then " +
+                            "${LocalLanguageModel.modelName(context)} via MediaPipe. No cloud " +
+                            "round-trip in either half."
+                    is LocalLanguageModel.Availability.Downloadable ->
+                        "Retrieval runs on-device by vector search over the store's " +
+                            "`product_knowledge` collection. Generation needs a one-time model " +
+                            "download, after which it also runs fully on-device."
+                    is LocalLanguageModel.Availability.RetrievalOnly ->
+                        "Retrieval runs on-device by vector search over the store's " +
+                            "`product_knowledge` collection. No language model is installed, so " +
+                            "the retrieved sources are shown as-is — the retrieval half of RAG."
                 },
                 fontSize = 12.sp
             )
+        }
+    }
+
+    val downloadable = llmAvailability as? LocalLanguageModel.Availability.Downloadable
+    if (downloadable != null) {
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val progress = downloadProgress
+                if (progress != null) {
+                    if (progress.total > 0) {
+                        LinearProgressIndicator(
+                            progress = { progress.fraction },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            "Downloading assistant model — ${progress.percent}% " +
+                                "(${progress.bytes / 1_000_000}MB of ${progress.total / 1_000_000}MB)",
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Text("Starting download…", fontSize = 12.sp, color = Color.Gray)
+                    }
+                } else {
+                    downloadError?.let {
+                        Text(it, fontSize = 12.sp, color = Color(0xFFC62828))
+                    }
+                    Button(
+                        onClick = { downloadModel(downloadable.url) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Download assistant model " +
+                                "(${downloadable.approxBytes / 1_000_000}MB)",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Text(
+                        "One-time download, cached on this device. Generation runs entirely " +
+                            "on-device afterward — no data leaves the phone.",
+                        fontSize = 11.sp, color = Color.Gray
+                    )
+                }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.groceryapplication.copilot
 
 import android.content.Context
 import android.util.Log
+import com.example.groceryapplication.AppConfig
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
 
@@ -41,6 +42,12 @@ object LocalLanguageModel {
 
     sealed interface Availability {
         data object Ready : Availability
+
+        /**
+         * No model present, but one can be fetched. Distinct from [RetrievalOnly] because it is
+         * actionable: the user taps once instead of being told to run adb.
+         */
+        data class Downloadable(val url: String, val approxBytes: Long) : Availability
         /** Generation cannot run, and this is the reason to show. */
         data class RetrievalOnly(val reason: String) : Availability
     }
@@ -83,11 +90,17 @@ object LocalLanguageModel {
 
     fun availability(context: Context): Availability {
         val file = modelFile(context)
-            ?: return Availability.RetrievalOnly(
-                "No on-device language model installed, so the retrieved sources are shown as-is " +
-                    "— the retrieval half of RAG. Add a Gemma .task file to " +
-                    "${modelDirectory(context).absolutePath} to enable generated answers."
-            )
+            ?: return if (AppConfig.COPILOT_LLM_MODEL_URL.isNotBlank()) {
+                Availability.Downloadable(
+                    AppConfig.COPILOT_LLM_MODEL_URL, AppConfig.COPILOT_LLM_MODEL_BYTES
+                )
+            } else {
+                Availability.RetrievalOnly(
+                    "No on-device language model installed, so the retrieved sources are shown " +
+                        "as-is — the retrieval half of RAG. Add a Gemma .task file to " +
+                        "${modelDirectory(context).absolutePath} to enable generated answers."
+                )
+            }
         if (file.length() < 50L * 1024 * 1024) {
             return Availability.RetrievalOnly(
                 "The model file ${file.name} looks truncated (${file.length() / 1_000_000}MB). " +
@@ -152,6 +165,89 @@ object LocalLanguageModel {
         .replace("<start_of_turn>", "")
         .replace(Regex("\\*{1,2}"), "")
         .trim()
+
+    /** Progress of an in-flight model download. */
+    data class DownloadProgress(val bytes: Long, val total: Long) {
+        val fraction: Float get() = if (total > 0) (bytes.toFloat() / total) else 0f
+        val percent: Int get() = (fraction * 100).toInt()
+    }
+
+    /**
+     * Downloads the model to the app's own directory, resuming a partial file if one exists.
+     *
+     * Resumable on purpose: this is ~0.5GB, and the realistic failure mode is a demo being set
+     * up on conference wifi. A dropped connection should cost the remainder, not the whole file.
+     *
+     * Written to `.part` and renamed only once the payload is complete, so an interrupted run can
+     * never leave a truncated `.task` that [availability] would accept and the loader would choke
+     * on. Runs on the caller's IO dispatcher; never call from the main thread.
+     */
+    fun download(
+        context: Context,
+        url: String = AppConfig.COPILOT_LLM_MODEL_URL,
+        onProgress: (DownloadProgress) -> Unit = {}
+    ): Result<File> {
+        if (url.isBlank()) return Result.failure(IllegalStateException("no model URL configured"))
+        val target = File(modelDirectory(context), AppConfig.COPILOT_LLM_MODEL_NAME)
+        val part = File(modelDirectory(context), "${AppConfig.COPILOT_LLM_MODEL_NAME}.part")
+
+        return try {
+            var existing = if (part.exists()) part.length() else 0L
+            val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection)
+                .apply {
+                    connectTimeout = 30_000
+                    readTimeout = 60_000
+                    if (existing > 0) setRequestProperty("Range", "bytes=$existing-")
+                }
+            connection.connect()
+
+            // 206 means the server honoured the range; anything else means start over, otherwise
+            // we would append a fresh full body onto the bytes already on disk and corrupt it.
+            val resuming = connection.responseCode == 206
+            if (existing > 0 && !resuming) {
+                part.delete()
+                existing = 0L
+            }
+            val total = connection.contentLengthLong.let { if (it > 0) it + existing else -1L }
+
+            connection.inputStream.use { input ->
+                java.io.FileOutputStream(part, resuming).use { output ->
+                    val buffer = ByteArray(1 shl 16)
+                    var written = existing
+                    var lastReported = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        written += read
+                        // Throttle callbacks: at 64KB a chunk this fires thousands of times, and
+                        // recomposing the progress bar on every one is pure jank.
+                        if (written - lastReported > 4L * 1024 * 1024) {
+                            lastReported = written
+                            onProgress(DownloadProgress(written, total))
+                        }
+                    }
+                    onProgress(DownloadProgress(written, total))
+                }
+            }
+            connection.disconnect()
+
+            if (total > 0 && part.length() != total) {
+                return Result.failure(
+                    java.io.IOException("incomplete download: ${part.length()} of $total bytes")
+                )
+            }
+            if (target.exists()) target.delete()
+            if (!part.renameTo(target)) {
+                return Result.failure(java.io.IOException("could not move model into place"))
+            }
+            Log.i(TAG, "⬇️ downloaded ${target.name} (${target.length() / 1_000_000}MB)")
+            Result.success(target)
+        } catch (t: Throwable) {
+            Log.e(TAG, "❌ model download failed", t)
+            Result.failure(t)
+        }
+    }
 
     fun close() {
         try {

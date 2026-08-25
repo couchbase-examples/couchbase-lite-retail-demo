@@ -14,6 +14,8 @@
 
     <!-- Copilot voice input. Recognition runs on-device, so no audio leaves the phone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Step 2 Case 1: scan a product to identify it on-device and report its shelf. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Android 11+ requires declaring the speech-recognition service to see whether one is
          installed; without this `isRecognitionAvailable` reports false on a device that has it. -->

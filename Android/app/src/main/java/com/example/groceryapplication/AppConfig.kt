@@ -82,6 +82,22 @@ object AppConfig {
     // existing per-store scopes and sync under the existing single App User per store —
     // additive channel configuration, not an access-model change.
     const val PLANOGRAMS_COLLECTION_NAME = "planograms"          // Step 2: shelf audit
+    /**
+     * Where the app fetches the on-device assistant model when it is not already present.
+     *
+     * Android has no OS-supplied language model the way iOS has Apple Foundation Models, so the
+     * weights have to come from somewhere. Bundling them is not an option — a 4-bit Gemma .task
+     * is ~0.5GB and the weights are licence-gated — so the app downloads once and caches.
+     *
+     * Blank disables the in-app download and leaves the side-load path (push a .task into the
+     * app's external files dir) as the only route. Point it at a host that serves the Gemma
+     * terms alongside the file.
+     */
+    const val COPILOT_LLM_MODEL_URL = "https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/gemma/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task"
+    const val COPILOT_LLM_MODEL_NAME = "gemma3-1b-it-q4.task"
+    /** Approximate download size, shown before the user commits to it. */
+    const val COPILOT_LLM_MODEL_BYTES = 557_000_000L
+
     const val KNOWLEDGE_COLLECTION_NAME = "product_knowledge"    // Step 3: RAG source chunks
     const val TASKS_COLLECTION_NAME = "tasks"                    // Request Help
 
