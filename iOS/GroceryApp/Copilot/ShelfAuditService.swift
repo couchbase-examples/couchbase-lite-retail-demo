@@ -3,6 +3,12 @@ import UIKit
 import CouchbaseLiteSwift
 
 /// One shelf whose expected layout is known — a `planograms` document.
+/// A shelf location carried between copilot steps.
+struct ShelfContext: Equatable {
+    let aisle: Int
+    let shelf: String
+}
+
 struct Planogram: Identifiable, Hashable {
     let id: String
     let shelf: String
@@ -90,8 +96,10 @@ final class ShelfAuditService: ObservableObject {
 
     @Published private(set) var planograms: [Planogram] = []
 
-    private let databaseManager: DatabaseManager
-    private let embedder = ImageEmbedder.shared
+    // Not private: the grid audit lives in PlanogramAudit.swift as an extension, and a
+    // cross-file extension cannot see private storage.
+    let databaseManager: DatabaseManager
+    let embedder = ImageEmbedder.shared
     private static let metricArgument = "\"cosine\""
 
     init(databaseManager: DatabaseManager) {
@@ -104,6 +112,7 @@ final class ShelfAuditService: ObservableObject {
         let sql = """
             SELECT META().id AS id, shelf, section, aisle, goldenImageURL, expectedLayout
             FROM `\(AppConfig.scopeName)`.`\(AppConfig.planogramsCollectionName)`
+            WHERE docType = "Planogram"
             ORDER BY aisle, shelf
             """
         do {
@@ -301,9 +310,17 @@ final class ShelfAuditService: ObservableObject {
     /// The dataset's real shelf photos do not exist yet — every `goldenImageURL` in the
     /// shipped data returns 403 — and the Simulator has no camera, so these are what make
     /// the audit demonstrable today. They are renders, not photographs, and the UI says so.
-    static func bundledShelfImage(store: String, shelf: String, variant: String) -> UIImage? {
-        guard let url = Bundle.main.url(forResource: "\(store)_\(shelf)_\(variant)",
-                                        withExtension: "png"),
+    /// Loads a bundled sample shelf view, named `nyc_aisle30_A2_golden` — aisle-qualified,
+    /// because shelf letters repeat across aisles and the old `nyc_A2_golden` was ambiguous.
+    ///
+    /// The short form is deliberately *not* accepted as a fallback any more. The renders left
+    /// over from before the rename predate the grid dataset, so matching one against a shelf's
+    /// current golden cell vectors produces confident-looking nonsense rather than an obvious
+    /// failure. Returning nil instead surfaces the honest "no imagery for this shelf yet".
+    static func bundledShelfImage(store: String, aisle: Int, shelf: String,
+                                  variant: String) -> UIImage? {
+        let name = "\(store)_aisle\(aisle)_\(shelf)_\(variant)"
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
               let data = try? Data(contentsOf: url) else { return nil }
         return UIImage(data: data)
     }

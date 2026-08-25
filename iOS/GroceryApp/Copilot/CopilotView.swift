@@ -36,20 +36,38 @@ struct CopilotView: View {
         }
     }
 
+    /// Step 2 has two entry points, per the PRD: identify a product with the camera and be told
+    /// where it belongs (Case 1), or audit a shelf you already picked (Case 2).
+    enum PlanogramMode: String, CaseIterable {
+        case scan = "Scan Product"
+        case audit = "Check Shelf"
+
+        var icon: String {
+            switch self {
+            case .scan: return "camera.viewfinder"
+            case .audit: return "square.grid.3x3.square"
+            }
+        }
+    }
+
     @State private var mode: Mode = .find
+    @State private var planogramMode: PlanogramMode = .audit
     @State private var searchService: CopilotSearchService?
     @State private var auditService: ShelfAuditService?
+    @State private var scanService: ProductScanService?
     @State private var taskService: TaskService?
     @State private var threshold = AppConfig.defaultRelevanceThreshold
     @State private var showDiagnostics = false
 
     /// Product context handed from a search result to the assistant.
     @State private var askAbout: GroceryItem?
+    /// Aisle and shelf carried from a Find result into the planogram audit (Case 1).
+    @State private var shelfContext: ShelfContext?
     /// Finding handed from the shelf audit to Request Help.
     @State private var helpRequest: (finding: PositionFinding, planogram: Planogram)?
 
-    private let accent = Color(hex: "FC9C0C")
-    private let cream = Color(hex: "FFF0DB")
+    private let accent = CopilotTheme.action
+    private let cream = CopilotTheme.canvas
 
     var body: some View {
         NavigationView {
@@ -66,15 +84,38 @@ struct CopilotView: View {
                                     askAbout = item
                                     mode = .ask
                                 },
+                                onAuditShelf: { context in
+                                    shelfContext = context
+                                    mode = .shelf
+                                },
                                 threshold: $threshold
                             )
                         case .shelf:
-                            ShelfAuditView(
-                                auditService: auditService,
-                                onRequestHelp: { finding, planogram in
-                                    helpRequest = (finding, planogram)
+                            VStack(alignment: .leading, spacing: 16) {
+                                planogramModePicker
+                                switch planogramMode {
+                                case .scan:
+                                    if let scanService {
+                                        ProductScanView(
+                                            scanService: scanService,
+                                            // Completes Case 1: identified product → its shelf
+                                            // → straight into the compliance check.
+                                            onAuditShelf: { context in
+                                                shelfContext = context
+                                                planogramMode = .audit
+                                            }
+                                        )
+                                    }
+                                case .audit:
+                                    ShelfAuditView(
+                                        auditService: auditService,
+                                        onRequestHelp: { finding, planogram in
+                                            helpRequest = (finding, planogram)
+                                        },
+                                        contextLocation: shelfContext
+                                    )
                                 }
-                            )
+                            }
                         case .ask:
                             RAGAssistantView(
                                 searchService: searchService,
@@ -131,8 +172,37 @@ struct CopilotView: View {
             if auditService == nil {
                 auditService = ShelfAuditService(databaseManager: databaseManager)
             }
+            if scanService == nil {
+                scanService = ProductScanService(databaseManager: databaseManager)
+            }
             if taskService == nil {
                 taskService = TaskService(databaseManager: databaseManager)
+            }
+        }
+    }
+
+    /// Deliberately a segmented control rather than a second row of big tabs: this is a choice
+    /// *within* Step 2, and it should not compete with the top-level step picker.
+    private var planogramModePicker: some View {
+        HStack(spacing: 6) {
+            ForEach(PlanogramMode.allCases, id: \.self) { candidate in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { planogramMode = candidate }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: candidate.icon).font(.caption2)
+                        Text(candidate.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1).minimumScaleFactor(0.85)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(planogramMode == candidate
+                                ? CopilotTheme.action : CopilotTheme.surface)
+                    .foregroundColor(planogramMode == candidate ? .white : .primary)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -171,6 +241,9 @@ struct SemanticResultCard: View {
     let rank: Int
     let accent: Color
     var onAsk: (() -> Void)?
+    /// Case 1 of the planogram flow: the associate looked the product up, now they walk to the
+    /// shelf. Tapping the location carries it straight into the audit.
+    var onAuditShelf: (() -> Void)?
 
     private var item: GroceryItem { hit.item }
 
@@ -206,12 +279,23 @@ struct SemanticResultCard: View {
 
                 // Location first: this is what the associate acts on.
                 if let location = item.location {
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.caption2).foregroundColor(accent)
-                        Text(locationText(location))
-                            .font(.caption.weight(.medium))
+                    Button {
+                        onAuditShelf?()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.caption2).foregroundColor(accent)
+                            Text(locationText(location))
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.primary)
+                            if onAuditShelf != nil {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2).foregroundColor(accent)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .disabled(onAuditShelf == nil)
                 }
 
                 if let badges = item.attributes?.displayBadges, !badges.isEmpty {

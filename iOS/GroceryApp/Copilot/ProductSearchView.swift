@@ -15,6 +15,8 @@ struct ProductSearchView: View {
     /// Asking a follow-up about a specific product is Step 3's entry point, so the parent
     /// owns the transition rather than this view knowing about the RAG assistant.
     let onAskAbout: (GroceryItem) -> Void
+    /// Carries a product's aisle and shelf into Step 2 (Priya's Case 1).
+    let onAuditShelf: (ShelfContext) -> Void
 
     @StateObject private var speech = SpeechRecognizer()
 
@@ -218,35 +220,66 @@ struct ProductSearchView: View {
                 .padding(.vertical, 30)
             } else {
                 ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
-                    SemanticResultCard(hit: hit, rank: index + 1, accent: accent,
-                                       onAsk: { onAskAbout(hit.item) })
+                    SemanticResultCard(
+                        hit: hit, rank: index + 1, accent: accent,
+                        onAsk: { onAskAbout(hit.item) },
+                        onAuditShelf: hit.item.location.flatMap { location in
+                            location.shelf.map { shelf in
+                                { onAuditShelf(ShelfContext(aisle: location.aisle, shelf: shelf)) }
+                            }
+                        }
+                    )
                 }
             }
         }
     }
 
+    /// One labelled count in the head-to-head strip.
+    private func comparisonChip(title: String, detail: String,
+                                foreground: Color, background: Color) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .fixedSize()
+            Text(detail)
+                .font(.caption)
+                .fixedSize()
+        }
+        .lineLimit(1)
+        .foregroundColor(foreground)
+        .padding(.horizontal, 9).padding(.vertical, 5)
+        .background(background)
+        .cornerRadius(6)
+    }
+
     /// The head-to-head strip. This is the argument of Step 1 made visible.
     private var comparisonStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label("Semantic", systemImage: "sparkles")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(accent).cornerRadius(6)
-                Text("\(hits.count) relevant")
-                    .font(.caption).foregroundColor(.secondary)
+            Text("SAME QUERY, TWO SEARCH METHODS")
+                .font(.caption2.weight(.bold))
+                .foregroundColor(.secondary)
 
-                Spacer()
-
-                Label("Keyword", systemImage: "textformat")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.18)).cornerRadius(6)
-                Text(keywordHits.isEmpty ? "0 results" : "\(keywordHits.count) hits")
-                    .font(.caption)
-                    .foregroundColor(keywordHits.isEmpty ? .red : .secondary)
+            // Deliberately no icons on these two chips. The previous version used the
+            // `textformat` SF Symbol on the keyword chip, which renders as the literal glyph
+            // "Aa" — combined with "Keyword" hyphen-wrapping to "Key-word" on a narrow iPhone,
+            // a reviewer read the whole strip as "aa Key-word" and could not tell what the
+            // section was claiming. Words only, and no mid-word breaks.
+            HStack(spacing: 8) {
+                comparisonChip(
+                    title: "Semantic",
+                    detail: "\(hits.count) relevant",
+                    foreground: .white,
+                    background: CopilotTheme.action
+                )
+                comparisonChip(
+                    title: "Keyword",
+                    detail: keywordHits.isEmpty ? "0 found" : "\(keywordHits.count) found",
+                    foreground: keywordHits.isEmpty ? CopilotTheme.missing : .primary,
+                    background: keywordHits.isEmpty
+                        ? CopilotTheme.tint(CopilotTheme.missing)
+                        : CopilotTheme.inset
+                )
+                Spacer(minLength: 0)
             }
 
             Text(comparisonExplanation)

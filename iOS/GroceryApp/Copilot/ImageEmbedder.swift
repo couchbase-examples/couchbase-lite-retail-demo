@@ -164,6 +164,24 @@ extension UIImage {
         }
     }
 
+    /// Redraws with the EXIF orientation baked in, so `cgImage` pixel coordinates line up with
+    /// `size`.
+    ///
+    /// This matters for tiling. `croppedNormalized` indexes into the raw `cgImage` pixel grid,
+    /// but a photo straight from the camera or photo library carries an `imageOrientation` that
+    /// leaves that grid rotated relative to what the user sees — so cell (r,c) of the tiling
+    /// would not be the cell (r,c) of the picture, and every distance would be measured against
+    /// the wrong crop. Bundled PNGs are already `.up`, which is why the sample path never showed
+    /// this, but any real photo would have tiled sideways.
+    func normalizedUp() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = scale
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
     /// Crops a normalized sub-rectangle (0-1 in both axes), used to cut each expected shelf
     /// position out of the audit photo.
     func croppedNormalized(_ rect: CGRect) -> UIImage? {

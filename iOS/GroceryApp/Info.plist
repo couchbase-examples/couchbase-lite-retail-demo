@@ -19,10 +19,6 @@
 		<string>_couchbaseP2P._tcp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>The Copilot uses the camera to photograph a shelf for on-device planogram compliance checks. Photos are analysed on this device.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>The Store Associate Copilot uses the microphone so you can speak a product query instead of typing it. Speech is transcribed on this device and is not sent anywhere.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Speech recognition runs entirely on this device to turn your spoken product query into text for on-device semantic search. No audio or transcript leaves the device.</string>
+	<string>Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.</string>
 </dict>
 </plist>
