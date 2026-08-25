@@ -153,6 +153,38 @@ Repeat these steps for each of the App Endpoints
   ![](./common/assets/cors2.png)
 
 
+## On-device models
+
+The vector features run entirely on-device, so the apps need their embedding models present
+before those screens will work. Most are committed to the repo and need no action. One is not.
+
+| Model | Used by | In the repo? |
+| --- | --- | --- |
+| MiniLM-L6-v2 (int8 ONNX) | Android — semantic product search, RAG | Yes |
+| MiniLM-L6-v2 (CoreML) | iOS — semantic product search, RAG | Yes |
+| CLIP ViT-B/32 (CoreML, int8) | iOS — planogram audit | Yes |
+| CLIP ViT-B/32 (ONNX, fp32) | Android — planogram audit | **No — fetch manually** |
+
+### Fetching the Android CLIP model
+
+The Android CLIP encoder is a 335MB unquantized fp32 export, deliberately left untracked so
+every clone does not pay for it permanently. Without it the app builds and runs, but the
+Planogram tab reports the model as unavailable and no audit will run.
+
+Place the file here, exactly under this name:
+
+```
+Android/app/src/main/assets/clip-vit-b-32.onnx
+```
+
+The export is distributed with the demo's model bundle (`models-clip-android.zip`) rather than
+served from this repo — ask the demo maintainers for the current link.
+
+> [!NOTE]
+> iOS bundles an **int8** CLIP while this Android export is **fp32**, roughly 4x larger for the
+> same model. Quantizing the Android one to int8 would let it be committed like the others and
+> remove this manual step — a worthwhile follow-up that has not been done yet.
+
 ## Repo Structure
 
 The repo is organized as follows:
