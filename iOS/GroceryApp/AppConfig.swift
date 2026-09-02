@@ -148,8 +148,7 @@ struct AppConfig {
     /// Collections replicated from the copilot endpoint. When there is only one endpoint
     /// these are simply added to the single replicator.
     static var copilotEndpointCollections: [String] {
-        var collections = [planogramsCollectionName, knowledgeCollectionName,
-                           tasksCollectionName]
+        var collections = [planogramsCollectionName, knowledgeCollectionName]
         if copilotEndpointOwnsInventory { collections.insert(collectionName, at: 0) }
         return collections
     }
@@ -198,13 +197,12 @@ struct AppConfig {
     // single App User per store — no new roles, users, or channels.
     static let planogramsCollectionName = "planograms"          // Step 2: shelf audit
     static let knowledgeCollectionName = "product_knowledge"    // Step 3: RAG source chunks
-    static let tasksCollectionName = "tasks"                    // Request Help
 
     /// Every collection the replicator should carry, in a single list so the sync
     /// manager and the local seeder cannot drift apart.
     static var allSyncedCollections: [String] {
         [collectionName, profileCollectionName, ordersCollectionName,
-         planogramsCollectionName, knowledgeCollectionName, tasksCollectionName]
+         planogramsCollectionName, knowledgeCollectionName]
     }
     
     // MARK: - Sync Configuration (Event-Driven, Real-Time)

@@ -2,6 +2,13 @@ package com.example.groceryapplication.copilot
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import com.example.groceryapplication.AppConfig
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
@@ -165,6 +172,55 @@ object LocalLanguageModel {
         .replace("<start_of_turn>", "")
         .replace(Regex("\\*{1,2}"), "")
         .trim()
+
+    // ---- background download state -------------------------------------------------------
+    //
+    // Owned by this object, not by a composable. The download used to run on the Ask screen's
+    // `rememberCoroutineScope()`, which is cancelled the moment that screen leaves composition —
+    // so switching to Find or Planogram silently killed a half-finished 550MB transfer. A
+    // one-time setup step has to survive navigation.
+
+    private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val downloading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Non-null while a download is in flight. Snapshot state, so any screen can observe it. */
+    var downloadProgress by mutableStateOf<DownloadProgress?>(null)
+        private set
+
+    /** Last failure, cleared when a new attempt starts. */
+    var downloadError by mutableStateOf<String?>(null)
+        private set
+
+    /** Bumped when a download finishes, so observers can re-check [availability]. */
+    var downloadGeneration by mutableStateOf(0)
+        private set
+
+    val isDownloading: Boolean get() = downloading.get()
+
+    /**
+     * Starts the model download if one is not already running, and returns immediately.
+     *
+     * Idempotent: a second tap, or a re-entry into the Ask screen mid-download, joins the
+     * existing transfer rather than starting a competing one.
+     */
+    fun startDownload(context: Context, url: String = AppConfig.COPILOT_LLM_MODEL_URL) {
+        if (!downloading.compareAndSet(false, true)) return
+        val appContext = context.applicationContext
+        downloadError = null
+        downloadProgress = DownloadProgress(0, 0)
+        downloadScope.launch {
+            val result = download(appContext, url) { progress -> downloadProgress = progress }
+            downloadProgress = null
+            downloading.set(false)
+            result.fold(
+                onSuccess = { downloadGeneration += 1 },
+                onFailure = { t ->
+                    downloadError = "Download failed: ${t.message ?: "unknown error"}. " +
+                        "Check your connection and try again."
+                }
+            )
+        }
+    }
 
     /** Progress of an in-flight model download. */
     data class DownloadProgress(val bytes: Long, val total: Long) {

@@ -4,6 +4,7 @@ import android.Manifest
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import com.example.groceryapplication.StoreLocation
@@ -11,9 +12,12 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -51,8 +55,7 @@ private enum class CopilotMode(val label: String) {
     // Named "Planogram" rather than "Shelf" per review feedback — the planogram is the
     // expected layout being checked against, the term the retail audience uses.
     PLANOGRAM("Planogram"),
-    ASK("Ask"),
-    TASKS("Tasks")
+    ASK("Ask")
 }
 
 /**
@@ -74,9 +77,6 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
 
     val searchService = remember {
         CopilotSearchService(context) { databaseManager.getDatabase() }
-    }
-    val taskService = remember {
-        TaskService(context) { databaseManager.getDatabase() }
     }
 
     var mode by remember { mutableStateOf(CopilotMode.FIND) }
@@ -146,15 +146,10 @@ fun CopilotScreen(databaseManager: DatabaseManager) {
                 },
                 scope = scope
             )
-            CopilotMode.PLANOGRAM -> PlanogramStep(databaseManager, shelfContext) { shelfContext = it }
+            CopilotMode.PLANOGRAM -> PlanogramSection(databaseManager, shelfContext)
             CopilotMode.ASK -> AskSection(
                 searchService = searchService,
                 product = askAbout,
-                scope = scope
-            )
-            CopilotMode.TASKS -> TasksSection(
-                taskService = taskService,
-                databaseManager = databaseManager,
                 scope = scope
             )
         }
@@ -218,6 +213,11 @@ private fun ProductSearchSection(
         val query = text.trim()
         if (query.isEmpty()) return
         onSearchStart()
+        // Submitting has to end dictation too. The recogniser keeps a live audio session and
+        // goes on appending to the field, so leaving it running meant the query kept mutating
+        // after the search was issued — and the mic stayed hot with no obvious way to stop it.
+        // A no-op when it is not listening, so the mic's own onFinal path is unaffected.
+        speech?.stop()
         isSearching = true
         errorMessage = null
         showKeywordDetail = false
@@ -338,6 +338,26 @@ private fun ProductSearchSection(
     }
 
     if (hasSearched && !isSearching && errorMessage == null) {
+        // Echo back a price bound the query itself carried. Worth showing rather than applying
+        // silently: results are being excluded by a filter the user typed in prose, and it makes
+        // the hybrid query legible — the phrase visibly leaves the vector search and becomes SQL.
+        searchService.lastConstraints.summary?.let { summary ->
+            Surface(color = Accent.copy(alpha = 0.10f), shape = RoundedCornerShape(8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.FilterAlt, null, tint = Accent,
+                        modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Price filter from your query: ", fontSize = 11.sp, color = Color.Gray)
+                    Text(summary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    Text("SQL++ WHERE", fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace, color = Color.Gray)
+                }
+            }
+        }
         ComparisonStrip(
             semanticCount = hits.size,
             keywordHits = keywordHits,
@@ -507,7 +527,14 @@ private fun SemanticResultCard(
                 modifier = Modifier.size(70.dp)
             )
             Spacer(Modifier.width(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // weight(1f) is load-bearing: without it this Column is measured unbounded, the
+            // single-line location text demands its full intrinsic width, and the whole card
+            // blows out — the location control stretched and its trailing label and chevron
+            // were pushed off-screen entirely.
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Row {
                     Text("$rank.", color = Accent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Spacer(Modifier.width(6.dp))
@@ -525,30 +552,53 @@ private fun SemanticResultCard(
                         color = if (item.quantity > 0) Color.Gray else Color.Red)
                 }
                 item.location?.let { loc ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = if (onAuditShelf != null) {
-                            Modifier.clickable { onAuditShelf() }
-                        } else Modifier
-                    ) {
-                        Icon(Icons.Default.Place, null, tint = Accent,
-                            modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            buildString {
-                                append("Aisle ${loc.aisle}")
-                                loc.shelf?.let { append(" shelf $it") }
-                                if (loc.bin > 0) append(" bin ${loc.bin}")
-                                loc.section?.let { append(" · $it") }
-                            },
-                            fontSize = 12.sp, fontWeight = FontWeight.Medium
-                        )
-                        if (onAuditShelf != null) {
-                            Spacer(Modifier.width(2.dp))
-                            Icon(
-                                Icons.Default.ChevronRight, null, tint = Accent,
-                                modifier = Modifier.size(14.dp)
-                            )
+                    val label = buildString {
+                        append("Aisle ${loc.aisle}")
+                        loc.shelf?.let { append(" shelf $it") }
+                        if (loc.bin > 0) append(" bin ${loc.bin}")
+                        loc.section?.let { append(" · $it") }
+                    }
+                    // When it can open the planogram it is drawn as an actual control — tinted
+                    // fill, border, named action. It previously rendered as plain text with a
+                    // small chevron, which read as a label, so the only way to discover it was
+                    // tappable was to tap it by accident.
+                    if (onAuditShelf != null) {
+                        Surface(
+                            onClick = onAuditShelf,
+                            color = Accent.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Accent.copy(alpha = 0.45f)),
+                            modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Place, null, tint = Accent,
+                                    modifier = Modifier.size(13.dp))
+                                Spacer(Modifier.width(6.dp))
+                                // The location gets the flexible space and ellipsizes; the
+                                // trailing action must never be the thing that gets pushed out,
+                                // since it is what signals this is tappable at all.
+                                Text(
+                                    label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Check shelf", fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold, color = Accent,
+                                    maxLines = 1)
+                                Icon(Icons.Default.ChevronRight, null, tint = Accent,
+                                    modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Place, null, tint = Color.Gray,
+                                modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(label, fontSize = 12.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -595,62 +645,6 @@ private fun SemanticResultCard(
 
 // MARK: - Step 2 (UI only on Android)
 
-/**
- * Step 2 has two entry points, per the PRD: identify a product with the camera and be told where
- * it belongs (Case 1), or audit a shelf you already picked (Case 2).
- */
-private enum class PlanogramTab(val label: String) { SCAN("Scan Product"), AUDIT("Check Shelf") }
-
-@Composable
-private fun PlanogramStep(
-    databaseManager: DatabaseManager,
-    incoming: ShelfContext?,
-    onShelfContext: (ShelfContext) -> Unit
-) {
-    var tab by remember { mutableStateOf(PlanogramTab.AUDIT) }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // A segmented control rather than a second row of big tabs: this is a choice *within*
-        // Step 2 and should not compete with the top-level step picker.
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PlanogramTab.entries.forEach { candidate ->
-                val on = tab == candidate
-                Surface(
-                    onClick = { tab = candidate },
-                    color = if (on) Accent else MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        Modifier.padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            if (candidate == PlanogramTab.SCAN) Icons.Default.CameraAlt
-                            else Icons.Default.GridView,
-                            null,
-                            tint = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            candidate.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                            color = if (on) Color.White else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        }
-        when (tab) {
-            // Completes Case 1: identified product → its shelf → straight into the check.
-            PlanogramTab.SCAN -> ProductScanSection(databaseManager) { ctx ->
-                onShelfContext(ctx); tab = PlanogramTab.AUDIT
-            }
-            PlanogramTab.AUDIT -> PlanogramSection(databaseManager, incoming)
-        }
-    }
-}
-
 @Composable
 private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfContext? = null) {
     // Real now, not a placeholder: this wires Priya's own PlanogramSearch.kt / ClipImageEmbedder
@@ -665,6 +659,10 @@ private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfCo
     var shelves by remember { mutableStateOf<List<ShelfRef>>(emptyList()) }
     var selectedShelf by remember { mutableStateOf<ShelfRef?>(null) }
     var shelfMenuOpen by remember { mutableStateOf(false) }
+    // Whether the current shelf actually came from the Find hand-off. Distinct from
+    // `incoming != null`, which stays true for the life of the screen — so the hint used to keep
+    // claiming the shelf was carried over long after the user had picked a different one.
+    var cameFromFind by remember { mutableStateOf(false) }
     var goldenUrl by remember { mutableStateOf<String?>(null) }
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var previewLabel by remember { mutableStateOf<String?>(null) }
@@ -703,9 +701,11 @@ private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfCo
         // Case 1 hands us a location from the product just looked up; Case 2 is a cold open,
         // where there is nothing to infer and the first shelf is as good as any.
         if (selectedShelf == null) {
-            selectedShelf = incoming?.let { ctx ->
+            val matched = incoming?.let { ctx ->
                 shelves.firstOrNull { it.aisle == ctx.aisle && it.shelf == ctx.shelf }
-            } ?: shelves.firstOrNull()
+            }
+            selectedShelf = matched ?: shelves.firstOrNull()
+            cameFromFind = matched != null
         }
     }
     LaunchedEffect(selectedShelf) {
@@ -728,17 +728,24 @@ private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfCo
                 Box {
                     Surface(
                         onClick = { shelfMenuOpen = true },
-                        color = Color(0x14000000), shape = RoundedCornerShape(10.dp)
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             Modifier.padding(horizontal = 14.dp, vertical = 11.dp).fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                selectedShelf?.label ?: "Choose a shelf",
-                                fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    selectedShelf?.let { "Aisle ${it.aisle} · Shelf ${it.shelf}" }
+                                        ?: "Choose a shelf",
+                                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold
+                                )
+                                selectedShelf?.section?.takeIf { it.isNotEmpty() }?.let {
+                                    Text(it, fontSize = 12.sp, color = Color.Gray)
+                                }
+                            }
                             Icon(Icons.Default.UnfoldMore, null, tint = Color.Gray,
                                 modifier = Modifier.size(16.dp))
                         }
@@ -746,13 +753,23 @@ private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfCo
                     DropdownMenu(shelfMenuOpen, onDismissRequest = { shelfMenuOpen = false }) {
                         shelves.forEach { shelf ->
                             DropdownMenuItem(
-                                text = { Text(shelf.label) },
-                                onClick = { selectedShelf = shelf; shelfMenuOpen = false }
+                                text = {
+                                    Text(
+                                        "Aisle ${shelf.aisle} · Shelf ${shelf.shelf}" +
+                                            if (shelf.section.isNotEmpty()) " — ${shelf.section}"
+                                            else ""
+                                    )
+                                },
+                                onClick = {
+                                    selectedShelf = shelf
+                                    cameFromFind = false
+                                    shelfMenuOpen = false
+                                }
                             )
                         }
                     }
                 }
-                if (incoming != null) {
+                if (cameFromFind) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.SubdirectoryArrowRight, null,
@@ -804,18 +821,46 @@ private fun PlanogramSection(databaseManager: DatabaseManager, incoming: ShelfCo
                     // Organized as the filled primary made it look active even while the screen
                     // showed disorganized results. Accent now follows the selection; the real
                     // primary action is "Audit shelf" below.
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!shelf.auditable) {
+                        // The golden image and shelf identity are still worth showing — only the
+                        // audit needs the grid. Saying so next to the disabled action beats
+                        // failing after the tap.
+                        Surface(
+                            color = Color(0xFFF5A623).copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(9.dp)
+                        ) {
+                            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
+                                Icon(Icons.Default.Warning, null, tint = Color(0xFFF5A623),
+                                    modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "This shelf's golden layout has not synced yet, so it " +
+                                        "cannot be audited. Import the current planograms " +
+                                        "dataset to enable it.",
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Stacked full-width, matching iOS. Side by side, the two titles wrapped
+                    // onto three lines each and the subtitles were truncated to the point of
+                    // being useless.
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         checkVariantButton(
                             title = "Check Organized Shelf",
-                            subtitle = "Should come back fully compliant",
+                            subtitle = "A correctly stocked shelf — should come back fully " +
+                                "compliant.",
                             selected = previewVariant == "golden",
-                            modifier = Modifier.weight(1f)
+                            enabled = shelf.auditable,
+                            modifier = Modifier.fillMaxWidth()
                         ) { loadSample(store, shelf, "golden", "Check Organized Shelf") }
                         checkVariantButton(
                             title = "Check Disorganized Shelf",
-                            subtitle = "Should flag the gap",
+                            subtitle = "A shelf with a product missing — should flag the gap.",
                             selected = previewVariant == "actual_missing",
-                            modifier = Modifier.weight(1f)
+                            enabled = shelf.auditable,
+                            modifier = Modifier.fillMaxWidth()
                         ) { loadSample(store, shelf, "actual_missing", "Check Disorganized Shelf") }
                     }
                 }
@@ -897,15 +942,17 @@ private fun checkVariantButton(
     title: String,
     subtitle: String,
     selected: Boolean,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val content = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
     Surface(
         onClick = onClick,
+        enabled = enabled,
         color = if (selected) Accent else MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(10.dp),
-        modifier = modifier
+        modifier = modifier.alpha(if (enabled) 1f else 0.5f)
     ) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
             Icon(
@@ -921,228 +968,6 @@ private fun checkVariantButton(
                     subtitle, fontSize = 10.sp,
                     color = if (selected) Color.White.copy(alpha = 0.9f) else Color.Gray
                 )
-            }
-        }
-    }
-}
-
-/** Step 2, Case 1: camera → on-device CLIP → nearest catalogue product → where it belongs. */
-@Composable
-private fun ProductScanSection(
-    databaseManager: DatabaseManager,
-    onAuditShelf: (ShelfContext) -> Unit
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var captured by remember { mutableStateOf<Bitmap?>(null) }
-    var matches by remember { mutableStateOf<List<ScanMatch>>(emptyList()) }
-    var isScanning by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var vectorsMissing by remember { mutableStateOf(false) }
-    var elapsedMs by remember { mutableStateOf(0L) }
-
-    LaunchedEffect(Unit) {
-        vectorsMissing = withContext(Dispatchers.IO) { !databaseManager.hasProductImageVectors() }
-    }
-
-    fun run(bmp: Bitmap) {
-        captured = bmp
-        matches = emptyList()
-        errorMessage = null
-        if (!ClipImageEmbedder.isReady) {
-            errorMessage = "CLIP model not ready yet (${ClipImageEmbedder.status}). It loads in " +
-                "the background at startup — wait a moment and try again."
-            return
-        }
-        isScanning = true
-        scope.launch {
-            val t0 = System.nanoTime()
-            val found = withContext(Dispatchers.Default) { databaseManager.identifyProduct(bmp) }
-            elapsedMs = (System.nanoTime() - t0) / 1_000_000
-            matches = found
-            isScanning = false
-            if (found.isEmpty()) {
-                errorMessage = "Nothing to match against — the inventory documents in this " +
-                    "store have no image vectors."
-            }
-        }
-    }
-
-    // TakePicturePreview hands back a thumbnail Bitmap directly, so there is no FileProvider or
-    // temp-file plumbing to get wrong for what is only ever a CLIP input.
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
-        if (it != null) run(it)
-    }
-    val cameraPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) camera.launch(null)
-        else errorMessage = "Camera permission is needed to scan a product."
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (vectorsMissing) {
-            Card(colors = CardDefaults.cardColors(Color(0xFFF5A623).copy(alpha = 0.14f))) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF5A623),
-                        modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "No product image vectors in this store's inventory yet. Scanning needs " +
-                            "embedding.image on the inventory documents — re-import the dataset " +
-                            "produced by tools/embeddings/embed_product_images_onnx.py.",
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-
-        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("SCAN A PRODUCT", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                    color = Color.Gray)
-                Text(
-                    "Point the camera at an item on the shelf. It is embedded on-device with " +
-                        "CLIP and matched against the product catalogue by vector search — no " +
-                        "network round-trip.",
-                    fontSize = 12.sp, color = Color.Gray
-                )
-                captured?.let { bmp ->
-                    Image(
-                        bmp.asImageBitmap(), null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxWidth().height(170.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                    )
-                }
-                Button(
-                    onClick = {
-                        if (ContextCompat.checkSelfPermission(
-                                context, Manifest.permission.CAMERA
-                            ) == PackageManager.PERMISSION_GRANTED
-                        ) camera.launch(null)
-                        else cameraPermission.launch(Manifest.permission.CAMERA)
-                    },
-                    enabled = !isScanning,
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (captured == null) "Scan product" else "Scan another",
-                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-
-        if (isScanning) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 18.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text("Embedding the frame on-device…", fontSize = 12.sp, color = Color.Gray)
-            }
-        }
-
-        errorMessage?.let { msg ->
-            Card(colors = CardDefaults.cardColors(Color(0xFFF5A623).copy(alpha = 0.14f))) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Warning, null, tint = Color(0xFFF5A623),
-                        modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(msg, fontSize = 12.sp)
-                }
-            }
-        }
-
-        if (matches.isNotEmpty() && !isScanning) {
-            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("IDENTIFIED", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = Color.Gray)
-                    matches.firstOrNull()?.takeIf { it.distance > SCAN_NO_MATCH_THRESHOLD }?.let { b ->
-                        // The nearest neighbour is always something; say so rather than
-                        // presenting a row the model is not actually confident about.
-                        Text(
-                            "No confident match — closest is ${b.name} at " +
-                                "%.2f".format(b.distance) + ". Try filling more of the frame " +
-                                "with the product.",
-                            fontSize = 12.sp, color = Color.Gray
-                        )
-                    }
-                    matches.forEachIndexed { i, m -> scanMatchRow(m, i == 0, onAuditShelf) }
-                    Text(
-                        "On-device: CLIP embed + vector search · $elapsedMs ms",
-                        fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = Color.Gray
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun scanMatchRow(m: ScanMatch, isTop: Boolean, onAuditShelf: (ShelfContext) -> Unit) {
-    Surface(
-        color = if (isTop) Color(0xFF0F9D58).copy(alpha = 0.14f)
-                else MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(9.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                AsyncImage(
-                    m.imageUrl, null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp))
-                )
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(m.name, fontSize = 14.sp,
-                        fontWeight = if (isTop) FontWeight.SemiBold else FontWeight.Normal)
-                    Row {
-                        m.brand?.let {
-                            Text(it, fontSize = 11.sp, color = Color.Gray)
-                            Text(" · ", fontSize = 11.sp, color = Color.Gray)
-                        }
-                        Text("$%.2f".format(m.price), fontSize = 11.sp)
-                        Text(" · ", fontSize = 11.sp, color = Color.Gray)
-                        Text("${m.quantity} in stock", fontSize = 11.sp,
-                            color = if (m.quantity > 0) Color.Gray else Color.Red)
-                    }
-                    Row {
-                        Text("${m.similarityPercent}% match", fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold, color = Accent)
-                        Spacer(Modifier.width(6.dp))
-                        Text("distance %.4f".format(m.distance), fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace, color = Color.Gray)
-                    }
-                }
-            }
-            // The payoff: where to put it back, and one tap into the compliance check.
-            m.shelfContext?.let { ctx ->
-                Surface(
-                    onClick = { onAuditShelf(ctx) },
-                    color = Accent.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Place, null, tint = Accent,
-                            modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text(m.locationLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.weight(1f))
-                        Text("Check shelf", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                            color = Accent)
-                        Icon(Icons.Default.ChevronRight, null, tint = Accent,
-                            modifier = Modifier.size(14.dp))
-                    }
-                }
             }
         }
     }
@@ -1252,316 +1077,14 @@ private fun auditResultCard(result: PlanogramAuditResult, elapsedMs: Long) {
     }
 }
 
-// MARK: - Request Help
+// MARK: - Step 3: retrieval-augmented answers
 
 /**
- * The resolution half of Request Help — what the *second* associate sees.
- *
- * The whole lifecycle runs against the local database, so it works with no network and
- * reconciles when sync returns. A change listener on the `tasks` collection keeps the list live,
- * so a task raised on another device (including the iOS app) arrives here on its own.
+ * Retrieval runs on-device by vector search over the store's `product_knowledge` collection.
+ * Generation is availability-gated: with a model present the answer is grounded in the
+ * retrieved chunks, and without one the chunks themselves are shown rather than an invented
+ * answer.
  */
-@Composable
-private fun TasksSection(
-    taskService: TaskService,
-    databaseManager: DatabaseManager,
-    scope: kotlinx.coroutines.CoroutineScope
-) {
-    var tasks by remember { mutableStateOf<List<StoreTask>>(emptyList()) }
-    var showFinished by remember { mutableStateOf(false) }
-    var remoteChange by remember { mutableStateOf(false) }
-
-    fun reload() {
-        scope.launch {
-            tasks = withContext(Dispatchers.IO) { taskService.loadTasks() }
-        }
-    }
-
-    // Live updates: a task arriving over replication should appear without a manual refresh.
-    DisposableEffect(Unit) {
-        reload()
-        val collection = runCatching {
-            databaseManager.getDatabase()?.getCollection(
-                AppConfig.TASKS_COLLECTION_NAME, AppConfig.scopeName
-            )
-        }.getOrNull()
-        val token = collection?.addChangeListener { change ->
-            val known = tasks.map { it.id }.toSet()
-            if (change.documentIDs.any { it !in known }) remoteChange = true
-            reload()
-        }
-        onDispose { token?.remove() }
-    }
-
-    val open = tasks.filter { it.status == "open" }
-    val active = tasks.filter { it.status == "accepted" || it.status == "in_progress" }
-    val finished = tasks.filter { it.isTerminal }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Store tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(Modifier.weight(1f))
-                    Text("you are ${taskService.deviceLabel}",
-                        fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Color.Gray)
-                }
-                Text("Every device signed in to this store sees the same tasks — over App " +
-                    "Services when online, peer-to-peer when not. Accepting one claims it under " +
-                    "this device's label.",
-                    fontSize = 12.sp, color = Color.Gray)
-                if (remoteChange) {
-                    Surface(color = Color(0x1F2196F3), shape = RoundedCornerShape(8.dp)) {
-                        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Sync, null, tint = Color(0xFF1565C0),
-                                modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Updated from another device", fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (tasks.isEmpty()) {
-            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("No tasks yet", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    Text("Tasks are raised from a shelf-audit finding — that flow lives on iOS " +
-                        "today. Anything raised there syncs into this list, and can be accepted, " +
-                        "recounted and closed from here.",
-                        fontSize = 12.sp, color = Color.Gray)
-                }
-            }
-        } else {
-            if (open.isNotEmpty()) {
-                TaskGroupHeader("NEEDS AN ASSOCIATE", open.size, Accent)
-                open.forEach { TaskCard(it, taskService) { reload() } }
-            }
-            if (active.isNotEmpty()) {
-                TaskGroupHeader("BEING WORKED ON", active.size, Color(0xFF2196F3))
-                active.forEach { TaskCard(it, taskService) { reload() } }
-            }
-            if (finished.isNotEmpty()) {
-                Surface(onClick = { showFinished = !showFinished }, color = Color.Transparent) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (showFinished) Icons.Default.KeyboardArrowDown
-                            else Icons.Default.KeyboardArrowRight,
-                            null, tint = Color.Gray, modifier = Modifier.size(18.dp)
-                        )
-                        Text("${finished.size} finished", fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold, color = Color.Gray)
-                    }
-                }
-                if (showFinished) finished.forEach { TaskCard(it, taskService) { reload() } }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskGroupHeader(title: String, count: Int, tint: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-        Spacer(Modifier.width(6.dp))
-        Surface(color = tint.copy(alpha = 0.18f), shape = RoundedCornerShape(4.dp)) {
-            Text("$count", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
-        }
-    }
-}
-
-@Composable
-private fun TaskCard(task: StoreTask, taskService: TaskService, onChanged: () -> Unit) {
-    var showCountEditor by remember(task.id) { mutableStateOf(false) }
-    var stock by remember(task.id) { mutableStateOf<TaskStockContext?>(null) }
-    var draftCount by remember(task.id) { mutableStateOf<Int?>(null) }
-    var applied by remember(task.id) { mutableStateOf(false) }
-    var showMenu by remember(task.id) { mutableStateOf(false) }
-
-    Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(task.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TaskBadge(task.taskType.replaceFirstChar { it.uppercase() }, Accent)
-                if (task.priority != "normal") {
-                    TaskBadge(
-                        task.priority.replaceFirstChar { it.uppercase() },
-                        if (task.priority == "high") Color.Red else Color.Gray
-                    )
-                }
-                TaskBadge(statusLabel(task.status), statusTint(task.status))
-            }
-
-            if (task.detail.isNotEmpty()) {
-                Text(task.detail, fontSize = 12.sp, color = Color.Gray)
-            }
-
-            task.locationText?.let {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Place, null, tint = Accent, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(it, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("raised by ${task.createdBy}", fontSize = 11.sp, color = Color.Gray)
-                task.assignedTo?.let { assignee ->
-                    val mine = assignee == taskService.deviceLabel
-                    Text("  →  ", fontSize = 11.sp, color = Color.Gray)
-                    Text(
-                        if (mine) "you" else assignee,
-                        fontSize = 11.sp,
-                        fontWeight = if (mine) FontWeight.SemiBold else FontWeight.Normal,
-                        fontFamily = if (mine) FontFamily.Default else FontFamily.Monospace,
-                        color = if (mine) Accent else Color.Gray
-                    )
-                }
-            }
-
-            if (task.quantityDelta != 0) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Inventory2, null, tint = Color(0xFF2E7D32),
-                        modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${if (task.quantityDelta > 0) "+" else ""}${task.quantityDelta} " +
-                        "recorded against stock",
-                        fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.width(4.dp))
-                    Text("(pn-counter)", fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                        color = Color.Gray)
-                }
-            }
-
-            if (showCountEditor) {
-                Surface(color = Cream, shape = RoundedCornerShape(8.dp)) {
-                    Column(Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val context = stock
-                        if (context == null) {
-                            Text("This task is not linked to a product in this store's " +
-                                "inventory, so there is no count to correct.",
-                                fontSize = 12.sp, color = Color.Gray)
-                        } else {
-                            Text(context.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("On shelf now", fontSize = 12.sp, color = Color.Gray)
-                                Spacer(Modifier.weight(1f))
-                                Text("${context.currentStock}", fontSize = 12.sp,
-                                    fontFamily = FontFamily.Monospace)
-                            }
-                            val current = draftCount ?: context.currentStock
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Corrected count", fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                IconButton(
-                                    onClick = { draftCount = (current - 1).coerceAtLeast(0) },
-                                    modifier = Modifier.size(32.dp)
-                                ) { Icon(Icons.Default.Remove, "Decrease") }
-                                Text("$current", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Monospace)
-                                IconButton(
-                                    onClick = { draftCount = current + 1 },
-                                    modifier = Modifier.size(32.dp)
-                                ) { Icon(Icons.Default.Add, "Increase") }
-                            }
-                            Button(
-                                onClick = {
-                                    if (taskService.applyStockCount(task, current)) {
-                                        applied = true
-                                        showCountEditor = false
-                                        draftCount = null
-                                        onChanged()
-                                    }
-                                },
-                                enabled = current != context.currentStock,
-                                colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Save count", fontSize = 13.sp) }
-                        }
-                    }
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                task.nextStatusLabel?.let { label ->
-                    Button(
-                        onClick = { taskService.advance(task); onChanged() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                    ) { Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-                }
-
-                if (!task.isTerminal && task.relatedProductId != null) {
-                    OutlinedButton(
-                        onClick = {
-                            if (stock == null) stock = taskService.stockContext(task)
-                            showCountEditor = !showCountEditor
-                        },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(if (applied) "Count saved" else "Update count", fontSize = 13.sp)
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                if (!task.isTerminal) {
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, "More", tint = Color.Gray)
-                        }
-                        DropdownMenu(showMenu, onDismissRequest = { showMenu = false }) {
-                            if (task.assignedTo != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Put back in the pool") },
-                                    onClick = {
-                                        showMenu = false
-                                        taskService.release(task); onChanged()
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("Cancel task") },
-                                onClick = {
-                                    showMenu = false
-                                    taskService.cancel(task); onChanged()
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskBadge(text: String, tint: Color) {
-    Surface(color = tint.copy(alpha = 0.16f), shape = RoundedCornerShape(4.dp)) {
-        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-    }
-}
-
-private fun statusLabel(status: String) =
-    if (status == "in_progress") "In progress" else status.replaceFirstChar { it.uppercase() }
-
-private fun statusTint(status: String) = when (status) {
-    "open" -> Color(0xFFEF6C00)
-    "accepted" -> Color(0xFF2196F3)
-    "in_progress" -> Color(0xFF7B1FA2)
-    "done" -> Color(0xFF2E7D32)
-    else -> Color.Gray
-}
-
-// MARK: - Step 3
-
 @Composable
 private fun AskSection(
     searchService: CopilotSearchService,
@@ -1579,30 +1102,17 @@ private fun AskSection(
     var generateMillis by remember { mutableStateOf(0.0) }
     var stage by remember { mutableStateOf<String?>(null) }
     val speech = rememberSpeechInput()
+    val askKeyboard = LocalSoftwareKeyboardController.current
     var llmAvailability by remember { mutableStateOf(LocalLanguageModel.availability(context)) }
-    var downloadProgress by remember { mutableStateOf<LocalLanguageModel.DownloadProgress?>(null) }
-    var downloadError by remember { mutableStateOf<String?>(null) }
+    // Progress and errors live on LocalLanguageModel, not here, so the transfer keeps running
+    // when this screen leaves composition — see startDownload().
+    val downloadProgress = LocalLanguageModel.downloadProgress
+    val downloadError = LocalLanguageModel.downloadError
 
-    fun downloadModel(url: String) {
-        downloadError = null
-        downloadProgress = LocalLanguageModel.DownloadProgress(0, 0)
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                LocalLanguageModel.download(context, url) { progress ->
-                    // download() runs on this IO thread; hop back to the UI thread per update
-                    // rather than letting Compose observe state written off the main thread.
-                    scope.launch(Dispatchers.Main) { downloadProgress = progress }
-                }
-            }
-            downloadProgress = null
-            result.fold(
-                onSuccess = { llmAvailability = LocalLanguageModel.availability(context) },
-                onFailure = { e ->
-                    downloadError = "Download failed: ${e.message ?: "unknown error"}. Check " +
-                        "your connection and try again."
-                }
-            )
-        }
+    // Re-check availability whenever a download completes, including one that finished while
+    // the user was on another tab.
+    LaunchedEffect(LocalLanguageModel.downloadGeneration) {
+        llmAvailability = LocalLanguageModel.availability(context)
     }
 
     val prompts = listOf(
@@ -1614,6 +1124,11 @@ private fun AskSection(
     fun ask(text: String) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
+        // Find hides the keyboard via onSearchStart; Ask had no equivalent, so the keyboard
+        // stayed up over the answer the user had just asked for.
+        askKeyboard?.hide()
+        // Ends dictation on submit — see runSearch().
+        speech?.stop()
         isWorking = true
         errorMessage = null
         chunks = emptyList()
@@ -1792,8 +1307,11 @@ private fun AskSection(
                         Text(it, fontSize = 12.sp, color = Color(0xFFC62828))
                     }
                     Button(
-                        onClick = { downloadModel(downloadable.url) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                        onClick = { LocalLanguageModel.startDownload(context, downloadable.url) },
+                        // Couchbase red rather than the amber Accent: this is a one-time setup
+                        // step, not one of the screen's primary actions, and the amber read as a
+                        // warning sitting next to genuine warning banners.
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC2A2E)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))

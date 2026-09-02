@@ -14,16 +14,21 @@ import UIKit
 struct ShelfAuditView: View {
     @EnvironmentObject var databaseManager: DatabaseManager
     @ObservedObject var auditService: ShelfAuditService
-    /// Raising a Request Help task is Step 2's natural next action, so it is handed back up
-    /// rather than duplicated here. Currently unused: the resolution buttons are hidden until
-    /// the P2P task flow is demoable, per review feedback — the closure stays so the call site
-    /// and the wiring survive intact.
-    let onRequestHelp: (PositionFinding, Planogram) -> Void
     /// Aisle and shelf carried in from a Step 1 result, when the associate arrived by looking a
-    /// product up rather than opening this tab cold. When set, that shelf is preselected.
-    let contextLocation: ShelfContext?
+    /// product up rather than opening this tab cold.
+    ///
+    /// A binding, and consumed once: this view's `@State` can outlive a mode switch, so the
+    /// hand-off has to be a message that is acted on and then cleared. Reading it as a plain
+    /// `let` and only applying it when `selected == nil` was the bug behind "Check shelf does
+    /// nothing" — if the Planogram tab had ever been opened before, `selected` was already set
+    /// and the incoming shelf was silently discarded.
+    @Binding var contextLocation: ShelfContext?
 
     @State private var selected: Planogram?
+    /// Whether `selected` actually came from the Find hand-off. Distinct from
+    /// `contextLocation != nil`, which stays true for the life of the view — so the hint used to
+    /// keep claiming the shelf was carried over long after the user had picked a different one.
+    @State private var cameFromFind = false
     /// The sample view chosen but not yet audited. Picking and auditing are separate steps so
     /// the associate can see what they are about to check before committing to it.
     @State private var pendingImage: UIImage?
@@ -55,20 +60,43 @@ struct ShelfAuditView: View {
         }
         .onAppear {
             auditService.loadPlanograms()
-            if selected == nil { selected = resolveInitialShelf() }
+            applyIncomingContext()
+        }
+        // The view can already be on screen when a new hand-off arrives, and it can also be
+        // reused across a mode switch, so appearance alone is not a reliable trigger.
+        .onChange(of: contextLocation) { _, _ in
+            auditService.loadPlanograms()
+            applyIncomingContext()
         }
     }
 
-    /// Case 1 hands us a location from the product the associate just looked up; Case 2 is a
-    /// cold open, where there is nothing to infer and the first shelf is as good as any.
-    private func resolveInitialShelf() -> Planogram? {
-        if let contextLocation,
-           let match = auditService.planograms.first(where: {
-               $0.aisle == contextLocation.aisle && $0.shelf == contextLocation.shelf
-           }) {
-            return match
+    /// Honours a shelf handed over from Find, then clears it so the choice is not re-applied
+    /// every time this tab is revisited — otherwise a manual pick would keep snapping back.
+    private func applyIncomingContext() {
+        if let context = contextLocation {
+            let match = auditService.planograms.first {
+                $0.aisle == context.aisle && $0.shelf == context.shelf
+            }
+            if let match {
+                if selected?.id != match.id {
+                    selected = match
+                    reset()
+                }
+                cameFromFind = true
+            } else {
+                print("⚠️ [ShelfAudit] no planogram for aisle \(context.aisle) "
+                      + "shelf \(context.shelf) — \(auditService.planograms.count) listed")
+                cameFromFind = false
+            }
+            // Consume it either way; a hand-off that cannot be honoured should not be retried.
+            contextLocation = nil
+            if selected == nil { selected = auditService.planograms.first }
+            return
         }
-        return auditService.planograms.first
+        if selected == nil {
+            selected = auditService.planograms.first
+            cameFromFind = false
+        }
     }
 
     private func reset() {
@@ -94,6 +122,7 @@ struct ShelfAuditView: View {
                 ForEach(auditService.planograms) { planogram in
                     Button {
                         selected = planogram
+                        cameFromFind = false
                         reset()
                     } label: {
                         Text("Aisle \(planogram.aisle) · Shelf \(planogram.shelf) — "
@@ -121,13 +150,13 @@ struct ShelfAuditView: View {
                 .cornerRadius(10)
             }
 
-            if contextLocation != nil {
+            if cameFromFind {
                 Label("Carried over from the product you looked up in Find.",
                       systemImage: "arrow.turn.down.right")
                     .font(.caption2)
                     .foregroundColor(CopilotTheme.info)
             }
-        }
+                    }
     }
 
     // MARK: - Golden reference
@@ -144,12 +173,16 @@ struct ShelfAuditView: View {
             Text("GOLDEN IMAGE REFERENCE (IDEAL LAYOUT)")
                 .font(.caption2.weight(.bold)).foregroundColor(.secondary)
 
+            // Prefer the synced URL, fall back to the bundled render. Every shelf ships a
+            // golden PNG, so a 403, an offline device, or a document holding a bare filename
+            // instead of a URL all still show the reference rather than an empty frame — which
+            // matters because this screen is the thing being demoed offline.
             AsyncImage(url: URL(string: planogram.goldenImageURL)) { phase in
                 switch phase {
                 case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fit)
                 case .failure:
-                    placeholderPanel("Golden image not reachable")
+                    bundledGolden(for: planogram)
                 default:
                     placeholderPanel("Loading golden image…")
                 }
@@ -165,6 +198,23 @@ struct ShelfAuditView: View {
                  + "planogram's grid, embedded on-device, and compared cell by cell.")
                 .font(.caption).foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if !planogram.isAuditable {
+                // The golden image and the shelf identity are still worth showing — only the
+                // audit needs the grid. Saying so here, next to the disabled action, beats
+                // failing after the tap.
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(CopilotTheme.degraded)
+                    Text("This shelf's golden layout has not synced yet, so it cannot be "
+                         + "audited. Import the current planograms dataset to enable it.")
+                        .font(.caption).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(CopilotTheme.tint(CopilotTheme.degraded))
+                .cornerRadius(9)
+            }
 
             VStack(spacing: 8) {
                 checkButton(
@@ -184,6 +234,17 @@ struct ShelfAuditView: View {
         .padding(14)
         .background(CopilotTheme.surface)
         .cornerRadius(12)
+    }
+
+    @ViewBuilder
+    private func bundledGolden(for planogram: Planogram) -> some View {
+        if let image = ShelfAuditService.bundledShelfImage(
+            store: AppConfig.currentStore.rawValue, aisle: planogram.aisle,
+            shelf: planogram.shelf, variant: "golden") {
+            Image(uiImage: image).resizable().aspectRatio(contentMode: .fit)
+        } else {
+            placeholderPanel("Golden image not reachable")
+        }
     }
 
     private func placeholderPanel(_ message: String) -> some View {
@@ -244,6 +305,8 @@ struct ShelfAuditView: View {
             .cornerRadius(10)
         }
         .buttonStyle(.plain)
+        .disabled(!planogram.isAuditable)
+        .opacity(planogram.isAuditable ? 1 : 0.5)
     }
 
     // MARK: - Pending selection
@@ -472,11 +535,6 @@ struct ShelfAuditView: View {
                 .background(CopilotTheme.tint(verdict.ok
                                               ? CopilotTheme.compliant : CopilotTheme.degraded))
                 .cornerRadius(9)
-
-                // The "Request Help" action is intentionally hidden for now. Review feedback was
-                // to hide the resolution controls until the peer-to-peer task flow is demoable,
-                // so the screen can be judged on the audit itself. `onRequestHelp` stays wired
-                // up so this is a one-line restore rather than a rebuild.
             }
         }
     }

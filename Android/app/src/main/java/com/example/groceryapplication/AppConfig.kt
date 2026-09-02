@@ -99,7 +99,6 @@ object AppConfig {
     const val COPILOT_LLM_MODEL_BYTES = 557_000_000L
 
     const val KNOWLEDGE_COLLECTION_NAME = "product_knowledge"    // Step 3: RAG source chunks
-    const val TASKS_COLLECTION_NAME = "tasks"                    // Request Help
 
     /**
      * Every collection the replicator should carry, in one list so the sync manager and the
@@ -108,7 +107,7 @@ object AppConfig {
     val allSyncedCollections: List<String>
         get() = listOf(
             COLLECTION_NAME, PROFILE_COLLECTION_NAME, ORDERS_COLLECTION_NAME,
-            PLANOGRAMS_COLLECTION_NAME, KNOWLEDGE_COLLECTION_NAME, TASKS_COLLECTION_NAME
+            PLANOGRAMS_COLLECTION_NAME, KNOWLEDGE_COLLECTION_NAME
         )
 
     // MARK: - Store Associate Copilot (edge vector search)

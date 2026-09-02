@@ -4,7 +4,7 @@ import CouchbaseLiteSwift
 /// Seeds the bundled extended dataset into the local database when a collection is empty.
 ///
 /// Why this exists: the extended dataset — descriptions, search tags, shelf/section,
-/// real MiniLM vectors, the Footwear category, planograms, knowledge chunks and tasks —
+/// real MiniLM vectors, the Footwear category, planograms and knowledge chunks —
 /// is not in Capella yet, and the whole point of this app is that a developer can pick it
 /// up and see edge vector search working. Requiring a provisioned Capella cluster before
 /// the copilot does anything would defeat that.
@@ -25,7 +25,6 @@ enum LocalDatasetSeeder {
         case AppConfig.collectionName:          return "\(prefix)_inventory"
         case AppConfig.planogramsCollectionName: return "\(prefix)_planograms"
         case AppConfig.knowledgeCollectionName:  return "\(prefix)_product_knowledge"
-        case AppConfig.tasksCollectionName:      return "\(prefix)_tasks"
         case AppConfig.profileCollectionName:
             // The profile file is named with a hyphen and a store suffix.
             return AppConfig.currentStore == .nyc ? "nyc-store-01-profile" : "aa-store-01-profile"

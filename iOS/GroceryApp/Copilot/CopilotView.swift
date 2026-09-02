@@ -24,38 +24,19 @@ struct CopilotView: View {
         // expected layout being checked against, which is the term the retail audience uses.
         case shelf = "Planogram"
         case ask = "Ask"
-        case tasks = "Tasks"
 
         var icon: String {
             switch self {
             case .find: return "sparkle.magnifyingglass"
             case .shelf: return "camera.viewfinder"
             case .ask: return "bubble.left.and.text.bubble.right"
-            case .tasks: return "checklist"
-            }
-        }
-    }
-
-    /// Step 2 has two entry points, per the PRD: identify a product with the camera and be told
-    /// where it belongs (Case 1), or audit a shelf you already picked (Case 2).
-    enum PlanogramMode: String, CaseIterable {
-        case scan = "Scan Product"
-        case audit = "Check Shelf"
-
-        var icon: String {
-            switch self {
-            case .scan: return "camera.viewfinder"
-            case .audit: return "square.grid.3x3.square"
             }
         }
     }
 
     @State private var mode: Mode = .find
-    @State private var planogramMode: PlanogramMode = .audit
     @State private var searchService: CopilotSearchService?
     @State private var auditService: ShelfAuditService?
-    @State private var scanService: ProductScanService?
-    @State private var taskService: TaskService?
     @State private var threshold = AppConfig.defaultRelevanceThreshold
     @State private var showDiagnostics = false
 
@@ -63,8 +44,6 @@ struct CopilotView: View {
     @State private var askAbout: GroceryItem?
     /// Aisle and shelf carried from a Find result into the planogram audit (Case 1).
     @State private var shelfContext: ShelfContext?
-    /// Finding handed from the shelf audit to Request Help.
-    @State private var helpRequest: (finding: PositionFinding, planogram: Planogram)?
 
     private let accent = CopilotTheme.action
     private let cream = CopilotTheme.canvas
@@ -75,7 +54,7 @@ struct CopilotView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     modePicker
 
-                    if let searchService, let auditService, let taskService {
+                    if let searchService, let auditService {
                         switch mode {
                         case .find:
                             ProductSearchView(
@@ -91,38 +70,15 @@ struct CopilotView: View {
                                 threshold: $threshold
                             )
                         case .shelf:
-                            VStack(alignment: .leading, spacing: 16) {
-                                planogramModePicker
-                                switch planogramMode {
-                                case .scan:
-                                    if let scanService {
-                                        ProductScanView(
-                                            scanService: scanService,
-                                            // Completes Case 1: identified product → its shelf
-                                            // → straight into the compliance check.
-                                            onAuditShelf: { context in
-                                                shelfContext = context
-                                                planogramMode = .audit
-                                            }
-                                        )
-                                    }
-                                case .audit:
-                                    ShelfAuditView(
-                                        auditService: auditService,
-                                        onRequestHelp: { finding, planogram in
-                                            helpRequest = (finding, planogram)
-                                        },
-                                        contextLocation: shelfContext
-                                    )
-                                }
-                            }
+                            ShelfAuditView(
+                                auditService: auditService,
+                                contextLocation: $shelfContext
+                            )
                         case .ask:
                             RAGAssistantView(
                                 searchService: searchService,
                                 product: askAbout
                             )
-                        case .tasks:
-                            TaskListView(taskService: taskService)
                         }
                     } else {
                         ProgressView("Preparing copilot…")
@@ -133,6 +89,9 @@ struct CopilotView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
+            // Swiping the content down dismisses the keyboard, which is the gesture people try
+            // first — the toolbar Done button is the explicit path.
+            .scrollDismissesKeyboard(.interactively)
             .background(cream.ignoresSafeArea())
             .navigationTitle("Copilot")
             .navigationBarTitleDisplayMode(.large)
@@ -149,21 +108,6 @@ struct CopilotView: View {
                 )
                 .environmentObject(databaseManager)
             }
-            .sheet(isPresented: Binding(
-                get: { helpRequest != nil },
-                set: { if !$0 { helpRequest = nil } }
-            )) {
-                if let helpRequest, let taskService {
-                    RequestHelpView(
-                        finding: helpRequest.finding,
-                        planogram: helpRequest.planogram,
-                        taskService: taskService,
-                        // Land on the task list so the raised task is visible immediately —
-                        // this is the handover the demo is about.
-                        onDismissAfterCreating: { mode = .tasks }
-                    )
-                }
-            }
         }
         .onAppear {
             if searchService == nil {
@@ -171,38 +115,6 @@ struct CopilotView: View {
             }
             if auditService == nil {
                 auditService = ShelfAuditService(databaseManager: databaseManager)
-            }
-            if scanService == nil {
-                scanService = ProductScanService(databaseManager: databaseManager)
-            }
-            if taskService == nil {
-                taskService = TaskService(databaseManager: databaseManager)
-            }
-        }
-    }
-
-    /// Deliberately a segmented control rather than a second row of big tabs: this is a choice
-    /// *within* Step 2, and it should not compete with the top-level step picker.
-    private var planogramModePicker: some View {
-        HStack(spacing: 6) {
-            ForEach(PlanogramMode.allCases, id: \.self) { candidate in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { planogramMode = candidate }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: candidate.icon).font(.caption2)
-                        Text(candidate.rawValue)
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1).minimumScaleFactor(0.85)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(planogramMode == candidate
-                                ? CopilotTheme.action : CopilotTheme.surface)
-                    .foregroundColor(planogramMode == candidate ? .white : .primary)
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -277,25 +189,52 @@ struct SemanticResultCard: View {
                         .foregroundColor(item.quantity > 0 ? .secondary : .red)
                 }
 
-                // Location first: this is what the associate acts on.
+                // Location first: this is what the associate acts on. When it can open the
+                // planogram it is drawn as an actual control — tinted fill, border, and a named
+                // action. It previously rendered as plain text with a small chevron, which read
+                // as a label, so the only way to discover it was tappable was to tap it by
+                // accident.
                 if let location = item.location {
-                    Button {
-                        onAuditShelf?()
-                    } label: {
+                    if onAuditShelf != nil {
+                        Button {
+                            onAuditShelf?()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.caption2).foregroundColor(accent)
+                                Text(locationText(location))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1).minimumScaleFactor(0.85)
+                                Spacer(minLength: 4)
+                                Text("Check shelf")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(accent)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(accent)
+                            }
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 7)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(accent.opacity(0.12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(accent.opacity(0.45), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    } else {
                         HStack(spacing: 4) {
                             Image(systemName: "mappin.and.ellipse")
-                                .font(.caption2).foregroundColor(accent)
+                                .font(.caption2).foregroundColor(.secondary)
                             Text(locationText(location))
                                 .font(.caption.weight(.medium))
-                                .foregroundColor(.primary)
-                            if onAuditShelf != nil {
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2).foregroundColor(accent)
-                            }
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(onAuditShelf == nil)
                 }
 
                 if let badges = item.attributes?.displayBadges, !badges.isEmpty {

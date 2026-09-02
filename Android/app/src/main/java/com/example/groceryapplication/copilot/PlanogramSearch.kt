@@ -40,7 +40,13 @@ data class PlanogramAuditResult(
 
 /** A shelf the user can audit, with its aisle for display. Shelf codes are unique, so
  *  `shelf` alone keys the queries; `aisle` is shown in the picker for clarity. */
-data class ShelfRef(val aisle: Int, val shelf: String) {
+data class ShelfRef(
+    val aisle: Int,
+    val shelf: String,
+    val auditable: Boolean = true,
+    /** Zone label shown under the picker, matching the iOS subtitle. */
+    val section: String = ""
+) {
     val label: String get() = "Aisle $aisle · $shelf"
 }
 
@@ -73,12 +79,18 @@ fun DatabaseManager.ensurePlanogramCellIndex() {
 fun DatabaseManager.planogramShelves(): List<ShelfRef> {
     val db = getDatabase() ?: return emptyList()
     val sql = """
-        SELECT DISTINCT aisle, shelf FROM `${AppConfig.scopeName}`.`${AppConfig.PLANOGRAMS_COLLECTION_NAME}`
+        SELECT DISTINCT aisle, shelf, grid, section FROM `${AppConfig.scopeName}`.`${AppConfig.PLANOGRAMS_COLLECTION_NAME}`
         WHERE docType = "Planogram" AND shelf IS NOT MISSING ORDER BY aisle, shelf
     """.trimIndent()
     return try {
         db.createQuery(sql).execute().mapNotNull { r ->
-            r.getString("shelf")?.let { ShelfRef(r.getInt("aisle"), it) }
+            // Every shelf stays listed; `auditable` gates the audit action. Hiding grid-less
+            // shelves made the picker disagree with the store the associate is standing in.
+            val grid = r.getDictionary("grid")
+            val auditable = (grid?.getInt("rows") ?: 0) > 0 && (grid?.getInt("cols") ?: 0) > 0
+            r.getString("shelf")?.let {
+                ShelfRef(r.getInt("aisle"), it, auditable, r.getString("section") ?: "")
+            }
         }
     } catch (e: Exception) {
         Log.e("PlanogramSearch", "❌ shelves query failed", e); emptyList()
@@ -89,7 +101,9 @@ private fun DatabaseManager.planogramGrid(shelf: String): PlanogramGrid? {
     val db = getDatabase() ?: return null
     val sql = """
         SELECT grid FROM `${AppConfig.scopeName}`.`${AppConfig.PLANOGRAMS_COLLECTION_NAME}`
-        WHERE docType = "Planogram" AND shelf = ${'$'}shelf LIMIT 1
+        WHERE docType = "Planogram" AND shelf = ${'$'}shelf
+          AND grid.rows IS VALUED AND grid.cols IS VALUED
+        LIMIT 1
     """.trimIndent()
     return try {
         val q = db.createQuery(sql)

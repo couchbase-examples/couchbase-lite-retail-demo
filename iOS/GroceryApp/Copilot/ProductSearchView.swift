@@ -33,6 +33,10 @@ struct ProductSearchView: View {
     // and its behaviour (filter applied to the ANN candidate set) is worth showing.
     @State private var categoryFilter = ""
     @State private var inStockOnly = false
+    /// Drives the keyboard's Done button. The field is `axis: .vertical`, so Return inserts a
+    /// newline instead of submitting — without an explicit dismissal there is no way to close
+    /// the keyboard at all except leaving the tab.
+    @FocusState private var queryFocused: Bool
     @Binding var threshold: Double
 
     private let accent = Color(hex: "FC9C0C")
@@ -92,7 +96,17 @@ struct ProductSearchView: View {
                 TextField("Describe what the shopper wants…", text: $queryText, axis: .vertical)
                     .lineLimit(1...3)
                     .submitLabel(.search)
-                    .onSubmit { runSearch(mode: "text") }
+                    .focused($queryFocused)
+                    .onSubmit { submitSearch() }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Search") { submitSearch() }
+                                .disabled(queryText.trimmingCharacters(
+                                    in: .whitespacesAndNewlines).isEmpty)
+                            Button("Done") { queryFocused = false }
+                        }
+                    }
                     // Speech lands in the field as it is recognised, so the associate reads
                     // their words where they would have typed them and can edit before
                     // searching. Guarded on `isListening` so it never clobbers typed text.
@@ -150,7 +164,7 @@ struct ProductSearchView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    runSearch(mode: "text")
+                    submitSearch()
                 } label: {
                     Text("Search")
                         .fontWeight(.semibold)
@@ -202,6 +216,7 @@ struct ProductSearchView: View {
 
     private var resultsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
+            appliedFilterChip
             comparisonStrip
 
             if hits.isEmpty {
@@ -253,6 +268,32 @@ struct ProductSearchView: View {
     }
 
     /// The head-to-head strip. This is the argument of Step 1 made visible.
+    /// Echoes back a price bound the query itself carried, e.g. "under $3".
+    ///
+    /// Worth showing rather than applying silently: results are being excluded by a filter the
+    /// user typed in prose and may not realise became a hard predicate. It also makes the hybrid
+    /// query legible in a demo — the phrase visibly leaves the vector search and becomes SQL.
+    @ViewBuilder
+    private var appliedFilterChip: some View {
+        if let summary = searchService.lastConstraints.summary {
+            HStack(spacing: 6) {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.caption).foregroundColor(accent)
+                Text("Price filter from your query: ")
+                    .font(.caption2).foregroundColor(.secondary)
+                + Text(summary)
+                    .font(.caption2.weight(.semibold)).foregroundColor(.primary)
+                Spacer(minLength: 0)
+                Text("SQL++ WHERE")
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(accent.opacity(0.10))
+            .cornerRadius(8)
+        }
+    }
+
     private var comparisonStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("SAME QUERY, TWO SEARCH METHODS")
@@ -454,6 +495,15 @@ struct ProductSearchView: View {
                 }
             }
         }
+    }
+
+    /// Submitting has to end dictation too. The recogniser keeps a live audio session and goes
+    /// on appending to the field, so leaving it running meant the query kept mutating *after*
+    /// the search had been issued — and the mic stayed hot with no visible way to stop it.
+    private func submitSearch() {
+        queryFocused = false
+        if speech.isListening { speech.stop() }
+        runSearch(mode: "text")
     }
 
     private func runSearch(mode: String) {

@@ -17,6 +17,9 @@ struct RAGAssistantView: View {
     @StateObject private var speech = SpeechRecognizer()
 
     @State private var question = ""
+    /// Drives the keyboard's Done button — see ProductSearchView: the field is
+    /// `axis: .vertical`, so Return inserts a newline rather than submitting.
+    @FocusState private var questionFocused: Bool
     @State private var answer = ""
     @State private var chunks: [KnowledgeHit] = []
     @State private var isWorking = false
@@ -88,7 +91,17 @@ struct RAGAssistantView: View {
                 TextField("Ask a question…", text: $question, axis: .vertical)
                     .lineLimit(1...3)
                     .submitLabel(.send)
-                    .onSubmit { ask() }
+                    .focused($questionFocused)
+                    .onSubmit { submitAsk() }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Ask") { submitAsk() }
+                                .disabled(question.trimmingCharacters(
+                                    in: .whitespacesAndNewlines).isEmpty)
+                            Button("Done") { questionFocused = false }
+                        }
+                    }
                     // Spoken words land in the field as they are recognised, matching Step 1.
                     .onChange(of: speech.transcript) { _, latest in
                         if speech.isListening && !latest.isEmpty { question = latest }
@@ -127,7 +140,7 @@ struct RAGAssistantView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Button { ask() } label: {
+            Button { submitAsk() } label: {
                 Text("Ask")
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity).padding(.vertical, 10)
@@ -284,6 +297,13 @@ struct RAGAssistantView: View {
     }
 
     // MARK: - Ask
+
+    /// Submitting has to end dictation too — see ProductSearchView.submitSearch().
+    private func submitAsk() {
+        questionFocused = false
+        if speech.isListening { speech.stop() }
+        ask()
+    }
 
     private func ask() {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)

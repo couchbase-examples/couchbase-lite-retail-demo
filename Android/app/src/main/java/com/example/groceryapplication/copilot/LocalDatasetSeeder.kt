@@ -43,7 +43,6 @@ object LocalDatasetSeeder {
             AppConfig.COLLECTION_NAME -> "${prefix}_inventory"
             AppConfig.PLANOGRAMS_COLLECTION_NAME -> "${prefix}_planograms"
             AppConfig.KNOWLEDGE_COLLECTION_NAME -> "${prefix}_product_knowledge"
-            AppConfig.TASKS_COLLECTION_NAME -> "${prefix}_tasks"
             // The profile file is named with hyphens and a store suffix.
             AppConfig.PROFILE_COLLECTION_NAME ->
                 if (AppConfig.currentStore == StoreLocation.NYC) "nyc-store-01-profile"

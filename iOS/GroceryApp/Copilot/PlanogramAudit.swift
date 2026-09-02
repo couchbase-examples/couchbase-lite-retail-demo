@@ -84,7 +84,9 @@ extension ShelfAuditService {
         guard let database = databaseManager.database else { return nil }
         let sql = """
             SELECT grid FROM `\(AppConfig.scopeName)`.`\(AppConfig.planogramsCollectionName)`
-            WHERE docType = "Planogram" AND shelf = $shelf LIMIT 1
+            WHERE docType = "Planogram" AND shelf = $shelf
+              AND grid.rows IS VALUED AND grid.cols IS VALUED
+            LIMIT 1
             """
         do {
             let query = try database.createQuery(sql)
