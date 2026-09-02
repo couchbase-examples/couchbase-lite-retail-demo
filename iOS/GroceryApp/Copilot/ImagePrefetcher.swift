@@ -36,12 +36,17 @@ enum ImagePrefetcher {
             print("🖼️ [Prefetch] warming \(urls.count) images for offline use")
 
             let started = Date()
+            // Sliding window: start up to `maxConcurrent`, then add one only as one finishes.
+            // `inFlight` tracks work in progress, so it goes down as well as up.
             await withTaskGroup(of: Void.self) { group in
-                var issued = 0
+                var inFlight = 0
                 for url in urls {
-                    if issued >= maxConcurrent { await group.next() }
-                    issued += 1
+                    if inFlight == maxConcurrent {
+                        await group.next()
+                        inFlight -= 1
+                    }
                     group.addTask { _ = await ImageDownloadService.shared.downloadImage(from: url) }
+                    inFlight += 1
                 }
             }
             let elapsed = Date().timeIntervalSince(started)

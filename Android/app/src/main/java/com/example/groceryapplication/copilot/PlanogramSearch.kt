@@ -6,8 +6,6 @@ import com.example.groceryapplication.DatabaseManager
 import android.graphics.Bitmap
 import android.util.Log
 import com.couchbase.lite.Parameters
-import com.couchbase.lite.VectorEncoding
-import com.couchbase.lite.VectorIndexConfiguration
 
 /**
  * Step 2 planogram audit on Android — Kotlin counterpart of the iOS
@@ -53,26 +51,23 @@ data class ShelfRef(
 /** A shelf location carried between copilot steps — Find (Step 1) into the audit (Step 2). */
 data class ShelfContext(val aisle: Int, val shelf: String)
 
-private const val PLANOGRAM_INDEX = "idx_planogram_cells"
 private const val EMPTY_THRESHOLD = 0.18   // cell distance above which nothing matches → empty/missing
 private const val CHANGE_THRESHOLD = 0.12  // per-product median above which it's flagged
 
-/** Create the golden-cell vector index (512-d, cosine) on the planograms collection. */
+/**
+ * Make sure the planogram image index exists before an audit runs.
+ *
+ * Delegates to [VectorIndexManager] rather than creating an index here. This used to build its
+ * own `idx_planogram_cells` over `embedding.image.vector` on `planograms`, which is the exact
+ * expression and collection `idx_planogram_image` already covers, so the app was paying to build
+ * and store two identical indexes. iOS only ever had the one.
+ *
+ * VectorIndexManager is also the only place that gets the centroid count right: it derives it
+ * from the actual vector count so the index can train, where the version here hardcoded 8.
+ */
 fun DatabaseManager.ensurePlanogramCellIndex() {
     val db = getDatabase() ?: return
-    try {
-        val collection = db.getCollection(AppConfig.PLANOGRAMS_COLLECTION_NAME, AppConfig.scopeName) ?: return
-        if (collection.indexes.contains(PLANOGRAM_INDEX)) return
-        val config = VectorIndexConfiguration("embedding.image.vector", 512L, 8L).apply {
-            metric = VectorIndexConfiguration.DistanceMetric.COSINE
-            encoding = VectorEncoding.none()
-            numProbes = 8L
-        }
-        collection.createIndex(PLANOGRAM_INDEX, config)
-        Log.d("PlanogramSearch", "✅ created $PLANOGRAM_INDEX")
-    } catch (e: Exception) {
-        Log.e("PlanogramSearch", "❌ index creation failed", e)
-    }
+    VectorIndexManager.ensureIndex(VectorIndexManager.planogramImageIndex, db)
 }
 
 /** Shelves that have a synced Planogram summary doc (for the picker). */

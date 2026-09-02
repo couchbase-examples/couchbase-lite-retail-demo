@@ -53,8 +53,9 @@ object ClipImageEmbedder {
             if (isReady) return
             try {
                 val model = stagedModel(context)
-                env = OrtEnvironment.getEnvironment()
-                session = env!!.createSession(model.absolutePath, OrtSession.SessionOptions())
+                val environment = OrtEnvironment.getEnvironment()
+                env = environment
+                session = environment.createSession(model.absolutePath, OrtSession.SessionOptions())
                 isReady = true
                 status = "ready"
                 Log.d("ClipImageEmbedder", "✅ ready (${model.length() / 1_048_576} MB)")
