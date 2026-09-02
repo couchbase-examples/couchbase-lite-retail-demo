@@ -95,8 +95,19 @@ object AppConfig {
      */
     const val COPILOT_LLM_MODEL_URL = "https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/gemma/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task"
     const val COPILOT_LLM_MODEL_NAME = "gemma3-1b-it-q4.task"
-    /** Approximate download size, shown before the user commits to it. */
-    const val COPILOT_LLM_MODEL_BYTES = 557_000_000L
+    /** Exact size of the model, used to sanity check a finished download. */
+    const val COPILOT_LLM_MODEL_BYTES = 554_661_246L
+
+    /**
+     * MD5 of the model file, checked once after download.
+     *
+     * A length check alone is not enough. A download that resumes against a stale or
+     * concurrently written `.part` file can land on exactly the right byte count with the wrong
+     * bytes in the middle, and MediaPipe loads that quite happily and then emits token soup. The
+     * failure looks like a bad model rather than a bad download, which is a miserable thing to
+     * debug, so verify it up front while we are already paying for the I/O.
+     */
+    const val COPILOT_LLM_MODEL_MD5 = "af0b3515e570e6124dd6d996b6055ca7"
 
     const val KNOWLEDGE_COLLECTION_NAME = "product_knowledge"    // Step 3: RAG source chunks
 

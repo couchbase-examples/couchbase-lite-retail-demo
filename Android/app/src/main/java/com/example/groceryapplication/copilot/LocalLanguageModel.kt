@@ -170,6 +170,10 @@ object LocalLanguageModel {
     private fun tidy(raw: String): String = raw
         .replace("<end_of_turn>", "")
         .replace("<start_of_turn>", "")
+        // The model sometimes emits the two characters backslash-n rather than a newline, which
+        // rendered as a literal "\n" on the end of the answer.
+        .replace("\\n", "\n")
+        .replace("\\t", " ")
         .replace(Regex("\\*{1,2}"), "")
         .trim()
 
@@ -248,6 +252,13 @@ object LocalLanguageModel {
         val part = File(modelDirectory(context), "${AppConfig.COPILOT_LLM_MODEL_NAME}.part")
 
         return try {
+            // A `.part` at or beyond the expected size cannot be a useful resume point: either
+            // the previous attempt already finished (and failed verification) or two writers
+            // appended to it. Either way, resuming would compound the problem.
+            if (part.exists() && part.length() >= AppConfig.COPILOT_LLM_MODEL_BYTES) {
+                Log.w(TAG, "discarding suspect partial file (${part.length()} bytes)")
+                part.delete()
+            }
             var existing = if (part.exists()) part.length() else 0L
             val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection)
                 .apply {
@@ -293,6 +304,25 @@ object LocalLanguageModel {
                     java.io.IOException("incomplete download: ${part.length()} of $total bytes")
                 )
             }
+
+            // Verify before installing. A corrupt model does not fail to load, it loads and
+            // produces nonsense, so this is the only place the problem is cheap to catch.
+            val expected = AppConfig.COPILOT_LLM_MODEL_MD5
+            if (expected.isNotBlank()) {
+                val actual = md5Of(part)
+                if (!actual.equals(expected, ignoreCase = true)) {
+                    part.delete()
+                    Log.e(TAG, "checksum mismatch: expected $expected, got $actual")
+                    return Result.failure(
+                        java.io.IOException(
+                            "the downloaded file was corrupt (checksum mismatch). It has been " +
+                                "discarded, so tapping download again will start clean."
+                        )
+                    )
+                }
+                Log.i(TAG, "✅ checksum verified")
+            }
+
             if (target.exists()) target.delete()
             if (!part.renameTo(target)) {
                 return Result.failure(java.io.IOException("could not move model into place"))
@@ -303,6 +333,20 @@ object LocalLanguageModel {
             Log.e(TAG, "❌ model download failed", t)
             Result.failure(t)
         }
+    }
+
+    /** Streams the file through MD5 so a 550MB model does not have to fit in memory. */
+    private fun md5Of(file: File): String {
+        val digest = java.security.MessageDigest.getInstance("MD5")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(1 shl 20)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     fun close() {
