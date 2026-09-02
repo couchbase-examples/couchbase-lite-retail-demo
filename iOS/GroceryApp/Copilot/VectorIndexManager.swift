@@ -56,12 +56,6 @@ enum VectorIndexManager {
     /// Product-image vectors. Not in the spec's index table, but per-facing crop matching
     /// needs it: each cropped shelf position is searched against these to identify which
     /// product is actually sitting there.
-    static let inventoryImageIndex = IndexSpec(
-        name: "idx_inventory_image",
-        collection: AppConfig.collectionName,
-        expression: "embedding.image.vector",
-        dimensions: 512
-    )
 
     /// Centroid count that both follows the √N guidance and lets the index actually train.
     ///
@@ -161,7 +155,7 @@ enum VectorIndexManager {
     static func ensureAllIndexes(in database: Database) -> [Outcome] {
         var outcomes: [Outcome] = []
         for spec in [inventoryTextIndex, knowledgeTextIndex,
-                     planogramImageIndex, inventoryImageIndex] {
+                     planogramImageIndex] {
             do {
                 outcomes.append(try ensureIndex(spec, in: database))
             } catch {

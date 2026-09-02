@@ -72,12 +72,6 @@ object VectorIndexManager {
      * actually sitting there. Android does not run the image model yet — the index is created
      * so the data is ready and the collection counts line up with iOS.
      */
-    val inventoryImageIndex = IndexSpec(
-        name = "idx_inventory_image",
-        collection = AppConfig.COLLECTION_NAME,
-        expression = "embedding.image.vector",
-        dimensions = 512
-    )
 
     data class Outcome(
         val spec: IndexSpec,
@@ -174,7 +168,7 @@ object VectorIndexManager {
 
     /** Creates every index whose collection is populated, returning one outcome each. */
     fun ensureAllIndexes(database: Database): List<Outcome> =
-        listOf(inventoryTextIndex, knowledgeTextIndex, planogramImageIndex, inventoryImageIndex)
+        listOf(inventoryTextIndex, knowledgeTextIndex, planogramImageIndex)
             .map { spec ->
                 try {
                     ensureIndex(spec, database)
