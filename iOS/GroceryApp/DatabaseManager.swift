@@ -917,7 +917,11 @@ class DatabaseManager: ObservableObject {
         // app was relaunched.
         appServicesSyncManager?.onInitialSyncComplete = { [weak self] in
             print("🧭 [Copilot] initial sync landed — building vector indexes")
-            self?.prepareCopilotData()
+            guard let self else { return }
+            self.prepareCopilotData()
+            // Documents are offline-first; the S3 images are not. Pull them now, while the
+            // network is known to be up, so the demo can go offline and still render.
+            ImagePrefetcher.warmCache(databaseManager: self)
         }
 
         print("✅ App Services integration ready")

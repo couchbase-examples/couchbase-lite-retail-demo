@@ -753,6 +753,10 @@ class DatabaseManager(private val context: Context) {
             appServicesSyncManager?.onInitialSyncComplete = {
                 Log.i("DatabaseManager", "🧭 initial sync landed — building vector indexes")
                 prepareCopilotData()
+                // Documents are offline-first; the S3 images are not. Pull them now, while the
+                // network is known to be up, so the demo can go offline and still render.
+                com.example.groceryapplication.copilot.ImagePrefetcher
+                    .warmCache(context, getDatabase())
             }
 
             Log.d("DatabaseManager", "✅ App Services integration ready")
