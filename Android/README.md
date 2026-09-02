@@ -7,7 +7,7 @@ A retail inventory management app for Android demonstrating Couchbase Lite's off
 > [!IMPORTANT]
 > Before proceeding with the Android setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
 >
-> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later**, because Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 ## Quick Start (For Already Configured Systems)
 
@@ -27,6 +27,51 @@ cd /path/to/Android
 
 **First time setup?** Continue reading below for complete installation instructions.
 
+## Vector Search Copilot
+
+The **Copilot** tab is the on-device vector search part of the demo: semantic product search, a
+visual shelf audit, and retrieval augmented answers. All of it queries the local Couchbase Lite
+database, so it works with the network off.
+
+The code lives in `app/src/main/java/com/example/groceryapplication/copilot/`.
+
+| Model | Used for | In the repo |
+| --- | --- | --- |
+| MiniLM-L6-v2 (int8 ONNX) | Text embedding, 384 dimensions | Yes |
+| CLIP ViT-B/32 (fp32 ONNX) | Image embedding, 512 dimensions | No, see below |
+| Gemma 3-1B | Answer generation in Ask | No, downloaded in the app |
+
+### The CLIP model is not in the repo
+
+The Android CLIP export is 335 MB, so it is deliberately untracked. Find and Ask do not use it
+and are unaffected. Only the Planogram tab needs it, and without it that tab reports the model as
+unavailable rather than failing. To enable it, put the file at:
+
+```
+app/src/main/assets/clip-vit-b-32.onnx
+```
+
+### The assistant model downloads itself
+
+Android has no operating system level language model, so Ask uses Gemma through MediaPipe. Open
+the Ask tab and tap **Download assistant model**. It downloads once, caches, resumes if
+interrupted, and keeps going if you switch to another tab. Until then, Ask shows the passages it
+retrieved without writing an answer.
+
+### If the Copilot looks broken
+
+The Copilot needs collections and a dataset the base setup does not create. If Find returns
+nothing, or the Planogram tab says a shelf has no golden layout, work through
+[Setting up the Copilot data and models](../docs/vector-setup.md).
+
+You may also see an "Android app compatibility" warning about 16 KB page sizes on Android 15 and
+newer. It lists native libraries from ONNX Runtime, Couchbase Lite and MediaPipe. It is
+informational, it comes from third party prebuilt libraries rather than this app, and the app
+runs normally.
+
+For what the three steps do, see [the Copilot](../docs/copilot.md). For the data model, queries
+and thresholds, see [how the vector search works](../docs/architecture.md).
+
 ## Requirements and Dependencies
 
 The following requirements apply to both macOS and Windows:
@@ -36,12 +81,12 @@ The following requirements apply to both macOS and Windows:
   - Minimum SDK: 24 (Android 7.0 Nougat)
   - Target SDK: 35 (Android 15)
   - Compile SDK: 35
-- **JDK**: 17 (see the note below — a *newer* JDK will fail the build, so this is not "17 or later")
+- **JDK**: 17 (see the note below, because a *newer* JDK will fail the build, so this is not "17 or later")
 - **Kotlin**: 2.0.21
 
 The project uses Gradle with Kotlin DSL for dependency management. Key dependencies:
 
-- **Couchbase Lite Android**: 4.1.0 (Enterprise Edition with KTX extensions) — 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
+- **Couchbase Lite Android**: 4.1.0 (Enterprise Edition with KTX extensions). 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
 - **Jetpack Compose**: Material 3 UI components
 - **Kotlin Coroutines**: For asynchronous operations
 - **Lifecycle Components**: ViewModel and LiveData
@@ -182,7 +227,7 @@ We use Android Studio to clone the repository.
 - Important: Do **not** select the main `couchbase-lite-retail-demo` folder. Instead, **select only the `Android` folder**
 - Android Studio will now start a "Gradle Sync". At the bottom of the screen you will see a progress bar. Wait until this finishes. If it asks to "Trust Project," click Trust.
 
-After import completes, proceed to the [Common Setup Steps](#common-setup-steps). In particular, modify the `gradle.properties` file as described in [Step 3: Configure Capella App Services — Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
+After import completes, proceed to the [Common Setup Steps](#common-setup-steps). In particular, modify the `gradle.properties` file as described in [Step 3: Configure Capella App Services, Option B: Gradle Properties](#option-b-gradle-properties). You can find the `gradle.properties` file after expanding `Gradle Scripts` on the left hand side.
 
 ## Common Setup Steps
 
@@ -357,7 +402,7 @@ P2P sync uses the same peer group ID as the iOS app, enabling cross-platform loc
 var transports: Set<MultipeerTransport> = EnumSet.of(MultipeerTransport.WIFI, MultipeerTransport.BLUETOOTH)
 ```
 
-The replicator auto-selects and auto-switches between transports based on availability — it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
+The replicator auto-selects and auto-switches between transports based on availability: it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
 
 Bluetooth LE peer discovery requires runtime permissions in addition to the Wi-Fi/mDNS ones. The app already declares and requests all of these:
 
@@ -368,7 +413,7 @@ Bluetooth LE peer discovery requires runtime permissions in addition to the Wi-F
 | API ≤32 (Android 12 and below) | `ACCESS_FINE_LOCATION` (required by mDNS discovery) |
 
 > [!NOTE]
-> On Android, the runtime permission prompt for Bluetooth is surfaced to the user as **"Nearby devices"**, not "Bluetooth" — the OS groups `BLUETOOTH_ADVERTISE`/`CONNECT`/`SCAN` and `NEARBY_WIFI_DEVICES` into a single permission group. If the app doesn't prompt on launch, check **Settings → Apps → Grocery Inventory → Permissions → Nearby devices** — it may already be granted from a previous run.
+> On Android, the runtime permission prompt for Bluetooth is surfaced to the user as **"Nearby devices"**, not "Bluetooth", because the OS groups `BLUETOOTH_ADVERTISE`/`CONNECT`/`SCAN` and `NEARBY_WIFI_DEVICES` into a single permission group. If the app doesn't prompt on launch, check **Settings → Apps → Grocery Inventory → Permissions → Nearby devices**, since it may already be granted from a previous run.
 
 ### Offline-First Architecture
 
@@ -413,7 +458,7 @@ Recent Android Studio releases bundle JetBrains Runtime 25, and Studio defaults 
 though the project itself is unchanged. Point Studio at JDK 17 instead.
 
 The setting Studio actually reads is `Android/.idea/gradle.xml` → `gradleJvm`. In this repo it is
-`#GRADLE_LOCAL_JAVA_HOME`, which resolves to `java.home` in `Android/.gradle/config.properties` —
+`#GRADLE_LOCAL_JAVA_HOME`, which resolves to `java.home` in `Android/.gradle/config.properties`,
 a machine-local, gitignored file, so each developer sets their own path:
 
 ```bash
@@ -423,12 +468,12 @@ a machine-local, gitignored file, so each developer sets their own path:
 # Write it where Gradle's "local JAVA_HOME" setting reads from
 printf 'java.home=%s\n' "$(/usr/libexec/java_home -v 17)" > Android/.gradle/config.properties
 
-# Confirm — "Launcher JVM" must report 17.x, not 25.x
+# Confirm: "Launcher JVM" must report 17.x, not 25.x
 cd Android && ./gradlew -version
 ```
 
 Alternatively, set it through the UI: **Settings → Build, Execution, Deployment → Build Tools →
-Gradle → Gradle JDK**, and pick a 17 entry. Do not "upgrade" Gradle to satisfy Studio — the
+Gradle → Gradle JDK**, and pick a 17 entry. Do not "upgrade" Gradle to satisfy Studio, because the
 Android Gradle Plugin version here is matched to Gradle 8.11.1.
 
 **"Could not install Gradle distribution" or SSL/Certificate errors**
@@ -504,7 +549,7 @@ dependencyResolutionManagement {
 **Emulator cannot resolve the Capella hostname (`UnknownHostException`, sync never leaves
 `connecting`)**
 
-The emulator inherits the host's DNS servers, but it cannot use an IPv6-only resolver — a common
+The emulator inherits the host's DNS servers, but it cannot use an IPv6-only resolver, which is a common
 setup on corporate and mobile-tethered networks. The host resolves the endpoint fine, so this
 looks like a Capella or credentials problem when it is purely DNS. Check whether your resolvers
 are IPv6-only:
@@ -581,7 +626,7 @@ org.gradle.parallel=true
 org.gradle.caching=true
 ```
 
-Windows (use `Windows-ROOT`, or omit the `trustStoreType` arg entirely — `KeychainStore` is macOS-only and will throw `KeyStoreException` on Windows):
+Windows (use `Windows-ROOT`, or omit the `trustStoreType` arg entirely, since `KeychainStore` is macOS-only and will throw `KeyStoreException` on Windows):
 
 ```properties
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Djavax.net.ssl.trustStoreType=Windows-ROOT
@@ -620,14 +665,14 @@ export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
 ```
 
-**Windows — PowerShell (current session):**
+**Windows, PowerShell (current session):**
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17"   # adjust to your JDK install path
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 ```
 
-**Windows — persistent (System Properties):** open **System Properties** → **Advanced** → **Environment Variables**, set `JAVA_HOME` to your JDK 17 install directory, and prepend `%JAVA_HOME%\bin` to the `Path` variable. Launch Android Studio after applying the change so it inherits the new environment.
+**Windows, persistent (System Properties):** open **System Properties** → **Advanced** → **Environment Variables**, set `JAVA_HOME` to your JDK 17 install directory, and prepend `%JAVA_HOME%\bin` to the `Path` variable. Launch Android Studio after applying the change so it inherits the new environment.
 
 ### Enterprise vs Community Edition
 

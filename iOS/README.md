@@ -7,7 +7,7 @@ A retail inventory management app for iOS demonstrating Couchbase Lite's offline
 > [!IMPORTANT]
 > Before proceeding with the iOS setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, and recording the public connection URL. If you skip these steps, the app will fail to authenticate and sync.
 >
-> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later**, because Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ A retail inventory management app for iOS demonstrating Couchbase Lite's offline
 
 The project uses Swift Package Manager (SPM) for dependency management. Dependencies are automatically resolved when you open the project:
 
-- **Couchbase Lite Swift**: 4.1.0 (Enterprise Edition) — 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
+- **Couchbase Lite Swift**: 4.1.0 (Enterprise Edition). 4.1.0 is the release that adds the Bluetooth LE peer-to-peer transport used by this demo
 
 ## Getting Started
 
@@ -55,7 +55,7 @@ Create the file at `GroceryApp/Info.plist` with your Capella App Services creden
 </plist>
 ```
 
-**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL** — it will look like `wss://<id>.apps.cloud.couchbase.com:4984`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
+**Where to find `CBL_BASE_URL`**: In your Capella dashboard, go to **App Services** > select your App Endpoint (e.g. `supermarket-nyc`) > **Connect** tab. Copy the **Public Connection URL**, which looks like `wss://<id>.apps.cloud.couchbase.com:4984`. Use only the base URL; do **not** append the database name (that is handled separately by `CBL_AA_DB` / `CBL_NYC_DB`).
 
 ### 2. Open the Project
 
@@ -109,6 +109,32 @@ open GroceryApp.xcodeproj
 ### 4. Build and Run
 
 Select a simulator or connected device and click **Run** (⌘R).
+
+## Vector Search Copilot
+
+The **Copilot** tab is the on-device vector search part of the demo: semantic product search, a
+visual shelf audit, and retrieval augmented answers. All of it queries the local Couchbase Lite
+database, so it works with the network off.
+
+The code lives in `GroceryApp/Copilot/`. Everything it needs is already in the repo:
+
+| Model | Used for | Where |
+| --- | --- | --- |
+| MiniLM-L6-v2 (CoreML) | Text embedding, 384 dimensions | `Copilot/Resources/` |
+| CLIP ViT-B/32 (CoreML, int8) | Image embedding, 512 dimensions | `Copilot/Resources/` |
+| Apple Foundation Models | Answer generation in Ask | Supplied by iOS |
+
+Two things to know before you judge the results:
+
+- **Answer generation needs a physical iPhone** with Apple Intelligence enabled. The Simulator
+  reports the model as available and then fails at inference. Retrieval works fine in the
+  Simulator, so Ask will show you the passages it found without writing an answer.
+- **The Copilot needs data the base setup does not create.** If Find returns nothing, or the
+  Planogram tab says a shelf has no golden layout, work through
+  [Setting up the Copilot data and models](../docs/vector-setup.md).
+
+For what the three steps do, see [the Copilot](../docs/copilot.md). For the data model, queries
+and thresholds, see [how the vector search works](../docs/architecture.md).
 
 ## Project Structure
 
@@ -177,7 +203,7 @@ To enable P2P sync, ensure `enableP2PSync` is set to `true` in `AppConfig.swift`
 var transports: Set<MultipeerTransport> = [.wifi, .bluetooth]
 ```
 
-The replicator auto-selects and auto-switches between transports based on availability — it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
+The replicator auto-selects and auto-switches between transports based on availability: it meshes over Wi-Fi when both devices share a network, and falls back to Bluetooth LE when they don't. To exercise the Bluetooth path specifically, put both devices in **Airplane Mode with Bluetooth left on**.
 
 Bluetooth requires its own usage-description string in addition to the local-network one; both are already configured in the Xcode project (`Info.plist` generation settings):
 
@@ -186,7 +212,7 @@ Bluetooth requires its own usage-description string in addition to the local-net
 | Bluetooth LE peer discovery | `NSBluetoothAlwaysUsageDescription` |
 | Wi-Fi / Bonjour peer discovery | `NSLocalNetworkUsageDescription` + `NSBonjourServices` |
 
-On first launch with P2P enabled, iOS prompts for both permissions separately — accept both, or Bluetooth sync will silently fail to advertise/scan.
+On first launch with P2P enabled, iOS prompts for both permissions separately, so accept both, or Bluetooth sync will silently fail to advertise/scan.
 
 ### Offline-First Architecture
 

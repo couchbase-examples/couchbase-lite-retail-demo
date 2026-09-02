@@ -8,13 +8,14 @@ A retail inventory management application built with [Couchbase Lite](https://do
 - 📱 **Offline-First**: Operates fully without an internet connection. Couchbase Lite stores all data locally, and changes sync automatically when connectivity is restored.
 - 🔄 **Real-Time Sync**: Bidirectional sync with Couchbase Capella via App Services. Changes appear instantly across iOS, Android, React Native, and web.
 - 🔄 **Peer-to-Peer Sync**: Sync data directly between iOS and Android devices over Wi-Fi or Bluetooth LE, without going through the cloud. Devices auto-mesh and fall back to Bluetooth when no shared Wi-Fi network is available.
+- 🔍 **On-Device Vector Search**: Semantic product search, a visual shelf audit, and retrieval augmented answers, all running against the local database with no cloud inference. iOS and Android only. See [the Copilot](./docs/copilot.md).
 - 🏪 **Multi-Platform Support**: A single backend supports **[iOS](https://docs.couchbase.com/couchbase-lite/current/swift/quickstart.html)**, **[Android](https://docs.couchbase.com/couchbase-lite/current/android/quickstart.html)**, **[React Native](https://www.npmjs.com/package/cbl-reactnative)**, and **[Web](https://docs.couchbase.com/couchbase-lite-javascript/current/index.html)**. Couchbase Lite also supports C, Java, .NET, Ionic, Flutter, and more.
 
 ## Demo Video
 
 ### Peer-to-Peer Sync across iOS and Android
 
-A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P. The replicator meshes over Wi-Fi when available and automatically falls back to Bluetooth LE otherwise — put both devices in Airplane Mode with Bluetooth left on to see pure Bluetooth sync.
+A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P. The replicator meshes over Wi-Fi when available and automatically falls back to Bluetooth LE otherwise. Put both devices in Airplane Mode with Bluetooth left on to see pure Bluetooth sync.
 
 https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 
@@ -55,11 +56,35 @@ These terms appear throughout the setup instructions and individual app READMEs.
 | **App Services** | A layer on top of Capella that handles sync, authentication, and access control for mobile/web clients. Your app connects to an App Services *endpoint URL*, not directly to the database. |
 | **Bucket** | Top-level data container in Capella (like a database). This demo uses a bucket named `supermarket`. |
 | **Scope** | A namespace inside a bucket (like a schema in SQL). This demo has two: `AA-Store` (Ann Arbor) and `NYC-Store`. |
-| **Collection** | A group of JSON documents inside a scope (like a table in SQL). Each scope has three: `inventory`, `orders`, `profile`. |
+| **Collection** | A group of JSON documents inside a scope (like a table in SQL). The base demo uses `inventory`, `orders` and `profile`; the Copilot adds `product_knowledge` and `planograms`. |
+| **Vector** | A list of numbers representing the meaning of some text or an image. Similar things sit close together, which is what makes search by meaning possible. Stored as an ordinary field on the document and synced like any other data. |
+| **Vector Index** | A local index Couchbase Lite builds over a vector field so it can search it quickly. Created by the app on the device, not in Capella. |
 | **Replicator** | The sync engine built into Couchbase Lite. Runs in the background and continuously pushes local changes to App Services and pulls remote changes down. |
 | **App Endpoint** | A named entry point in App Services that maps to a specific scope. Apps connect to an endpoint (e.g., `supermarket-nyc`) rather than directly to the bucket. |
 | **App User** | A credential registered in App Services. The app authenticates with a username/password to access a specific endpoint. |
 | **Continuous Replication** | A mode where the replicator keeps a persistent WebSocket connection open and syncs changes immediately in both directions, rather than on a schedule. |
+
+## The Store Associate Copilot
+
+Behind the **Copilot** tab in the iOS and Android apps is the vector search half of this demo.
+It has three parts:
+
+| Step | What it does |
+| --- | --- |
+| **Find** | Describe a product the way a shopper would and get ranked results with the aisle and shelf. Also understands price limits written into the sentence, like "under $3". |
+| **Planogram** | Check a shelf photo against its reference layout and get told which product moved, not just that something changed. |
+| **Ask** | Answer a shopper's question from a local knowledge collection, with the retrieved passages used to write the reply. |
+
+All of it runs on the device: the query is embedded locally, the search runs against Couchbase
+Lite, and the language model is on the phone. Turn on airplane mode and everything still works,
+which is the point worth demoing.
+
+Vector search is implemented on **iOS and Android only**. The React Native and web clients sync
+the same data but do not have the Copilot.
+
+- [What the Copilot does and how to demo it](./docs/copilot.md)
+- [Setting up its data and models](./docs/vector-setup.md), needed before it will work
+- [How the vector search is built](./docs/architecture.md)
 
 ## Demo Setup
 
@@ -69,6 +94,13 @@ The complete setup of the demo would look like this:
 
 > [!NOTE]
 > You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for just that app and functionality.
+
+> [!IMPORTANT]
+> **The setup below does not cover the Copilot.** It was written before the vector features
+> existed, so it creates three collections and imports a dataset with no vectors in it. If you
+> want semantic search, the planogram audit, or the assistant, follow
+> [Setting up the Copilot data and models](./docs/vector-setup.md) as well. Skipping it is why
+> Find comes back empty and why the Planogram tab reports that a shelf cannot be audited.
 
 ## Setting up Capella Cluster
 
@@ -81,7 +113,7 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 - Create a couchbase cluster on Capella by following these [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
-### Deploy App Service (do this early — it takes 5–25 minutes)
+### Deploy App Service (do this early, it takes 5 to 25 minutes)
 
 > [!TIP]
 > App Service deployments can take between 5 and 25 minutes. Start the deployment now so it can provision in the background while you set up the bucket, scopes, collections, and sample data in the steps that follow.
@@ -160,10 +192,10 @@ before those screens will work. Most are committed to the repo and need no actio
 
 | Model | Used by | In the repo? |
 | --- | --- | --- |
-| MiniLM-L6-v2 (int8 ONNX) | Android — semantic product search, RAG | Yes |
-| MiniLM-L6-v2 (CoreML) | iOS — semantic product search, RAG | Yes |
-| CLIP ViT-B/32 (CoreML, int8) | iOS — planogram audit | Yes |
-| CLIP ViT-B/32 (ONNX, fp32) | Android — planogram audit | **No — fetch manually** |
+| MiniLM-L6-v2 (int8 ONNX) | Android: semantic product search, RAG | Yes |
+| MiniLM-L6-v2 (CoreML) | iOS: semantic product search, RAG | Yes |
+| CLIP ViT-B/32 (CoreML, int8) | iOS: planogram audit | Yes |
+| CLIP ViT-B/32 (ONNX, fp32) | Android: planogram audit | **No, fetch manually** |
 
 ### Fetching the Android CLIP model
 
@@ -178,20 +210,22 @@ Android/app/src/main/assets/clip-vit-b-32.onnx
 ```
 
 The export is distributed with the demo's model bundle (`models-clip-android.zip`) rather than
-served from this repo — ask the demo maintainers for the current link.
+served from this repo, so ask the demo maintainers for the current link.
 
 > [!NOTE]
 > iOS bundles an **int8** CLIP while this Android export is **fp32**, roughly 4x larger for the
 > same model. Quantizing the Android one to int8 would let it be committed like the others and
-> remove this manual step — a worthwhile follow-up that has not been done yet.
+> remove this manual step, a worthwhile follow-up that has not been done yet.
 
 ## Repo Structure
 
 The repo is organized as follows:
 
-- **iOS**: Swift/SwiftUI app for iPhone and iPad. Supports cloud sync and peer-to-peer sync (Wi-Fi + Bluetooth LE). Follow the [iOS README](./iOS/README.md) to build and run.
+- **docs**: How the on-device vector search works and how to set it up. Start with [the Copilot](./docs/copilot.md).
 
-- **Android**: Kotlin/Jetpack Compose app for Android. Supports cloud sync and peer-to-peer sync (Wi-Fi + Bluetooth LE). Follow the [Android README](./Android/README.md) to build and run.
+- **iOS**: Swift/SwiftUI app for iPhone and iPad. Supports cloud sync, peer-to-peer sync (Wi-Fi + Bluetooth LE), and the vector search Copilot. Follow the [iOS README](./iOS/README.md) to build and run.
+
+- **Android**: Kotlin/Jetpack Compose app for Android. Supports cloud sync, peer-to-peer sync (Wi-Fi + Bluetooth LE), and the vector search Copilot. Follow the [Android README](./Android/README.md) to build and run.
 
 - **react-native**: Cross-platform app built with React Native (Expo) that runs on both iOS and Android from a single codebase. Supports cloud sync. Follow the [React Native README](./react-native/README.md) to build and run.
 
