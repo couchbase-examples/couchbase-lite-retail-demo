@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +43,9 @@ fun LandingScreen(
         NavigationItem("inventory", Icons.AutoMirrored.Filled.List, "Inventory"),
         NavigationItem("profile", Icons.Default.Store, "Profile"),
         NavigationItem("orders", Icons.Default.ShoppingCart, "Orders"),
+        // Store Associate Copilot — edge vector search. Android had no equivalent slot; iOS
+        // carries the same tab in the same position, between Orders and Settings.
+        NavigationItem("copilot", Icons.Default.AutoAwesome, "Copilot"),
         NavigationItem("settings", Icons.Default.Settings, "Settings")
     )
     
@@ -100,6 +104,9 @@ fun LandingScreen(
                 "orders" -> OrdersScreen(
                     databaseManager = databaseManager,
                     onBackPressed = { currentScreen = "inventory" }
+                )
+                "copilot" -> com.example.groceryapplication.copilot.CopilotScreen(
+                    databaseManager = databaseManager
                 )
                 "settings" -> SettingsScreen(
                     authManager = authManager,

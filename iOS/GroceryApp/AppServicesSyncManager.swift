@@ -28,9 +28,27 @@ class AppServicesSyncManager: ObservableObject {
     
     // MARK: - Core Components
     private var database: Database
-    private var replicator: Replicator?
-    private var replicatorChangeToken: ListenerToken?
+    /// One replicator per App Endpoint. The copilot's collections may live on a different
+    /// endpoint than inventory, in which case both run concurrently against the same local
+    /// database — which is fine, as long as no collection is served by both (see
+    /// `AppConfig.copilotEndpointOwnsInventory`).
+    private var replicators: [String: Replicator] = [:]
+    private var replicatorChangeTokens: [ListenerToken] = []
+    /// Per-endpoint status, merged into `syncState` so the UI keeps its single summary.
+    private var endpointActivity: [String: Replicator.ActivityLevel] = [:]
     private let collectionName = AppConfig.collectionName
+
+    /// Kept for source compatibility with callers that only care whether sync exists.
+    private var replicator: Replicator? { replicators.values.first }
+
+    /// Called the first time every replicator reaches idle, i.e. the initial pull has landed.
+    ///
+    /// This is what lets the copilot's vector indexes be built from synced data. Index
+    /// creation is deliberately guarded on a collection having vectors — an index created
+    /// against an empty collection can never train — so on a cold start with an empty
+    /// database there is nothing to index until this fires.
+    var onInitialSyncComplete: (() -> Void)?
+    private var hasReportedInitialSync = false
     
     // MARK: - Sync Control
     private var isSyncActive = false
@@ -47,69 +65,43 @@ class AppServicesSyncManager: ObservableObject {
     private func setupAppServicesSync() {
         print("🔧 Setting up App Services sync configuration...")
         print("🔧 Scope: \(AppConfig.scopeName)")
-        print("🔧 Collections: inventory, profile, orders")
-        
+
         do {
-            // Ensure all collections exist (using scope from AppConfig to match Capella structure)
-            let inventoryCollection = try database.collection(name: collectionName, scope: AppConfig.scopeName) 
-                ?? database.createCollection(name: collectionName, scope: AppConfig.scopeName)
-            
-            let profileCollection = try database.collection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
-                ?? database.createCollection(name: AppConfig.profileCollectionName, scope: AppConfig.scopeName)
-            
-            let ordersCollection = try database.collection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
-                ?? database.createCollection(name: AppConfig.ordersCollectionName, scope: AppConfig.scopeName)
-            
-            // Create target endpoint
-            guard let url = URL(string: syncGatewayURL) else {
-                throw NSError(domain: "Invalid sync gateway URL", code: -1)
+            if AppConfig.usesSeparateCopilotEndpoint {
+                // Inventory and the copilot's collections live on different App Endpoints,
+                // so each gets its own replicator. The collection sets are disjoint by
+                // construction — `AppConfig` decides which endpoint owns `inventory` —
+                // because two replicators pulling one collection into the same local
+                // collection would fight over every document.
+                print("🔧 Two endpoints:")
+                print("   inventory → \(syncGatewayURL)")
+                print("      \(AppConfig.inventoryEndpointCollections.joined(separator: ", "))")
+                print("   copilot   → \(AppConfig.copilotSyncGatewayURL)")
+                print("      \(AppConfig.copilotEndpointCollections.joined(separator: ", "))")
+
+                try addReplicator(label: "inventory",
+                                  urlString: syncGatewayURL,
+                                  collections: AppConfig.inventoryEndpointCollections,
+                                  user: username, pass: password)
+                try addReplicator(label: "copilot",
+                                  urlString: AppConfig.copilotSyncGatewayURL,
+                                  collections: AppConfig.copilotEndpointCollections,
+                                  user: AppConfig.copilotUsername,
+                                  pass: AppConfig.copilotPassword)
+            } else {
+                print("🔧 Single endpoint: \(syncGatewayURL)")
+                print("🔧 Collections: \(AppConfig.allSyncedCollections.joined(separator: ", "))")
+                try addReplicator(label: "all",
+                                  urlString: syncGatewayURL,
+                                  collections: AppConfig.allSyncedCollections,
+                                  user: username, pass: password)
             }
-            
-            let target = URLEndpoint(url: url)
 
-            // CBL 4.x: each CollectionConfiguration now carries its own
-            // collection (init(collection:)), and the full set is passed to the
-            // ReplicatorConfiguration initializer — `config.addCollection(_:config:)`
-            // and `ReplicatorConfiguration(target:)` were removed in 4.0.
-            var inventoryConfig = CollectionConfiguration(collection: inventoryCollection)
-            inventoryConfig.conflictResolver = GroceryCRDTConflictResolver.shared
-
-            // Profile and orders need no CRDT resolver (default last-write-wins).
-            let profileConfig = CollectionConfiguration(collection: profileCollection)
-            let ordersConfig = CollectionConfiguration(collection: ordersCollection)
-
-            var config = ReplicatorConfiguration(
-                collections: [inventoryConfig, profileConfig, ordersConfig],
-                target: target
-            )
-
-            // Configure authentication
-            config.authenticator = BasicAuthenticator(username: username, password: password)
-
-            // Configure replication type and behavior
-            config.replicatorType = .pushAndPull
-            config.continuous = true
-            config.enableAutoPurge = false
-            config.heartbeat = 60 // seconds
-            config.maxAttempts = 10
-            config.maxAttemptWaitTime = 300 // 5 minutes
-            config.allowReplicatingInBackground = true
-
-            // Create replicator
-            replicator = Replicator(config: config)
-            
-            // Add change listener
-            replicatorChangeToken = replicator?.addChangeListener { [weak self] change in
-                DispatchQueue.main.async {
-                    self?.handleReplicationChange(change)
-                }
-            }
-            
             print("✅ App Services sync configured successfully")
             updateSyncState { state in
                 state.status = "☁️ Ready to sync"
             }
-            
+
         } catch {
             print("❌ Failed to setup App Services sync: \(error)")
             updateSyncState { state in
@@ -117,6 +109,57 @@ class AppServicesSyncManager: ObservableObject {
                 state.error = error.localizedDescription
             }
         }
+    }
+
+    /// Builds one replicator for `collections` against `urlString`.
+    private func addReplicator(label: String, urlString: String, collections: [String],
+                               user: String, pass: String) throws {
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "Invalid sync gateway URL: \(urlString)", code: -1)
+        }
+
+        // CBL 4.x: each CollectionConfiguration now carries its own collection
+        // (init(collection:)), and the full set is passed to the ReplicatorConfiguration
+        // initializer — `config.addCollection(_:config:)` and
+        // `ReplicatorConfiguration(target:)` were removed in 4.0.
+        //
+        // Note for anyone hitting a 'collection not found' sync error: the App Services
+        // endpoint must also be configured to serve these collections, otherwise the
+        // replicator reports them as missing on the remote.
+        var collectionConfigs: [CollectionConfiguration] = []
+        for name in collections {
+            let collection = try database.collection(name: name, scope: AppConfig.scopeName)
+                ?? database.createCollection(name: name, scope: AppConfig.scopeName)
+            var collectionConfig = CollectionConfiguration(collection: collection)
+            // Only inventory needs the CRDT resolver — it is the one collection with
+            // concurrent counter updates. Everything else is default last-write-wins.
+            if name == collectionName {
+                collectionConfig.conflictResolver = GroceryCRDTConflictResolver.shared
+            }
+            collectionConfigs.append(collectionConfig)
+        }
+
+        var config = ReplicatorConfiguration(
+            collections: collectionConfigs,
+            target: URLEndpoint(url: url)
+        )
+        config.authenticator = BasicAuthenticator(username: user, password: pass)
+        config.replicatorType = .pushAndPull
+        config.continuous = true
+        config.enableAutoPurge = false
+        config.heartbeat = 60 // seconds
+        config.maxAttempts = 10
+        config.maxAttemptWaitTime = 300 // 5 minutes
+        config.allowReplicatingInBackground = true
+
+        let created = Replicator(config: config)
+        let token = created.addChangeListener { [weak self] change in
+            DispatchQueue.main.async {
+                self?.handleReplicationChange(change, endpoint: label)
+            }
+        }
+        replicators[label] = created
+        replicatorChangeTokens.append(token)
     }
     
     // MARK: - Public Sync Control Methods
@@ -154,18 +197,22 @@ class AppServicesSyncManager: ObservableObject {
     }
     
     private func startSync() {
-        guard let replicator = replicator, !isSyncActive else {
+        guard !replicators.isEmpty, !isSyncActive else {
             print("⚠️ Cannot start sync - replicator not available or already active")
             return
         }
-        
+
+        let toStart = replicators
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
-            print("🌐 Starting App Services replicator...")
+
+            print("🌐 Starting \(toStart.count) App Services replicator(s)...")
             self.isSyncActive = true
-            replicator.start()
-            
+            for (label, replicator) in toStart {
+                print("   ▶︎ \(label)")
+                replicator.start()
+            }
+
             DispatchQueue.main.async {
                 self.updateSyncState { state in
                     state.status = "☁️ Connecting to cloud..."
@@ -173,18 +220,20 @@ class AppServicesSyncManager: ObservableObject {
             }
         }
     }
-    
+
     private func stopSync() {
-        guard let replicator = replicator, isSyncActive else { return }
-        
+        guard !replicators.isEmpty, isSyncActive else { return }
+
+        let toStop = replicators
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
-            print("🛑 Stopping App Services replicator...")
-            replicator.stop()
+
+            print("🛑 Stopping App Services replicator(s)...")
+            for replicator in toStop.values { replicator.stop() }
             self.isSyncActive = false
-            
+
             DispatchQueue.main.async {
+                self.endpointActivity.removeAll()
                 self.updateSyncState { state in
                     state.status = "☁️ Sync stopped"
                     state.isConnected = false
@@ -216,15 +265,29 @@ class AppServicesSyncManager: ObservableObject {
     }
     
     // MARK: - Replication Event Handling
-    private func handleReplicationChange(_ change: ReplicatorChange) {
+    private func handleReplicationChange(_ change: ReplicatorChange, endpoint: String = "all") {
         let status = change.status
         let progress = status.progress
-        
-        print("📊 App Services sync change: \(status.activity) - \(progress.completed)/\(progress.total)")
-        
+
+        print("📊 [\(endpoint)] sync change: \(status.activity) - \(progress.completed)/\(progress.total)")
+        endpointActivity[endpoint] = status.activity
+
+        // With two endpoints the summary reflects the least-settled one, so the UI does not
+        // claim "sync ready" while the other endpoint is still connecting or offline.
+        let activities = endpointActivity.values
+        let aggregated: Replicator.ActivityLevel = {
+            if activities.contains(.offline) { return .offline }
+            if activities.contains(.connecting) { return .connecting }
+            if activities.contains(.busy) { return .busy }
+            if activities.contains(.stopped) && activities.allSatisfy({ $0 == .stopped }) {
+                return .stopped
+            }
+            return activities.allSatisfy { $0 == .idle } ? .idle : .busy
+        }()
+
         updateSyncState { state in
             // Update connection status
-            state.isConnected = (status.activity == .busy || status.activity == .idle)
+            state.isConnected = (aggregated == .busy || aggregated == .idle)
             
             // Update progress
             if progress.total > 0 {
@@ -235,7 +298,7 @@ class AppServicesSyncManager: ObservableObject {
             }
             
             // Update status based on activity
-            switch status.activity {
+            switch aggregated {
             case .connecting:
                 state.status = "☁️ Connecting to cloud..."
                 
@@ -246,6 +309,13 @@ class AppServicesSyncManager: ObservableObject {
                 state.status = "☁️ Cloud sync ready"
                 state.lastSyncTime = Date()
                 state.progress = 1.0
+                // Every endpoint has settled, so synced documents are now on disk and the
+                // vector indexes can be built from them. Fires once per session.
+                if !hasReportedInitialSync {
+                    hasReportedInitialSync = true
+                    let callback = onInitialSyncComplete
+                    DispatchQueue.main.async { callback?() }
+                }
                 
             case .stopped:
                 state.status = "☁️ Sync stopped"
@@ -382,11 +452,11 @@ class AppServicesSyncManager: ObservableObject {
         
         stopSync()
         
-        if let token = replicatorChangeToken {
+        for token in replicatorChangeTokens {
             token.remove()
         }
-        
-        replicator = nil
+        replicatorChangeTokens.removeAll()
+        replicators.removeAll()
     }
 }
 

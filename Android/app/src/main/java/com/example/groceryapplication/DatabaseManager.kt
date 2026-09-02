@@ -24,6 +24,12 @@ import kotlinx.coroutines.flow.callbackFlow
 class DatabaseManager(private val context: Context) {
     private var database: Database? = null
     private val databaseName = AppConfig.DATABASE_NAME
+
+    private companion object {
+        /** Enable the vector-search extension exactly once per process. */
+        @Volatile
+        var vectorSearchEnabled = false
+    }
     private val collectionName = AppConfig.COLLECTION_NAME
 
     // Background scope for post-login sync setup. Using SupervisorJob so that
@@ -121,16 +127,76 @@ class DatabaseManager(private val context: Context) {
         }
     }
     
+    /** Human-readable state of the on-device vector indexes, for the copilot diagnostics. */
+    var vectorIndexReports: List<String> = emptyList()
+        private set
+
+    /** Set when the vector-search extension could not be enabled. */
+    var vectorSearchError: String? = null
+        private set
+
     private fun openDatabase() {
         try {
             CouchbaseLite.init(context)
+            // The vector-search extension has to be enabled before any database is opened —
+            // it registers the APPROX_VECTOR_DISTANCE implementation with the query engine.
+            // A failure is reported rather than fatal so the rest of the app (inventory,
+            // orders, sync) still works without the copilot.
+            enableVectorSearchExtension()
+
             val config = DatabaseConfiguration()
             database = Database(databaseName, config)
             Log.d("DatabaseManager", "✅ Database opened successfully: $databaseName")
             Log.d("DatabaseManager", "📍 Database path: ${database?.path}")
             Log.d("DatabaseManager", "🔄 Database ready - waiting for App Services to sync data...")
+
+            // Seed the bundled extended dataset into any empty collection, then build the
+            // on-device vector indexes. Both are no-ops once real data has arrived.
+            prepareCopilotData()
         } catch (e: Exception) {
             Log.e("DatabaseManager", "❌ Error opening database", e)
+        }
+    }
+
+    private fun enableVectorSearchExtension() {
+        if (vectorSearchEnabled) return
+        try {
+            // Android exposes this on CouchbaseLite, unlike iOS where it is `Extension
+            // .enableVectorSearch()`. Must be called after CouchbaseLite.init and before any
+            // database is opened.
+            CouchbaseLite.enableVectorSearch()
+            vectorSearchEnabled = true
+            Log.i("DatabaseManager", "🧭 [VectorSearch] extension enabled")
+        } catch (e: Exception) {
+            // Most likely cause is a missing per-ABI artifact: the extension ships as
+            // separate arm64 / x86_64 packages and the app needs the one matching the
+            // device or emulator it is running on.
+            vectorSearchError = "Vector search extension unavailable: ${e.message}"
+            Log.e("DatabaseManager", "❌ [VectorSearch] ${vectorSearchError}", e)
+        }
+    }
+
+    /**
+     * Seeds bundled demo data if needed and (re)creates the vector indexes.
+     *
+     * Safe to call repeatedly — seeding skips non-empty collections and index creation skips
+     * indexes that already exist. Called on open and again when the replicator goes idle,
+     * because on a cold start the collections are empty at open time and an index created
+     * against an empty collection can never train.
+     */
+    fun prepareCopilotData() {
+        val db = database ?: return
+        try {
+            com.example.groceryapplication.copilot.LocalDatasetSeeder
+                .seedIfNeeded(context, db)
+                .filter { it.inserted > 0 }
+                .forEach { Log.i("DatabaseManager", "🌱 seeded ${it.inserted} into ${it.collection}") }
+
+            vectorIndexReports = com.example.groceryapplication.copilot.VectorIndexManager
+                .ensureAllIndexes(db)
+                .map { it.describe() }
+        } catch (e: Exception) {
+            Log.e("DatabaseManager", "❌ Failed preparing copilot data", e)
         }
     }
     
@@ -678,6 +744,21 @@ class DatabaseManager(private val context: Context) {
         database?.let { db ->
             Log.d("DatabaseManager", "🌐 Setting up App Services integration...")
             appServicesSyncManager = AppServicesSyncManager(context, db)
+
+            // Build the vector indexes once the initial pull has landed. On a cold start
+            // against a remote backend the collections are empty when the database opens, so
+            // there is nothing to index yet — and an index created against an empty collection
+            // can never train. Without this the copilot reports "requires a vector index"
+            // until the app is relaunched.
+            appServicesSyncManager?.onInitialSyncComplete = {
+                Log.i("DatabaseManager", "🧭 initial sync landed — building vector indexes")
+                prepareCopilotData()
+                // Documents are offline-first; the S3 images are not. Pull them now, while the
+                // network is known to be up, so the demo can go offline and still render.
+                com.example.groceryapplication.copilot.ImagePrefetcher
+                    .warmCache(context, getDatabase())
+            }
+
             Log.d("DatabaseManager", "✅ App Services integration ready")
         } ?: run {
             Log.e("DatabaseManager", "❌ Database not ready for App Services integration")

@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/couchbase/couchbase-lite-vector-search-spm.git",
       "state" : {
-        "revision" : "451c3390f207b2610f3a2d8e7a9a9282fe6b76c8",
-        "version" : "1.0.0"
+        "revision" : "0d275616008c0774c82cf39c9b9d915b37b69b78",
+        "version" : "2.0.0"
       }
     }
   ],

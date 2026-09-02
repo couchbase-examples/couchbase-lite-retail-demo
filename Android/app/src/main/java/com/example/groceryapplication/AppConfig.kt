@@ -77,6 +77,93 @@ object AppConfig {
     const val COLLECTION_NAME = "inventory"  // Main inventory collection
     const val ORDERS_COLLECTION_NAME = "orders"  // Orders collection
     const val PROFILE_COLLECTION_NAME = "profile"  // Store profile collection
+
+    // Collections added by the edge vector search / copilot extension. These sit in the
+    // existing per-store scopes and sync under the existing single App User per store —
+    // additive channel configuration, not an access-model change.
+    const val PLANOGRAMS_COLLECTION_NAME = "planograms"          // Step 2: shelf audit
+    /**
+     * Where the app fetches the on-device assistant model when it is not already present.
+     *
+     * Android has no OS-supplied language model the way iOS has Apple Foundation Models, so the
+     * weights have to come from somewhere. Bundling them is not an option — a 4-bit Gemma .task
+     * is ~0.5GB and the weights are licence-gated — so the app downloads once and caches.
+     *
+     * Blank disables the in-app download and leaves the side-load path (push a .task into the
+     * app's external files dir) as the only route. Point it at a host that serves the Gemma
+     * terms alongside the file.
+     */
+    const val COPILOT_LLM_MODEL_URL = "https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/gemma/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task"
+    const val COPILOT_LLM_MODEL_NAME = "gemma3-1b-it-q4.task"
+    /** Exact size of the model, used to sanity check a finished download. */
+    const val COPILOT_LLM_MODEL_BYTES = 554_661_246L
+
+    /**
+     * MD5 of the model file, checked once after download.
+     *
+     * A length check alone is not enough. A download that resumes against a stale or
+     * concurrently written `.part` file can land on exactly the right byte count with the wrong
+     * bytes in the middle, and MediaPipe loads that quite happily and then emits token soup. The
+     * failure looks like a bad model rather than a bad download, which is a miserable thing to
+     * debug, so verify it up front while we are already paying for the I/O.
+     */
+    const val COPILOT_LLM_MODEL_MD5 = "af0b3515e570e6124dd6d996b6055ca7"
+
+    const val KNOWLEDGE_COLLECTION_NAME = "product_knowledge"    // Step 3: RAG source chunks
+
+    /**
+     * Every collection the replicator should carry, in one list so the sync manager and the
+     * local seeder cannot drift apart.
+     */
+    val allSyncedCollections: List<String>
+        get() = listOf(
+            COLLECTION_NAME, PROFILE_COLLECTION_NAME, ORDERS_COLLECTION_NAME,
+            PLANOGRAMS_COLLECTION_NAME, KNOWLEDGE_COLLECTION_NAME
+        )
+
+    // MARK: - Store Associate Copilot (edge vector search)
+
+    /**
+     * Seeds the bundled extended dataset into the local database when a collection comes up
+     * empty.
+     *
+     * **Off, because Capella is now the source of truth.** The App Endpoint serves all six
+     * collections with real MiniLM embeddings, so the app pulls everything over the
+     * replicator. Leaving this on was not wrong — synced documents carry the same IDs and
+     * supersede seeded ones — but it wrote a redundant revision to every document and made it
+     * impossible to tell from the UI whether sync was actually working.
+     *
+     * Set to `true` to work with no backend at all: useful offline, and a reasonable fallback
+     * if the free-tier cluster has hibernated, since a hibernated backend with seeding off
+     * means an empty inventory rather than a stale one.
+     */
+    const val ENABLE_LOCAL_DATASET_SEEDING = false
+
+    /**
+     * Cosine-distance ceiling for a result to count as relevant.
+     *
+     * Not the data-model spec's hardcoded 0.35 — that predates real vectors. Measured against
+     * the actual MiniLM corpus, the hero query's best match sits at 0.24 and the 5th
+     * percentile of all documents at 0.57, so 0.35 would surface almost nothing. Matches the
+     * iOS default; note the bundled int8 model reads roughly 0.02 higher than iOS's fp16
+     * CoreML model for the same query, which this threshold comfortably absorbs.
+     */
+    const val DEFAULT_RELEVANCE_THRESHOLD = 0.60
+
+    /** How many candidates a vector query returns before threshold filtering. */
+    const val COPILOT_SEARCH_LIMIT = 10
+
+    /** Chunks retrieved for a grounded answer. */
+    const val COPILOT_RAG_CHUNK_COUNT = 4
+
+    /**
+     * Whether footwear leads the demo script — suggested queries and example copy.
+     *
+     * The narrative is grocery-first, so this is false. It is a presentation choice, not a
+     * data rule: footwear stays searchable and seeded, because what the app can find is
+     * decided by the documents and embeddings present, not by a hardcoded category list.
+     */
+    const val FOOTWEAR_NARRATIVE_ENABLED = false
     
     // MARK: - Sync Configuration (Event-Driven, Real-Time)
     // NOTE: "Continuous" sync is EVENT-DRIVEN, not polling!

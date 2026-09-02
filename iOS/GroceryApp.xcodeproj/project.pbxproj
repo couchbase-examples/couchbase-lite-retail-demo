@@ -445,14 +445,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = DFQY8NB65M;
+				DEVELOPMENT_TEAM = 57CXDH6G46;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
-				INFOPLIST_KEY_NSCameraUsageDescription = "GroceryApp needs access to your camera to scan products and inventory for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The Copilot uses the camera to photograph a shelf for on-device planogram compliance checks. Photos are analysed on this device.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The Store Associate Copilot uses the microphone so you can speak a product query instead of typing it. Speech is transcribed on this device and is not sent anywhere.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition runs entirely on this device to turn your spoken product query into text for on-device semantic search. No audio or transcript leaves the device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -463,7 +465,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.couchbase.GroceryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.couchbase.GroceryApp23;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -478,14 +480,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = DFQY8NB65M;
+				DEVELOPMENT_TEAM = 57CXDH6G46;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
-				INFOPLIST_KEY_NSCameraUsageDescription = "GroceryApp needs access to your camera to scan products and inventory for merchandising analysis. We use the camera to capture photos that are processed locally on your device to identify and match products.";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The Copilot uses the camera to photograph a shelf for on-device planogram compliance checks. Photos are analysed on this device.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The Store Associate Copilot uses the microphone so you can speak a product query instead of typing it. Speech is transcribed on this device and is not sent anywhere.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition runs entirely on this device to turn your spoken product query into text for on-device semantic search. No audio or transcript leaves the device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -496,7 +500,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.couchbase.GroceryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.couchbase.GroceryApp23;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -623,7 +627,7 @@
 			repositoryURL = "https://github.com/couchbase/couchbase-lite-vector-search-spm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 2.0.0;
 			};
 		};
 		D1E468902EAA673000588E29 /* XCRemoteSwiftPackageReference "couchbase-lite-swift-ee" */ = {

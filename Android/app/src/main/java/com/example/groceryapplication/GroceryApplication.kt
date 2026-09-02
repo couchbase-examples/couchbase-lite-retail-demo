@@ -31,6 +31,22 @@ class GroceryApplication : Application() {
         
         // Initialize database manager
         initializeDatabaseManager()
+
+        // Step 2: on-device CLIP for the planogram audit. Warmed here rather than lazily on
+        // first use so the audit screen doesn't stall the first time an associate opens it.
+        // Off the main thread: staging the 335MB graph to disk on first launch takes seconds.
+        //
+        // The extra try/catch is belt-and-braces. ClipImageEmbedder.init already swallows
+        // Throwable, but an uncaught error on this thread would kill the whole process at
+        // launch — which is exactly what happened when the loader hit OutOfMemoryError. The
+        // planogram audit is one screen; it must never be able to take the app down with it.
+        Thread {
+            try {
+                com.example.groceryapplication.copilot.ClipImageEmbedder.init(this)
+            } catch (t: Throwable) {
+                Log.e(TAG, "❌ CLIP warm-up failed; planogram audit will be unavailable", t)
+            }
+        }.start()
         
         // NOTE: Sync is NOT started here — it starts after login
         // so the correct store endpoint is used.

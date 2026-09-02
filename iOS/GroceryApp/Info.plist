@@ -7,7 +7,7 @@
 	<key>CBL_AA_USER</key>
 	<string>aa-store-01@supermarket.com</string>
 	<key>CBL_BASE_URL</key>
-	<string>wss://d91glcpey3egweng.apps.cloud.couchbase.com:4984</string>
+	<string>wss://mhpmv0kc7pj95vwh.apps.cloud.couchbase.com:4984</string>
 	<key>CBL_NYC_DB</key>
 	<string>supermarket-nyc</string>
 	<key>CBL_NYC_USER</key>
@@ -18,5 +18,7 @@
 	<array>
 		<string>_couchbaseP2P._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.</string>
 </dict>
 </plist>
