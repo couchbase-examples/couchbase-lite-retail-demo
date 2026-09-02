@@ -61,6 +61,10 @@ class CopilotSearchService(
     var telemetry: SearchTelemetry = SearchTelemetry()
         private set
 
+    /** What the last query's parser lifted out, so the UI can show the filter it applied. */
+    var lastConstraints: QueryConstraints = QueryConstraints("")
+        private set
+
     companion object {
         private const val TAG = "CopilotSearch"
 
@@ -169,9 +173,16 @@ class CopilotSearchService(
         category: String? = null,
         inStockOnly: Boolean = false
     ): List<SemanticHit> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return emptyList()
+        val raw = query.trim()
+        if (raw.isEmpty()) return emptyList()
         val database = databaseProvider() ?: return emptyList()
+
+        // Split the query before embedding: the price phrase becomes a SQL++ predicate, the rest
+        // becomes the vector. See QueryConstraints for why doing this afterwards in the app
+        // changes which results come back.
+        val constraints = QueryConstraints.parse(raw)
+        lastConstraints = constraints
+        val trimmed = constraints.semanticQuery
 
         // An empty collection means nothing has synced yet, so the vector index does not exist
         // and the query below would fail with an index error. Say what is actually wrong.
@@ -191,6 +202,10 @@ class CopilotSearchService(
         val predicates = mutableListOf("$distanceExpr IS VALUED")
         if (!category.isNullOrEmpty()) predicates += "category = \$category"
         if (inStockOnly) predicates += "stockQty > 0"
+        // The numeric half of the hybrid query, in the same statement as the distance so the
+        // index scan and the filter are evaluated together.
+        if (constraints.maxPrice != null) predicates += "price < \$maxPrice"
+        if (constraints.minPrice != null) predicates += "price > \$minPrice"
 
         // `IS VALUED` is the documented way to force the vector index to be used. Distance is
         // aliased once and ordered by the alias so the expensive function is not re-evaluated
@@ -213,6 +228,8 @@ class CopilotSearchService(
             // doubles too — matching representations keeps the distances exact.
             setValue("queryVector", vector.map { it.toDouble() })
             if (!category.isNullOrEmpty()) setValue("category", category)
+            constraints.maxPrice?.let { setValue("maxPrice", it) }
+            constraints.minPrice?.let { setValue("minPrice", it) }
         }
 
         val candidates = executeWithRetry(cblQuery) { row ->

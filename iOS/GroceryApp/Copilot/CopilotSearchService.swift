@@ -55,6 +55,9 @@ struct SearchTelemetry {
 final class CopilotSearchService: ObservableObject {
 
     @Published private(set) var telemetry = SearchTelemetry()
+    /// What the last query's parser lifted out, so the UI can show the filter it applied.
+    @Published private(set) var lastConstraints = QueryConstraints(
+        semanticQuery: "", maxPrice: nil, minPrice: nil)
 
     private let databaseManager: DatabaseManager
     private let embedder = TextEmbedder.shared
@@ -145,9 +148,16 @@ final class CopilotSearchService: ObservableObject {
                 inStockOnly: Bool = false,
                 inputMode: String = "text") async throws -> [SemanticHit] {
 
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
+        let raw = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return [] }
         guard let database = databaseManager.database else { return [] }
+
+        // Split the query before embedding: the price phrase becomes a SQL++ predicate, the
+        // rest becomes the vector. See QueryConstraints for why this cannot be done afterwards
+        // in the app without changing which results come back.
+        let constraints = QueryConstraints.parse(raw)
+        lastConstraints = constraints
+        let trimmed = constraints.semanticQuery
 
         // An empty collection means nothing has synced yet, so the vector index does not exist
         // and the query below would fail with an index error. Say what is actually wrong.
@@ -168,6 +178,14 @@ final class CopilotSearchService: ObservableObject {
         }
         if inStockOnly {
             predicates.append("stockQty > 0")
+        }
+        // The numeric half of the hybrid query, in the same statement as the distance so the
+        // index scan and the filter are evaluated together.
+        if constraints.maxPrice != nil {
+            predicates.append("price < $maxPrice")
+        }
+        if constraints.minPrice != nil {
+            predicates.append("price > $minPrice")
         }
         // Grocery-first narrative: keep hidden categories out of results even when the
         // documents are present in the collection.
@@ -197,6 +215,12 @@ final class CopilotSearchService: ObservableObject {
         params.setValue(vector.map { Double($0) }, forName: "queryVector")
         if let category, !category.isEmpty {
             params.setValue(category, forName: "category")
+        }
+        if let maxPrice = constraints.maxPrice {
+            params.setValue(maxPrice, forName: "maxPrice")
+        }
+        if let minPrice = constraints.minPrice {
+            params.setValue(minPrice, forName: "minPrice")
         }
         for (index, hidden) in AppConfig.hiddenCategories.enumerated() {
             params.setValue(hidden, forName: "hidden\(index)")
