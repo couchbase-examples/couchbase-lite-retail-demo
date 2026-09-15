@@ -172,7 +172,7 @@ final class CopilotSearchService: ObservableObject {
         let distanceExpr =
             "APPROX_VECTOR_DISTANCE(embedding.text.vector, $queryVector, \(Self.metricArgument))"
 
-        var predicates = ["\(distanceExpr) IS VALUED"]
+        var predicates = ["embedding.text.vector IS VALUED"]
         if let category, !category.isEmpty {
             predicates.append("category = $category")
         }
@@ -193,9 +193,11 @@ final class CopilotSearchService: ObservableObject {
             predicates.append("category != $hidden\(index)")
         }
 
-        // `IS VALUED` is the documented way to force the vector index to be used.
-        // Distance is aliased once and ordered by the alias so the expensive function
-        // is not re-evaluated per row in ORDER BY.
+        // `ORDER BY APPROX_VECTOR_DISTANCE(...)` is what selects the vector index; that is
+        // the documented form. The `IS VALUED` predicate is a plain null check on the stored
+        // field, which keeps documents that carry no vector from sorting to the top on a NULL
+        // distance. Distance is aliased once and ordered by the alias so the expensive
+        // function is not re-evaluated per row in ORDER BY.
         let sql = """
             SELECT META().id AS id, name, category, price, imageURL, stockQty,
                    productId, sku, brand, unit, location, attributes,
@@ -323,7 +325,7 @@ final class CopilotSearchService: ObservableObject {
         let distanceExpr =
             "APPROX_VECTOR_DISTANCE(embedding.text.vector, $queryVector, \(Self.metricArgument))"
 
-        var predicates = ["\(distanceExpr) IS VALUED"]
+        var predicates = ["embedding.text.vector IS VALUED"]
         if relatedCategory != nil {
             predicates.append("ARRAY_CONTAINS(relatedCategories, $category)")
         }

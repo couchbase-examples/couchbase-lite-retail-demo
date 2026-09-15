@@ -199,7 +199,7 @@ class CopilotSearchService(
         val distanceExpr =
             "APPROX_VECTOR_DISTANCE(embedding.text.vector, \$queryVector, $METRIC_ARG)"
 
-        val predicates = mutableListOf("$distanceExpr IS VALUED")
+        val predicates = mutableListOf("embedding.text.vector IS VALUED")
         if (!category.isNullOrEmpty()) predicates += "category = \$category"
         if (inStockOnly) predicates += "stockQty > 0"
         // The numeric half of the hybrid query, in the same statement as the distance so the
@@ -207,9 +207,11 @@ class CopilotSearchService(
         if (constraints.maxPrice != null) predicates += "price < \$maxPrice"
         if (constraints.minPrice != null) predicates += "price > \$minPrice"
 
-        // `IS VALUED` is the documented way to force the vector index to be used. Distance is
-        // aliased once and ordered by the alias so the expensive function is not re-evaluated
-        // per row in ORDER BY.
+        // `ORDER BY APPROX_VECTOR_DISTANCE(...)` is what selects the vector index; that is the
+        // documented form. The `IS VALUED` predicate is a plain null check on the stored field,
+        // which keeps documents that carry no vector from sorting to the top on a NULL distance.
+        // Distance is aliased once and ordered by the alias so the expensive function is not
+        // re-evaluated per row in ORDER BY.
         val sql = """
             SELECT META().id AS id, name, category, price, imageURL, stockQty,
                    productId, sku, brand, unit, location, attributes,
@@ -317,7 +319,7 @@ class CopilotSearchService(
         val distanceExpr =
             "APPROX_VECTOR_DISTANCE(embedding.text.vector, \$queryVector, $METRIC_ARG)"
 
-        val predicates = mutableListOf("$distanceExpr IS VALUED")
+        val predicates = mutableListOf("embedding.text.vector IS VALUED")
         if (relatedCategory != null) {
             predicates += "ARRAY_CONTAINS(relatedCategories, \$category)"
         }

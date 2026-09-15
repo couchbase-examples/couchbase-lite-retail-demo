@@ -181,7 +181,7 @@ enum VectorIndexManager {
         let sql = """
             SELECT META().id
             FROM `\(AppConfig.scopeName)`.`\(spec.collection)`
-            WHERE APPROX_VECTOR_DISTANCE(\(spec.expression), $probe, "cosine") IS VALUED
+            ORDER BY APPROX_VECTOR_DISTANCE(\(spec.expression), $probe, "cosine")
             LIMIT 1
             """
         do {

@@ -60,15 +60,17 @@ The query is embedded with MiniLM-L6-v2 into 384 dimensions and matched against
 SELECT productId, name, price, location, ...,
        APPROX_VECTOR_DISTANCE(embedding.text.vector, $queryVector, "cosine") AS distance
 FROM `<scope>`.`inventory`
-WHERE APPROX_VECTOR_DISTANCE(embedding.text.vector, $queryVector, "cosine") IS VALUED
+WHERE embedding.text.vector IS VALUED
   AND price < $maxPrice
 ORDER BY distance
 LIMIT 20
 ```
 
-Two details are load bearing. `IS VALUED` is the documented way to make the planner use the
-vector index. And the distance is aliased once and ordered by the alias, so the function is not
-re-evaluated for every row.
+Two details are load bearing. `ORDER BY APPROX_VECTOR_DISTANCE(...)` is what selects the vector
+index, and that is the documented form. The `IS VALUED` in the `WHERE` clause is not doing that
+job, it is a plain null check on the stored field so a document carrying no vector cannot sort to
+the top on a NULL distance. And the distance is aliased once and ordered by the alias, so the
+function is not re-evaluated for every row.
 
 Results are then dropped if their distance is above a relevance threshold, which is adjustable
 on the diagnostics screen. Without it, a vector search always returns its `LIMIT` worth of rows,
@@ -219,7 +221,7 @@ A few things need to stay identical, and none of them fail loudly if they drift:
 - **The thresholds.** 0.18 and 0.12 are duplicated in `PlanogramAudit.swift` and
   `PlanogramSearch.kt`.
 - **The price grammar.** `QueryConstraints` on both sides, same patterns.
-- **The queries.** Same SQL++, including `IS VALUED` and the fallback behaviour.
+- **The queries.** Same SQL++, including the null check and the fallback behaviour.
 
 If you are changing any of those, change both, and check the diagnostics screen afterwards. It
 reports the model in use, the vector dimensions, the metric, the indexes, and the measured
