@@ -41,18 +41,32 @@ device.
 
 ## The dataset
 
-Use the dataset that contains embeddings. The `demo-dataset.zip` linked from the root README
-predates the Copilot and has no vectors, so importing it leaves Find with nothing to match
-against.
+### Where the files are
+
+They are in this repository, at either of these paths, which hold the same content:
+
+```
+iOS/GroceryApp/Copilot/Resources/DemoDataset/
+Android/app/src/main/assets/copilot/dataset/
+```
+
+Do not use the `demo-dataset.zip` linked from the root README. It predates the Copilot and has
+no vectors in it, so importing it leaves Find with nothing to match against.
 
 Per store, you need:
 
-| File | Into collection |
-| --- | --- |
-| `<store>_store_inventory.json` | `inventory` |
-| `<store>-store-01-profile.json` | `profile` |
-| `<store>_store_product_knowledge.json` | `product_knowledge` |
-| `<store>_store_planograms.json` | `planograms` |
+| File | Into collection | Documents |
+| --- | --- | --- |
+| `<store>_store_inventory.json` | `inventory` | 104 |
+| `<store>-store-01-profile.json` | `profile` | 1 |
+| `<store>_store_product_knowledge.json` | `product_knowledge` | 10 |
+| `<store>_store_planograms.json` | `planograms` | 336 |
+
+`<store>` is `aa` or `nyc`. The two stores hold equivalent data, so whatever you import into one
+scope, import the matching file into the other.
+
+The planograms file is about 3.6 MB. If the copy you are holding is around 34 KB, it is an older
+one from before the grid based audit and the Planogram tab will not work with it.
 
 Import each one through **Data Tools > Import** in Capella:
 
@@ -66,9 +80,13 @@ looks documents up by it. If you leave the default **UUID** option selected, Cap
 random keys and you get a second copy of every document rather than an update. A collection
 holding 208 products instead of 104 is the tell.
 
-The `planograms` file is worth checking twice. It contains two document types: one `Planogram`
-summary per shelf, carrying the grid, and one `PlanogramCell` per grid cell, carrying the image
-vector. A shelf whose cells did not import will appear in the shelf picker but cannot be audited.
+The `planograms` file is worth checking twice. It contains two document types: 24 `Planogram`
+summaries, one per shelf, each carrying the grid, and 312 `PlanogramCell` documents, one per grid
+cell, each carrying the image vector. A shelf whose cells did not import will appear in the shelf
+picker but cannot be audited.
+
+The count is the quickest check. A `planograms` collection holding 336 documents is right.
+One holding 3 is the old dataset, and one holding 672 means the import ran twice with UUID keys.
 
 ## Vector indexes: nothing to do
 
