@@ -13,26 +13,26 @@ import kotlin.math.sqrt
 /**
  * Creates and reports on the Couchbase Lite vector indexes that power the copilot.
  *
- * The architectural point this mirrors from iOS: **the vector index lives on the device, not
+ * The architectural point this mirrors from iOS: **the vector search runs on the device, not
  * in Capella.** App Services stores and replicates the vectors as ordinary JSON float arrays
- * and does no vector work; Couchbase Lite builds the real ANN index locally from the synced
- * documents, and every `APPROX_VECTOR_DISTANCE` query runs at the edge.
+ * and does no vector work; Couchbase Lite handles them locally, and every
+ * `APPROX_VECTOR_DISTANCE` query runs at the edge.
  *
- * Three things make this work at this dataset's size, all of which the spec gets wrong or
- * omits:
+ * Three things are worth knowing about how this behaves at the demo's dataset size:
  *
  *  * **Centroids.** Couchbase's guidance is `centroids ≈ √N`. The spec hardcodes 8; with ~104
  *    inventory documents per store the right value is 10, so it is derived from the data.
  *
- *  * **Training size.** A vector index must be *trained* before it serves queries, and
- *    training only starts once the collection holds `minTrainingSize` vectors. The default for
- *    the quantized encodings is a multiple of the centroid count — far more than 104 — so with
- *    defaults the index silently never trains and queries come back empty.
+ *  * **Training.** A vector index is *trained* only once the collection holds enough vectors,
+ *    and Couchbase Lite's floor is 25 × centroids. This dataset does not reach it, so nothing
+ *    here trains. That is not a failure: below the threshold Couchbase Lite keeps the vectors
+ *    as a flat list, treats them as one default centroid, and scans them linearly, which at
+ *    ~100 vectors is faster and more accurate than an approximate search.
  *
- *  * **Training timing.** Training happens lazily on the first query that uses the index and
- *    needs a write lock. If that first query is a user search while a replicator is writing,
- *    training loses the race and the search fails with "database is locked" rather than
- *    retrying. [warmUp] forces training during setup instead.
+ *  * **Training timing.** When a collection *is* large enough, training happens lazily on the
+ *    first query that uses the index and needs a write lock. If that first query is a user
+ *    search while a replicator is writing, training loses the race and the search fails with
+ *    "database is locked" rather than retrying. [warmUp] takes that first query during setup.
  */
 object VectorIndexManager {
 
@@ -89,29 +89,26 @@ object VectorIndexManager {
     }
 
     /**
-     * Centroid count that both follows the √N guidance and lets the index actually train.
+     * Centroid count, following Couchbase's documented `centroids ≈ √(vector count)` guidance.
      *
-     * Couchbase's documented guidance is `centroids ≈ √(vector count)` — 10 for this dataset's
-     * 104 inventory vectors. But Couchbase Lite enforces its own training floor of
-     * **25 × centroids** vectors and silently raises whatever `minTrainingSize` you set to
-     * meet it: ask for 10 centroids over 104 vectors and the log reads
-     * "minTrainingSize of 20 is too small; raising it to 250", followed by
-     * "Untrained index; queries may be slow. 250 vectors needed for training; 104 present."
+     * This deliberately does not adjust for how small the demo dataset is. An earlier version
+     * capped centroids at `N / 25` to get under Couchbase Lite's training floor of
+     * 25 × centroids, reasoning that an untrained index meant the ANN path never ran and the
+     * app had nothing to show.
      *
-     * An untrained index is not broken — queries fall back to an exact brute-force scan and
-     * return correct results, which at ~100 vectors is both fine and fast. But it means the ANN
-     * code path never runs, which is precisely what this app exists to demonstrate. Capping
-     * centroids at `N / 25` keeps the index trainable: 104 vectors gives 4 centroids and a
-     * training floor of 100, which the data clears.
+     * That optimised for the wrong thing. Below the training threshold Couchbase Lite does not
+     * build an index at all: it holds the vectors as a flat list, treats them as belonging to a
+     * single default centroid, and scans them linearly. At ~100 vectors that scan is both
+     * faster and more accurate than an approximate search, so forcing the index to train traded
+     * result quality for exercising a code path that earns nothing at this size.
      *
-     * Collections genuinely too small to train at all (10 knowledge chunks, 3 planograms) fall
-     * back to brute force, and that is the right answer for them.
+     * So the number follows the guidance and the app describes what actually happens.
+     * `idx_inventory_text` over 104 vectors asks for 10 centroids, does not reach the 250
+     * vector training floor, and serves its queries by linear scan. The same code against a
+     * real catalogue trains and runs ANN without a line changing.
      */
-    fun centroidCount(vectorCount: Int): Long {
-        val bySqrt = sqrt(vectorCount.toDouble()).roundToInt()
-        val trainable = vectorCount / 25
-        return minOf(bySqrt, maxOf(trainable, 1)).coerceIn(1, 64).toLong()
-    }
+    fun centroidCount(vectorCount: Int): Long =
+        sqrt(vectorCount.toDouble()).roundToInt().coerceIn(1, 64).toLong()
 
     /**
      * Creates the index if it is absent and the collection actually holds vectors.
@@ -146,10 +143,11 @@ object VectorIndexManager {
             // Unquantized: ~100 vectors x 384 floats is ~160 KB, so there is nothing to save
             // by quantizing, and NONE keeps distances exact.
             encoding = VectorEncoding.none()
-            // Training bounds sized to the data this store actually has. Note that Couchbase
-            // Lite treats minTrainingSize as a request, not a command: it raises anything
-            // below 25 × centroids. Setting it still documents intent, but [centroidCount] is
-            // what actually determines whether the index can train.
+            // Training bounds sized to the data this store actually has. Couchbase Lite treats
+            // minTrainingSize as a request rather than a command and raises anything below
+            // 25 × centroids, so on this dataset the effective floor is 250 and these vectors
+            // do not reach it. Setting the bounds still documents intent, and on a collection
+            // large enough to train it is these values that apply.
             minTrainingSize = maxOf(1, minOf(vectorCount, (centroids * 25).toInt())).toLong()
             maxTrainingSize = maxOf(minTrainingSize, vectorCount.toLong())
         }
@@ -180,8 +178,12 @@ object VectorIndexManager {
             }
 
     /**
-     * Runs one throwaway vector query so the index trains here rather than on the associate's
-     * first search. See the class comment for why that race matters.
+     * Runs one throwaway vector query during setup rather than leaving the first one to the
+     * associate's first search. See the class comment for why that race matters.
+     *
+     * On this dataset nothing actually trains, because the collections sit below the training
+     * floor and are served by a linear scan. The call is kept because it costs one query at
+     * startup and is what makes the same code safe on a collection large enough to train.
      */
     private fun warmUp(spec: IndexSpec, database: Database) {
         val sql = """

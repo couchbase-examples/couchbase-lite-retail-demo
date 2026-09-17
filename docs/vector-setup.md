@@ -94,23 +94,32 @@ This surprises people who know Capella's server side vector search, so it is wor
 plainly: **you do not create any vector index in Capella for this demo.**
 
 Couchbase Lite builds its own indexes locally, on each device, and the apps do that
-automatically on launch. Four get created:
+automatically on launch. Three get created:
 
 | Index | Collection | Field | Dimensions |
 | --- | --- | --- | --- |
 | `idx_inventory_text` | `inventory` | `embedding.text.vector` | 384 |
 | `idx_knowledge_text` | `product_knowledge` | `embedding.text.vector` | 384 |
 | `idx_planogram_image` | `planograms` | `embedding.image.vector` | 512 |
-| `idx_planogram_cells` | `planograms` | `embedding.image.vector` | 512 |
 
 The vectors travel as ordinary document fields through sync, and each device indexes its own
 copy. That is the point of the demo: the search runs on the device, so there is no server side
 index in the query path.
 
-One behaviour to expect. Index creation is skipped while a collection is still empty, because an
-index built against no documents can never train. On a first launch the apps wait for
-replication to finish and then build them, so the indexes appear a moment after the data does.
-That is normal, not a failure.
+Two behaviours to expect, neither of them a failure.
+
+Index creation is skipped while a collection is still empty, because there is nothing to index
+yet. On a first launch the apps wait for replication to finish and then build them, so the
+indexes appear a moment after the data does.
+
+The logs then say something like "Untrained index; queries may be slow. 250 vectors needed for
+training; 104 present." That is expected at this size and does not need fixing. A vector index
+is trained only once a collection holds 25 x centroids vectors, and this dataset does not get
+there. Below that point Couchbase Lite does not build an ANN structure at all: it keeps the
+vectors as a flat list, treats them as one default centroid, and scans them linearly, which for
+around a hundred vectors is faster and more accurate than an approximate search would be. The
+same code against a real catalogue trains and runs a true approximate search with nothing
+changed.
 
 ## On-device models
 

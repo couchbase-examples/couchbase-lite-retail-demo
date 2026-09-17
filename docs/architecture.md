@@ -32,6 +32,25 @@ diagnostics screen compares the two and warns when they disagree.
 Distances are cosine throughout, and every vector is L2 normalised, so a distance of 0 is
 identical and larger is worse.
 
+### What the index is actually doing at this size
+
+Worth being precise about, because it is easy to overclaim. A Couchbase Lite vector index is
+trained only once its collection holds 25 x centroids vectors. The demo dataset is far below
+that: 104 inventory vectors against a floor of 250. Below the threshold Couchbase Lite does not
+build an approximate structure at all. It keeps the vectors as a flat list, treats them as
+belonging to a single default centroid, and scans them linearly.
+
+So these queries run an exact linear scan over the local vectors, not an approximate nearest
+neighbour search. That is the faster and more accurate answer for a hundred vectors, and it is
+what the log line "Untrained index; queries may be slow" is telling you.
+
+An earlier version of `centroidCount` capped centroids at `N / 25` specifically to get the index
+under the training floor so the approximate path would run. That has been removed. It made
+results slightly worse in exchange for exercising a code path that buys nothing at this size,
+and it meant the demo was configured around its own dataset rather than showing how you would
+size an index for real. The centroid count now follows the documented square root guidance, and
+the same code trains and runs a genuine approximate search on a real catalogue.
+
 ## Where the code lives
 
 | Concern | iOS | Android |
@@ -136,9 +155,10 @@ ORDER BY APPROX_VECTOR_DISTANCE(embedding.image.vector, $vec, "cosine")
 LIMIT 1
 ```
 
-There is a fallback behind this. A predicate applied to an approximate nearest neighbour
-candidate set can eliminate every row, which would read as "nothing on this shelf matches" for a
-perfectly good photo. So if the hybrid form returns nothing, the same search runs without the
+There is a fallback behind this. A predicate applied to a nearest neighbour candidate set can
+eliminate every row, which would read as "nothing on this shelf matches" for a perfectly good
+photo. It does not bite at the demo's size, where the scan is linear and sees every vector, but
+it would on a collection large enough to train. So if the hybrid form returns nothing, the same search runs without the
 `WHERE`, at a larger limit, and is filtered to the shelf in code.
 
 ### Classification
