@@ -89,23 +89,10 @@ object VectorIndexManager {
     }
 
     /**
-     * Centroid count, following Couchbase's documented `centroids ≈ √(vector count)` guidance.
-     *
-     * This deliberately does not adjust for how small the demo dataset is. An earlier version
-     * capped centroids at `N / 25` to get under Couchbase Lite's training floor of
-     * 25 × centroids, reasoning that an untrained index meant the ANN path never ran and the
-     * app had nothing to show.
-     *
-     * That optimised for the wrong thing. Below the training threshold Couchbase Lite does not
-     * build an index at all: it holds the vectors as a flat list, treats them as belonging to a
-     * single default centroid, and scans them linearly. At ~100 vectors that scan is both
-     * faster and more accurate than an approximate search, so forcing the index to train traded
-     * result quality for exercising a code path that earns nothing at this size.
-     *
-     * So the number follows the guidance and the app describes what actually happens.
-     * `idx_inventory_text` over 104 vectors asks for 10 centroids, does not reach the 250
-     * vector training floor, and serves its queries by linear scan. The same code against a
-     * real catalogue trains and runs ANN without a line changing.
+     * Couchbase's sqrt(N) guidance for centroids. Training settings are left at their defaults,
+     * so an index only trains once its collection holds 25 x centroids vectors. This demo's data
+     * is below that, so queries scan the whole dataset. For larger datasets, tune centroids and
+     * training size.
      */
     fun centroidCount(vectorCount: Int): Long =
         sqrt(vectorCount.toDouble()).roundToInt().coerceIn(1, 64).toLong()
@@ -143,20 +130,13 @@ object VectorIndexManager {
             // Unquantized: ~100 vectors x 384 floats is ~160 KB, so there is nothing to save
             // by quantizing, and NONE keeps distances exact.
             encoding = VectorEncoding.none()
-            // Training bounds sized to the data this store actually has. Couchbase Lite treats
-            // minTrainingSize as a request rather than a command and raises anything below
-            // 25 × centroids, so on this dataset the effective floor is 250 and these vectors
-            // do not reach it. Setting the bounds still documents intent, and on a collection
-            // large enough to train it is these values that apply.
-            minTrainingSize = maxOf(1, minOf(vectorCount, (centroids * 25).toInt())).toLong()
-            maxTrainingSize = maxOf(minTrainingSize, vectorCount.toLong())
         }
 
         collection.createIndex(spec.name, config)
         Log.i(TAG, "created '${spec.name}' on ${AppConfig.scopeName}.${spec.collection} " +
             "expression=${spec.expression} dim=${spec.dimensions} metric=cosine encoding=none " +
             "vectors=$vectorCount centroids=$centroids " +
-            "minTrainingSize=${config.minTrainingSize} maxTrainingSize=${config.maxTrainingSize}")
+            "minTrainingSize=${config.minTrainingSize} maxTrainingSize=${config.maxTrainingSize} (defaults)")
 
         warmUp(spec, database)
 
