@@ -74,6 +74,35 @@ actor ImageEmbedder {
         }
     }
 
+    /// Loads the model and runs one throwaway embed in the background, so the first audit
+    /// does not pay for it.
+    ///
+    /// On a fresh install the first load compiles the model for this device, which measured
+    /// about 30 seconds and looked like a hang on the first audit. An audit started before the
+    /// warm-up finishes just waits on the actor, which is still quicker than loading from
+    /// scratch.
+    nonisolated static func warmUpInBackground() {
+        Task.detached(priority: .utility) {
+            let started = DispatchTime.now().uptimeNanoseconds
+            do {
+                let format = UIGraphicsImageRendererFormat.default()
+                format.scale = 1
+                let size = CGSize(width: inputSize, height: inputSize)
+                let blank = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+                    UIColor.gray.setFill()
+                    ctx.fill(CGRect(origin: .zero, size: size))
+                }
+                _ = try await shared.embed(blank)
+                let ms = (DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+                let units = await shared.computeUnitsDescription
+                print("🔥 [ImageEmbedder] CLIP warmed up in \(ms) ms (\(units))")
+            } catch {
+                // Not fatal: the first audit loads the model instead.
+                print("⚠️ [ImageEmbedder] warm-up failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
     /// Embeds an image into a 512-d unit-norm vector.
     func embed(_ image: UIImage) throws -> [Float] {
         try prepare()
