@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.groceryapplication"
+    namespace = "com.cb.retaildemo"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.groceryapplication"
+        applicationId = "com.cb.retaildemo"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -32,8 +34,24 @@ android {
         buildConfigField("String", "CBL_PASSWORD", "\"${prop("CBL_PASSWORD")}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val props = Properties()
+            val f = rootProject.file("keystore.properties")
+            if (f.exists()) {
+                f.inputStream().use { props.load(it) }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

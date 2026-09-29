@@ -378,7 +378,7 @@ p2pSync.startDiscovery()
 
 **iOS**:
 ```bash
-xcrun simctl uninstall booted com.couchbase.GroceryApp
+xcrun simctl uninstall booted com.cbl.retaildemo
 ```
 
 **Android**:
