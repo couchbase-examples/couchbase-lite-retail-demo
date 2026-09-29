@@ -1,15 +1,12 @@
 # Setting up the Copilot data and models
 
-Follow this after the Capella and App Services setup in the [root README](../README.md). The
-Copilot needs three things the base setup does not cover: two extra collections, a dataset that
-actually contains vectors, and the on-device models.
+The Copilot needs three things: the `product_knowledge` and `planograms` collections, a dataset
+that actually contains vectors, and the on-device models. The Capella setup in the
+[root README](../README.md) now covers the first two. This page adds the detail behind them, the
+models, and how to check it all worked.
 
 If Find returns nothing, or the Planogram tab says a shelf has no golden layout, the cause is
 almost always on this page.
-
-> **The base setup in the root README is not enough on its own.** It documents three collections
-> (`inventory`, `orders`, `profile`) and links a dataset with no vectors in it. Both were written
-> before the Copilot existed.
 
 ## Contents
 
@@ -50,7 +47,7 @@ iOS/GroceryApp/Copilot/Resources/DemoDataset/
 Android/app/src/main/assets/copilot/dataset/
 ```
 
-Do not use the `demo-dataset.zip` linked from the root README. It predates the Copilot and has
+Do not use the older `demo-dataset.zip` that earlier versions of the root README linked to. It predates the Copilot and has
 no vectors in it, so importing it leaves Find with nothing to match against.
 
 Per store, you need:

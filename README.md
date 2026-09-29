@@ -96,11 +96,11 @@ The complete setup of the demo would look like this:
 > You are not required to go through the entire setup. Depending on the app and functionality of interest, you can proceed with just the setup required for just that app and functionality.
 
 > [!IMPORTANT]
-> **The setup below does not cover the Copilot.** It was written before the vector features
-> existed, so it creates three collections and imports a dataset with no vectors in it. If you
-> want semantic search, the planogram audit, or the assistant, follow
-> [Setting up the Copilot data and models](./docs/vector-setup.md) as well. Skipping it is why
-> Find comes back empty and why the Planogram tab reports that a shelf cannot be audited.
+> The setup below creates all five collections and imports the dataset with vectors, so it covers
+> the Copilot's data. The Copilot also needs its on-device models, and one of them (the Android
+> CLIP model) is not in the repo. See [On-device models](#on-device-models) below, and
+> [Setting up the Copilot data and models](./docs/vector-setup.md) for more detail and
+> troubleshooting.
 
 ## Setting up Capella Cluster
 
@@ -132,28 +132,51 @@ Although instructions are specified for Capella App Services, equivalent instruc
 
 2. **Add the second scope.** In the `supermarket` bucket, add a new scope named `AA-Store` by following these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes).
 
-3. **Add the remaining collections.** Using these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection), add collections so each scope ends up with **`inventory`**, **`profile`**, and **`orders`**:
-   - In **`NYC-Store`**: add `profile` and `orders` (the `inventory` collection already exists from step 1).
-   - In **`AA-Store`**: add `inventory`, `profile`, and `orders`.
+3. **Add the remaining collections.** Using these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-collection), add collections so each scope ends up with **`inventory`**, **`profile`**, **`orders`**, **`product_knowledge`** and **`planograms`**:
+   - In **`NYC-Store`**: add `profile`, `orders`, `product_knowledge` and `planograms` (the `inventory` collection already exists from step 1).
+   - In **`AA-Store`**: add `inventory`, `profile`, `orders`, `product_knowledge` and `planograms`.
 
-At the end of these steps, your cluster configuration should look something like ![](./common/assets/data-model.png). You have probably not yet imported any data, so your collections will show no documents.
+   `product_knowledge` and `planograms` are only used by the Copilot, but create them anyway. The apps sync all five.
+
+At the end of these steps, your cluster configuration should look something like ![](./common/assets/data-model.png). (The screenshot predates the Copilot, so it shows three collections per scope rather than five.) You have probably not yet imported any data, so your collections will show no documents.
 
 ## Importing Sample Data Set
 
-- Download and unzip sample dataset from [demo-dataset.zip](https://cbm-retaildemo-dataset.s3.us-west-1.amazonaws.com/demo-dataset.zip)
+The dataset is in this repo, in either of these folders (they hold the same files):
 
-- Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import the data set into corresponding scope/collection via inline mode.
+```
+iOS/GroceryApp/Copilot/Resources/DemoDataset/
+Android/app/src/main/assets/copilot/dataset/
+```
+
+> [!WARNING]
+> Do not use the older `demo-dataset.zip` from S3 that earlier versions of this README linked to. It has no vectors in it and the old planogram layout, so Find returns nothing and the Planogram tab cannot audit any shelf.
+
+Import these files into each scope. `<store>` is `nyc` for `NYC-Store` and `aa` for `AA-Store`.
+
+| File | Collection | Documents |
+| --- | --- | --- |
+| `<store>_store_inventory.json` | `inventory` | 104 |
+| `<store>-store-01-profile.json` | `profile` | 1 |
+| `<store>_store_product_knowledge.json` | `product_knowledge` | 10 |
+| `<store>_store_planograms.json` | `planograms` | 336 |
+
+`orders` starts empty. The app writes to it. The `<store>_store_tasks.json` files are left over from a removed feature and don't need importing.
+
+Follow these [instructions](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#how-to-import-data) to import each file into its scope and collection.
 
 > [!NOTE]
->  When importing data, Select the Field option to map doc Id.
+> When importing, choose the **Field** option and enter `id` to map the document ID. If you leave the default UUID option, every document gets a random ID, and importing again creates duplicates instead of updating the documents.
 
 ![](./common/assets/import-data.png)
+
+When you're done, check the document counts against the table. `planograms` is the one most worth checking. It should hold 336 documents per scope. If it holds 3, you imported the old dataset.
 
 ## Configuring Capella App Services
 
 By now your App Service deployment (started earlier) should be ready or close to ready.
 
-- Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint).
+- Create two App Endpoints corresponding to the two scopes. This is an example for AA store. Name App Endpoints as **"supermarket-aa"** and **"supermarket-nyc"** by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint). Link all five collections in the scope.
 
 The configuration of App Endpoint should look like this:
 ![](./common/assets/appendpoint.png)
