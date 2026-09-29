@@ -90,9 +90,13 @@ object VectorIndexManager {
 
     /**
      * Couchbase's sqrt(N) guidance for centroids. Training settings are left at their defaults,
-     * so an index only trains once its collection holds 25 x centroids vectors. This demo's data
-     * is below that, so queries scan the whole dataset. For larger datasets, tune centroids and
-     * training size.
+     * so an index only trains once its collection holds 25 x centroids vectors.
+     *
+     * This demo's dataset is below that, so the index is never partitioned: every vector sits in
+     * a single bucket and each query is a full scan. At this size that has no real impact. In a
+     * real app with a much larger dataset the index trains and partitions the vectors across
+     * centroids, so a query only scans the closest partitions instead of everything. Tune
+     * centroids and training size for your data.
      */
     fun centroidCount(vectorCount: Int): Long =
         sqrt(vectorCount.toDouble()).roundToInt().coerceIn(1, 64).toLong()
@@ -132,6 +136,11 @@ object VectorIndexManager {
             encoding = VectorEncoding.none()
         }
 
+        // Built eagerly: Couchbase Lite indexes every existing vector as soon as the index is
+        // created. For a large collection, consider a lazy vector index (`isLazy = true`), which
+        // defers that work and updates the index in batches you control, reducing the startup
+        // cost of building it. Given this demo's small dataset, creating it this way is fine.
+        // https://docs.couchbase.com/couchbase-lite/current/android/working-with-vector-search.html
         collection.createIndex(spec.name, config)
         Log.i(TAG, "created '${spec.name}' on ${AppConfig.scopeName}.${spec.collection} " +
             "expression=${spec.expression} dim=${spec.dimensions} metric=cosine encoding=none " +
