@@ -314,11 +314,16 @@ struct InventoryView: View {
 
         while !Task.isCancelled && !didCompleteInitialLoad {
             let state = databaseManager.getAppServicesSyncState()
-            let reachedIdle = state?.status.lowercased().contains("idle") == true
+            let status = state?.status.lowercased() ?? ""
+            let reachedIdle = status.contains("idle") || status.contains("ready")
+            // Offline or errored is just as terminal as idle: there is no more data coming, so
+            // show the empty state now rather than making a first-launch-with-no-network user
+            // stare at a spinner for the full timeout.
+            let cannotReachServer = status.contains("offline") || state?.error != nil
             let replicatorDisabled = databaseManager.isAppServicesEnabled == false
             let timedOut = Date().timeIntervalSince(startedAt) > timeoutSeconds
 
-            if reachedIdle || replicatorDisabled || timedOut {
+            if reachedIdle || cannotReachServer || replicatorDisabled || timedOut {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     didCompleteInitialLoad = true
                 }

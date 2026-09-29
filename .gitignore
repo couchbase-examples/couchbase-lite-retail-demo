@@ -1,1 +1,32 @@
 .DS_Store
+
+# Intermediate ONNX export — the int8 model bundled in the Android assets is the shipped
+# artifact; the 86MB fp32 graph is only a comparison baseline, regenerate with
+# tools/embeddings/export_minilm_onnx.py when needed.
+tools/embeddings/minilm_l6_v2.onnx
+tools/embeddings/*.onnx.data
+tools/embeddings/minilm_l6_v2_int8.onnx
+tools/embeddings/*.mlpackage/
+tools/embeddings/generated-assets/
+tools/embeddings/s3-upload/
+
+# Android's CLIP image encoder for the Step 2 planogram audit. Deliberately NOT tracked: it is
+# an unquantized fp32 export at 335MB, which every clone would pay for permanently. Note the
+# asymmetry with iOS, which bundles an int8 CLIP (~4x smaller) — quantizing this one is the
+# obvious follow-up. The app will not run the planogram audit without it; see the
+# "On-device models" section of README.md for where to get it.
+Android/app/src/main/assets/clip-vit-b-32.onnx
+
+# Source crops used to generate the golden PlanogramCell embeddings. Inputs to a one-time
+# offline pass, not something the app reads at runtime.
+tools/embeddings/planogram-cells/products/
+tools/embeddings/planogram-cells/output/
+
+# Local venv for the ONNX-based embedding scripts.
+tools/embeddings/.venv*/
+
+# Output of embed_product_images_onnx.py — datasets destined for Capella import. Derived from
+# the source dataset plus planogram-cells/products, so regenerate rather than track. The
+# embeddings that the apps ship are patched into the bundled DemoDataset copies, which ARE
+# tracked.
+tools/embeddings/out-inventory/

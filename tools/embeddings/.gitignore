@@ -1,0 +1,8 @@
+# Conversion outputs. The mlpackage that the app actually ships lives in
+# iOS/GroceryApp/Copilot/Resources/; keeping a second copy here would double
+# ~130MB of weights in the repo for no benefit. Regenerate with the scripts.
+*.mlpackage/
+demo-dataset-extended-minilm/
+generated-assets/
+.venv/
+ca-bundle.pem

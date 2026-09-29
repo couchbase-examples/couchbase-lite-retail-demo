@@ -40,6 +40,17 @@ class AppServicesSyncManager(
     }
     
     // State management
+    /**
+     * Called the first time the replicator reaches idle, i.e. the initial pull has landed.
+     *
+     * This is what lets the copilot's vector indexes be built from synced data. Index creation
+     * is deliberately guarded on a collection having vectors — an index created against an
+     * empty collection can never train — so on a cold start against a remote backend there is
+     * nothing to index until this fires.
+     */
+    var onInitialSyncComplete: (() -> Unit)? = null
+    private var hasReportedInitialSync = false
+
     private val _syncState = MutableStateFlow(AppServicesSyncState())
     val syncState: StateFlow<AppServicesSyncState> = _syncState.asStateFlow()
     
@@ -76,17 +87,20 @@ class AppServicesSyncManager(
             Log.d(TAG, "🔧 Scope: ${AppConfig.scopeName}")
             Log.d(TAG, "🔧 URL: ${AppConfig.syncGatewayURL}")
             Log.d(TAG, "🔧 User: ${AppConfig.username}")
-            Log.d(TAG, "🔧 Collections: inventory, profile, orders")
-            
-            // Get all collections from correct scope (matches Capella structure)
-            val inventoryCollection = database.getCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
-                ?: database.createCollection(AppConfig.COLLECTION_NAME, AppConfig.scopeName)
-            
-            val profileCollection = database.getCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
-                ?: database.createCollection(AppConfig.PROFILE_COLLECTION_NAME, AppConfig.scopeName)
-            
-            val ordersCollection = database.getCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
-                ?: database.createCollection(AppConfig.ORDERS_COLLECTION_NAME, AppConfig.scopeName)
+            Log.d(TAG, "🔧 Collections: ${AppConfig.allSyncedCollections.joinToString(", ")}")
+
+            // Get all collections from the correct scope (matches Capella structure).
+            // `planograms`, `product_knowledge` and `tasks` were added for the copilot: they
+            // sit in the existing per-store scope and replicate under the same App User, so
+            // this is additive channel configuration rather than an access-model change.
+            //
+            // Note for anyone hitting a 'collection not found' sync error: the App Services
+            // endpoint must also be configured to serve these collections, otherwise the
+            // replicator reports them as missing on the remote.
+            val syncedCollections = AppConfig.allSyncedCollections.map { name ->
+                database.getCollection(name, AppConfig.scopeName)
+                    ?: database.createCollection(name, AppConfig.scopeName)
+            }
             
             // Create target endpoint — read dynamically from AppConfig (not frozen companion vals)
             val syncUrl = AppConfig.syncGatewayURL
@@ -96,9 +110,7 @@ class AppServicesSyncManager(
             // Build per-collection configurations (CBL 3.1+ replaces the deprecated
             // ReplicatorConfiguration(endpoint) + addCollection() pattern with a
             // collection-first constructor that takes a set of CollectionConfigurations).
-            val collectionConfigs = CollectionConfiguration.fromCollections(
-                listOf(inventoryCollection, profileCollection, ordersCollection)
-            )
+            val collectionConfigs = CollectionConfiguration.fromCollections(syncedCollections)
 
             // Create replicator configuration with collections and endpoint up-front
             val config = ReplicatorConfiguration(collectionConfigs, target)
@@ -292,6 +304,12 @@ class AppServicesSyncManager(
                     lastSyncTime = System.currentTimeMillis(),
                     progress = 1f
                 )
+                // The initial pull has landed, so synced documents are on disk and the
+                // copilot's vector indexes can be built from them. Fires once per session.
+                if (!hasReportedInitialSync) {
+                    hasReportedInitialSync = true
+                    onInitialSyncComplete?.invoke()
+                }
             }
             
             // Handle errors

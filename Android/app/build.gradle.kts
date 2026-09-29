@@ -65,12 +65,50 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+    // Version comes from the Compose BOM above. Pinning it explicitly is what previously
+    // dragged animation-core ahead of the BOM's material3 and crashed
+    // CircularProgressIndicator with a NoSuchMethodError on KeyframesSpecConfig.at().
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
     // Couchbase Lite - Enterprise Edition 4.1.0 with KTX (adds the Bluetooth
     // multipeer transport). Resolved from the public Maven repo in settings.gradle.kts.
     implementation("com.couchbase.lite:couchbase-lite-android-ee-ktx:4.1.0")
+
+    // Vector search extension, needed for APPROX_VECTOR_DISTANCE. Must be major version 2
+    // to match Couchbase Lite 4.1.0 — with 1.x the native library loads but reports a
+    // version mismatch, the `vectorsearch` SQLite module never registers, and every index
+    // creation fails silently. The failure surfaces only as a log line, so it is easy to
+    // mistake for "vector search is broken".
+    //
+    // Shipped as separate per-ABI artifacts, and they cannot both be on the classpath: each
+    // AAR contains the same `com.couchbase.lite.vectorsearch.BuildConfig`, so including both
+    // fails with a duplicate-class error. Pick the one matching what you are deploying to:
+    //
+    //   arm64  — physical Android devices, and emulators on Apple Silicon (the default)
+    //   x86_64 — emulators on Intel hosts
+    //
+    // Override without editing this file:
+    //   ./gradlew :app:assembleDebug -PcopilotVectorSearchAbi=x86_64
+    //
+    // Vector search does NOT require a physical device; it requires the artifact for the ABI
+    // the emulator actually runs.
+    val copilotVectorSearchAbi =
+        (project.findProperty("copilotVectorSearchAbi") as String?) ?: "arm64"
+    implementation(
+        "com.couchbase.lite:couchbase-lite-android-vector-search-$copilotVectorSearchAbi:2.0.0"
+    )
+
+    // ONNX Runtime — on-device query embedding with all-MiniLM-L6-v2, the Android
+    // counterpart to CoreML on iOS. Same checkpoint and the same in-graph mean pooling,
+    // so both platforms produce vectors comparable to the ones authored offline.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+
+    // MediaPipe LLM Inference — Step 3 answer generation, the Android counterpart to Apple
+    // Foundation Models on iOS. The model itself is NOT bundled: Gemma weights are ~0.5-1.5GB
+    // and licence-gated, so they are side-loaded to app-external storage. See
+    // LocalLanguageModel for the expected path and how a missing model degrades.
+    implementation("com.google.mediapipe:tasks-genai:0.10.35")
     
     // Coil - Image loading library for Compose
     implementation("io.coil-kt:coil-compose:2.5.0")

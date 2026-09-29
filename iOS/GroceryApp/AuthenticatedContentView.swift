@@ -35,11 +35,11 @@ struct AuthenticatedContentView: View {
                 }
                 .tag(2)
             
-            // Merchandising Tab
-            SimpleMerchandisingView()
+            // Store Associate Copilot Tab (edge vector search + RAG)
+            CopilotView()
                 .tabItem {
-                    Image(systemName: "camera.viewfinder")
-                    Text("Scanner")
+                    Image(systemName: "sparkle.magnifyingglass")
+                    Text("Copilot")
                 }
                 .tag(3)
             

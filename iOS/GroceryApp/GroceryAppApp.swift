@@ -35,6 +35,9 @@ struct GroceryAppApp: App {
         auth.restoreSessionIfAny()
         _databaseManager = StateObject(wrappedValue: db)
         _authManager = StateObject(wrappedValue: auth)
+
+        // Load the planogram audit's CLIP model now rather than on the first audit.
+        ImageEmbedder.warmUpInBackground()
     }
     
     var body: some Scene {

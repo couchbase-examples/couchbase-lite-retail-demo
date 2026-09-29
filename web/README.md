@@ -2,6 +2,13 @@
 
 A modern retail inventory management application built with Couchbase Lite for web, featuring real-time sync capabilities with Couchbase Capella App Services.
 
+
+> [!NOTE]
+> **This client does not include the vector search Copilot.** Semantic search, the planogram
+> audit, and the on-device assistant are implemented in the iOS and Android apps only. This app
+> syncs the same data, including the vector fields, but has no UI for them. See
+> [the Copilot](../docs/copilot.md) for what those features do.
+
 ## Features
 
 - 📱 **Offline-First**: Full functionality without internet connection using Couchbase Lite
@@ -25,7 +32,7 @@ A modern retail inventory management application built with Couchbase Lite for w
 > [!IMPORTANT]
 > Before proceeding with the web app setup, you **must** complete the Capella backend configuration described in the [root README](../README.md). This includes creating a Capella cluster, deploying an App Service, setting up the bucket/scopes/collections, importing the sample dataset, creating App Endpoints and App Users, recording the public connection URL, and configuring CORS for the web app. If you skip these steps, the app will fail to authenticate and sync.
 >
-> **Backend version:** the App Service / Sync Gateway must be **4.0 or later** — Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
+> **Backend version:** the App Service / Sync Gateway must be **4.0 or later**, because Couchbase Lite 4.x clients require a 4.x sync backend. Capella App Services' free tier already defaults to 4.x.
 
 - **Node.js**
     - **macOS**: Version 18 or higher ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
