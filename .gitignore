@@ -15,7 +15,6 @@ tools/embeddings/s3-upload/
 # asymmetry with iOS, which bundles an int8 CLIP (~4x smaller) — quantizing this one is the
 # obvious follow-up. The app will not run the planogram audit without it; see the
 # "On-device models" section of README.md for where to get it.
-Android/app/src/main/assets/clip-vit-b-32.onnx
 
 # Source crops used to generate the golden PlanogramCell embeddings. Inputs to a one-time
 # offline pass, not something the app reads at runtime.

@@ -33,23 +33,17 @@ The **Copilot** tab is the on-device vector search part of the demo: semantic pr
 visual shelf audit, and retrieval augmented answers. All of it queries the local Couchbase Lite
 database, so it works with the network off.
 
-The code lives in `app/src/main/java/com/example/groceryapplication/copilot/`.
+The code lives in `app/src/main/java/com/cb/retaildemo/copilot/`.
 
 | Model | Used for | In the repo |
 | --- | --- | --- |
 | MiniLM-L6-v2 (int8 ONNX) | Text embedding, 384 dimensions | Yes |
-| CLIP ViT-B/32 (fp32 ONNX) | Image embedding, 512 dimensions | No, see below |
+| CLIP ViT-B/32 (fp32 ONNX) | Image embedding, 512 dimensions | No, downloaded in the app |
 | Gemma 3-1B | Answer generation in Ask | No, downloaded in the app |
 
-### The CLIP model is not in the repo
+### The CLIP model
 
-The Android CLIP export is 335 MB, so it is deliberately untracked. Find and Ask do not use it
-and are unaffected. Only the Planogram tab needs it, and without it that tab reports the model as
-unavailable rather than failing. To enable it, put the file at:
-
-```
-app/src/main/assets/clip-vit-b-32.onnx
-```
+Open the Planogram tab and tap **Download image model** (one-time, 335MB).
 
 ### The assistant model downloads itself
 
@@ -331,7 +325,7 @@ Further documentation: [Run apps on the Android Emulator | Android Studio | And
 Android/
 ├── app/
 │   ├── src/main/
-│   │   ├── java/com/example/groceryapplication/
+│   │   ├── java/com/cb/retaildemo/
 │   │   │   ├── GroceryApplication.kt          # Application class
 │   │   │   ├── MainActivity.kt                # Main activity with Compose setup
 │   │   │   ├── AppConfig.kt                   # Configuration (database, sync, stores)
@@ -601,7 +595,7 @@ Database.log.console.level = LogLevel.VERBOSE
 ### Inspect Database
 
 You can use the Couchbase Lite command-line tool to inspect the database file:
-1. Pull the database from device: `adb pull /data/data/com.example.groceryapplication/files/GroceryInventoryDB.cblite2`
+1. Pull the database from device: `adb pull /data/data/com.cb.retaildemo/files/GroceryInventoryDB.cblite2`
 2. Use `cblite` tool to query the database
 
 ## Additional Notes

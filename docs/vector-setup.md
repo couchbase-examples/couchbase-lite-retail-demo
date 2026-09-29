@@ -120,22 +120,16 @@ changed.
 
 ## On-device models
 
-Three of the four models are committed to the repo. One is not.
+Three of the four models are committed to the repo. The Android CLIP model is downloaded in the app.
 
 | Model | Used by | In the repo |
 | --- | --- | --- |
 | MiniLM-L6-v2 (CoreML) | iOS, Find and Ask retrieval | Yes |
 | MiniLM-L6-v2 (int8 ONNX) | Android, Find and Ask retrieval | Yes |
 | CLIP ViT-B/32 (CoreML, int8) | iOS, Planogram | Yes |
-| CLIP ViT-B/32 (fp32 ONNX) | Android, Planogram | **No, fetch it** |
+| CLIP ViT-B/32 (fp32 ONNX) | Android, Planogram | No, downloaded in the app |
 
-The Android CLIP export is 335 MB, so it is deliberately kept out of git. Without it the app
-still runs and Find and Ask are unaffected; only the Planogram tab reports the model as
-unavailable. To enable it, put the file here:
-
-```
-Android/app/src/main/assets/clip-vit-b-32.onnx
-```
+On Android, open the Planogram tab and tap **Download image model** (one-time, 335MB).
 
 ### The answer generator for Ask
 
@@ -194,6 +188,6 @@ are unusable:
 | Ask retrieves nothing while Find works | `product_knowledge` is missing, or not enabled on the endpoint |
 | A shelf says its golden layout has not synced | That shelf's `Planogram` document has no `grid`. Re-import the planograms file |
 | Every product appears twice | Imported with UUID keys instead of the `id` field |
-| Planogram says the CLIP model is unavailable (Android) | `clip-vit-b-32.onnx` is not in the assets folder |
+| Planogram says the CLIP model is unavailable (Android) | Tap **Download image model** on the Planogram tab |
 | Ask shows passages but never an answer | No language model. Expected on iOS Simulator, or before the Android download |
 | Images are blank after going offline | The app caches images after the first sync. Let it finish once while online |

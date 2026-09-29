@@ -97,8 +97,7 @@ The complete setup of the demo would look like this:
 
 > [!IMPORTANT]
 > The setup below creates all five collections and imports the dataset with vectors, so it covers
-> the Copilot's data. The Copilot also needs its on-device models, and one of them (the Android
-> CLIP model) is not in the repo. See [On-device models](#on-device-models) below, and
+> the Copilot's data. See [On-device models](#on-device-models) below, and
 > [Setting up the Copilot data and models](./docs/vector-setup.md) for more detail and
 > troubleshooting.
 
@@ -218,27 +217,11 @@ before those screens will work. Most are committed to the repo and need no actio
 | MiniLM-L6-v2 (int8 ONNX) | Android: semantic product search, RAG | Yes |
 | MiniLM-L6-v2 (CoreML) | iOS: semantic product search, RAG | Yes |
 | CLIP ViT-B/32 (CoreML, int8) | iOS: planogram audit | Yes |
-| CLIP ViT-B/32 (ONNX, fp32) | Android: planogram audit | **No, fetch manually** |
+| CLIP ViT-B/32 (ONNX, fp32) | Android: planogram audit | No, downloaded in the app |
 
-### Fetching the Android CLIP model
+### The Android CLIP model
 
-The Android CLIP encoder is a 335MB unquantized fp32 export, deliberately left untracked so
-every clone does not pay for it permanently. Without it the app builds and runs, but the
-Planogram tab reports the model as unavailable and no audit will run.
-
-Place the file here, exactly under this name:
-
-```
-Android/app/src/main/assets/clip-vit-b-32.onnx
-```
-
-The export is distributed with the demo's model bundle (`models-clip-android.zip`) rather than
-served from this repo, so ask the demo maintainers for the current link.
-
-> [!NOTE]
-> iOS bundles an **int8** CLIP while this Android export is **fp32**, roughly 4x larger for the
-> same model. Quantizing the Android one to int8 would let it be committed like the others and
-> remove this manual step, a worthwhile follow-up that has not been done yet.
+On Android, open the Planogram tab and tap **Download image model** (one-time, 335MB).
 
 ## Repo Structure
 
