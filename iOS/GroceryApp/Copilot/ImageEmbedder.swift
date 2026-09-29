@@ -5,14 +5,13 @@ import Accelerate
 
 /// On-device image embedding with CLIP ViT-B/32 (512-d, cosine, unit-norm).
 ///
-/// Used by the shelf audit: each expected shelf position is cropped out of the associate's
-/// photo and embedded here, then matched against the product-image vectors stored on the
-/// inventory documents.
+/// Used by the shelf audit: each grid cell is cropped out of the associate's photo and
+/// embedded here, then matched against the golden `PlanogramCell` vectors for that shelf.
 ///
-/// Preprocessing has to reproduce CLIP's own pipeline exactly, because the stored product
-/// vectors were authored with it: resize the shortest side to 224 (bicubic), centre crop,
-/// scale to [0,1], then normalize with CLIP's channel mean/std. `verify_clip_parity.py`
-/// checks this Swift path against the Python one and confirms every audit verdict survives.
+/// Preprocessing has to match the script that authored the golden cell vectors
+/// (embed_planogram_cells.py): stretch to 224x224 (high-quality interpolation, matching PIL
+/// BICUBIC in embed_planogram_cells.py), scale to [0,1], then normalize with CLIP's channel
+/// mean/std. Android does the same.
 ///
 /// The bundled weights are int8-quantized. CLIP's vision tower is 87M parameters, so fp16
 /// would be ~168MB — over GitHub's per-file limit. Quantization was verified not to change
@@ -106,11 +105,13 @@ actor ImageEmbedder {
 
     // MARK: - Preprocessing
 
-    /// Resize shortest side to 224 (bicubic-equivalent), centre crop, normalize.
+    /// Stretch to 224x224, scale to [0,1], normalize with CLIP mean/std.
     /// Returns CHW-ordered floats, which is the layout the CoreML graph expects.
     static func preprocess(_ image: UIImage) throws -> [Float] {
-        guard let resized = image.clipResizedAndCropped(to: inputSize),
-              let cg = resized.cgImage else {
+        // Stretch to 224x224 (no aspect-preserving crop). The golden PlanogramCell vectors
+        // were authored by embed_planogram_cells.py with PIL resize((224,224), BICUBIC),
+        // i.e. a plain stretch; centre-cropping a tall cell throws away most of the product.
+        guard let cg = image.cgImage else {
             throw EmbedderError.badImage
         }
 
@@ -122,6 +123,7 @@ actor ImageEmbedder {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { throw EmbedderError.badImage }
+        context.interpolationQuality = .high   // closest CoreGraphics gets to PIL BICUBIC
         context.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
 
         // CHW, normalized per channel.
@@ -140,29 +142,6 @@ actor ImageEmbedder {
 }
 
 extension UIImage {
-
-    /// CLIP's resize-then-centre-crop: scale so the shortest side is `side`, then take the
-    /// centre `side`x`side` square. Cropping after scaling (rather than squashing to a
-    /// square) preserves aspect ratio, which is what the offline job does.
-    func clipResizedAndCropped(to side: Int) -> UIImage? {
-        let target = CGFloat(side)
-        let scale = target / min(size.width, size.height)
-        let scaled = CGSize(width: (size.width * scale).rounded(),
-                            height: (size.height * scale).rounded())
-
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        format.opaque = true
-
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: target, height: target),
-                                              format: format)
-        return renderer.image { _ in
-            // Centre the scaled image over the square canvas; the overflow is the crop.
-            let origin = CGPoint(x: (target - scaled.width) / 2,
-                                 y: (target - scaled.height) / 2)
-            draw(in: CGRect(origin: origin, size: scaled))
-        }
-    }
 
     /// Redraws with the EXIF orientation baked in, so `cgImage` pixel coordinates line up with
     /// `size`.

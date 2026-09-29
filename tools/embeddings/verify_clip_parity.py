@@ -36,13 +36,8 @@ model = ct.models.MLModel(PKG, compute_units=ct.ComputeUnit.CPU_ONLY)
 
 
 def preprocess(img: Image.Image) -> np.ndarray:
-    img = img.convert("RGB")
-    w, h = img.size
-    scale = 224 / min(w, h)
-    img = img.resize((max(224, round(w * scale)), max(224, round(h * scale))), Image.BICUBIC)
-    w, h = img.size
-    left, top = (w - 224) // 2, (h - 224) // 2
-    img = img.crop((left, top, left + 224, top + 224))
+    # Stretch, matching embed_planogram_cells.py (the author of the PlanogramCell vectors).
+    img = img.convert("RGB").resize((224, 224), Image.BICUBIC)
     arr = np.asarray(img, dtype=np.float32) / 255.0
     arr = (arr - CLIP_MEAN) / CLIP_STD
     return arr.transpose(2, 0, 1)[None, ...]
