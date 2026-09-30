@@ -8,13 +8,13 @@ plugins {
 
 android {
     namespace = "com.cb.retaildemo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cb.retaildemo"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
+        targetSdk = 36
+        versionCode = 2
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,8 @@ android {
     buildTypes {
         release {
             isDebuggable = false
+            // Ships native debug symbols so Play can symbolicate native crashes.
+            ndk { debugSymbolLevel = "FULL" }
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
