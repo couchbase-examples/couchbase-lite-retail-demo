@@ -443,6 +443,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 57CXDH6G46;
@@ -451,7 +452,7 @@
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "The Copilot uses the camera to photograph a shelf for on-device planogram compliance checks. Photos are analysed on this device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The Store Associate Copilot uses the microphone so you can speak a product query instead of typing it. Speech is transcribed on this device and is not sent anywhere.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition runs entirely on this device to turn your spoken product query into text for on-device semantic search. No audio or transcript leaves the device.";
@@ -467,6 +468,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cbl.retaildemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -478,6 +480,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 57CXDH6G46;
@@ -486,7 +489,7 @@
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "The Copilot uses the camera to photograph a shelf for on-device planogram compliance checks. Photos are analysed on this device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The Store Associate Copilot uses the microphone so you can speak a product query instead of typing it. Speech is transcribed on this device and is not sent anywhere.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition runs entirely on this device to turn your spoken product query into text for on-device semantic search. No audio or transcript leaves the device.";
@@ -502,6 +505,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cbl.retaildemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
