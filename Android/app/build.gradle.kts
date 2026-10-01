@@ -8,13 +8,13 @@ plugins {
 
 android {
     namespace = "com.cb.retaildemo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cb.retaildemo"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
+        targetSdk = 36
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,8 @@ android {
     buildTypes {
         release {
             isDebuggable = false
+            // Ships native debug symbols so Play can symbolicate native crashes.
+            ndk { debugSymbolLevel = "FULL" }
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
@@ -65,6 +67,15 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+    packaging {
+        jniLibs {
+            // The Couchbase Lite vector search extension is opened by file path, so its .so
+            // must exist on disk. With the default (false) Play delivers native libraries
+            // inside a split APK and Couchbase Lite looks for them in base.apk, which fails
+            // with "Unable to open extension" and leaves every vector index uncreated.
+            useLegacyPackaging = true
+        }
     }
     buildFeatures {
         compose = true

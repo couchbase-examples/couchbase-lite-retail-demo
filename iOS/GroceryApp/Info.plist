@@ -18,7 +18,5 @@
 	<array>
 		<string>_couchbaseP2P._tcp</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.</string>
 </dict>
 </plist>
