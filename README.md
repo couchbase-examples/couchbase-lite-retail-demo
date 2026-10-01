@@ -13,6 +13,13 @@ A retail inventory management application built with [Couchbase Lite](https://do
 
 ## Demo Video
 
+### On-Device Vector Search (Store Associate Copilot)
+
+A walkthrough of the Copilot tab on iPhone: finding products by describing them, checking a shelf against its planogram, and answering a shopper's question from the store's own product knowledge. Every search runs on the phone against the local Couchbase Lite database, and the video ends in airplane mode to show it all still works offline. See [The Store Associate Copilot](#the-store-associate-copilot) below for what each feature does.
+
+<!-- VIDEO: drag and drop the vector search demo video on the blank line below -->
+
+
 ### Peer-to-Peer Sync across iOS and Android
 
 A demo video where we are able to sync data between two android devices and an iPhone with CouchbaseLite's P2P. The replicator meshes over Wi-Fi when available and automatically falls back to Bluetooth LE otherwise. Put both devices in Airplane Mode with Bluetooth left on to see pure Bluetooth sync.
@@ -66,24 +73,67 @@ These terms appear throughout the setup instructions and individual app READMEs.
 
 ## The Store Associate Copilot
 
-Behind the **Copilot** tab in the iOS and Android apps is the vector search half of this demo.
-It has three parts:
+The **Copilot** tab in the iOS and Android apps is the vector search part of this demo. It is
+built for a store associate on the shop floor, and has three features:
 
-| Step | What it does |
-| --- | --- |
-| **Find** | Describe a product the way a shopper would and get ranked results with the aisle and shelf. Also understands price limits written into the sentence, like "under $3". |
-| **Planogram** | Check a shelf photo against its reference layout and get told which product moved, not just that something changed. |
-| **Ask** | Answer a shopper's question from a local knowledge collection, with the retrieved passages used to write the reply. |
+| Feature | What it does | Vectors used |
+| --- | --- | --- |
+| **Find** | Search for products in the shopper's own words, like "high protein shake, low sugar, dairy free", and get ranked results with the aisle and shelf. A keyword search result is shown alongside for comparison. Price limits in the sentence, like "under $3", become a SQL++ filter in the same query. | Text, 384 dimensions (MiniLM) |
+| **Planogram** | Check a shelf photo against its golden layout, cell by cell, and get told which product moved or is missing. Tapping a product's location in Find opens the check on that shelf. | Image, 512 dimensions (CLIP) |
+| **Ask** | Answer a shopper's question from the store's product knowledge. The passages are found on the device, then an on-device language model writes the answer: Apple Foundation Models on iOS, Gemma on Android. With no language model available, it shows the passages instead of making up an answer. | Text, 384 dimensions |
 
-All of it runs on the device: the query is embedded locally, the search runs against Couchbase
-Lite, and the language model is on the phone. Turn on airplane mode and everything still works,
-which is the point worth demoing.
+Everything runs on the device. The query is turned into a vector on the phone, the search runs
+against the local Couchbase Lite database, and the language model is on the phone too. Turn on
+airplane mode and all three features still work.
 
-Vector search is implemented on **iOS and Android only**. The React Native and web clients sync
+Vector search is available on **iOS and Android only**. The React Native and web clients sync
 the same data but do not have the Copilot.
 
+### Already set up an earlier version?
+
+The Copilot needs more than the original demo did, so an existing setup will not work as it is:
+
+1. Add the `product_knowledge` and `planograms` collections to both store scopes, and enable all
+   five collections on each App Endpoint.
+2. Import the new dataset from the repo, mapping the document ID to the `id` field. The old
+   `demo-dataset.zip` has no vectors. See [Importing Sample Data Set](#importing-sample-data-set).
+3. Check the document counts in each scope: `inventory` 104, `product_knowledge` 10,
+   `planograms` 336.
+4. On Android, the Copilot downloads two models inside the app the first time you use them:
+   Gemma (about 550 MB, from the Ask tab) and CLIP (335 MB, from the Planogram tab).
+
+The app IDs have also changed, to `com.cb.retaildemo` on Android and `com.cbl.retaildemo` on
+iOS, so both install as new apps alongside any older build.
+
+### Try it
+
+- **Find:** a meaning-based query like "high protein shake, low sugar, dairy free" returns
+  sensible products, and the keyword comparison is clearly worse. A price phrase like "under $3"
+  filters the results. A nonsense query returns nothing that looks like a match.
+- **Planogram:** **Check Organized Shelf** reports every product in place, and **Check
+  Disorganized Shelf** flags the missing product. Each store has 24 shelves. For the
+  disorganized check, start with R1, R2, K1, D2, M1, N1, B3, A1, A2 or A4. The sample photos for
+  the other 14 shelves are framed differently from their golden image, so their disorganized
+  check is not reliable yet.
+- **Ask:** answers stick to the store's knowledge passages, and say so when the answer is not
+  there. On iOS this needs a physical iPhone with Apple Intelligence; the Simulator cannot
+  generate answers.
+- **Offline:** turn on airplane mode and repeat all three.
+
+### Expected behaviours (not bugs)
+
+- With only about 100 vectors per collection, the vector index never trains, so every query
+  scans the whole dataset. The log line "Untrained index; queries may be slow" is expected. A
+  larger dataset would be partitioned and avoid the full scan.
+- Android uses an fp32 CLIP model and iOS an int8 one, so planogram distances differ slightly
+  between the two.
+- Android 15 and later may show a 16 KB page size warning from third-party libraries. It is
+  harmless; see the [Android README](./Android/README.md).
+
+### More detail
+
 - [What the Copilot does and how to demo it](./docs/copilot.md)
-- [Setting up its data and models](./docs/vector-setup.md), needed before it will work
+- [Setting up its data and models](./docs/vector-setup.md)
 - [How the vector search is built](./docs/architecture.md)
 
 ## Demo Setup
