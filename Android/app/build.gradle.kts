@@ -14,7 +14,7 @@ android {
         applicationId = "com.cb.retaildemo"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -67,6 +67,15 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+    packaging {
+        jniLibs {
+            // The Couchbase Lite vector search extension is opened by file path, so its .so
+            // must exist on disk. With the default (false) Play delivers native libraries
+            // inside a split APK and Couchbase Lite looks for them in base.apk, which fails
+            // with "Unable to open extension" and leaves every vector index uncreated.
+            useLegacyPackaging = true
+        }
     }
     buildFeatures {
         compose = true
