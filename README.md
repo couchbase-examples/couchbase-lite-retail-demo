@@ -13,12 +13,6 @@ A retail inventory management application built with [Couchbase Lite](https://do
 
 ## Demo Video
 
-### On-Device Vector Search (Store Associate Copilot)
-
-A walkthrough of the Copilot tab on iPhone: finding products by describing them, checking a shelf against its planogram, and answering a shopper's question from the store's own product knowledge. Every search runs on the phone against the local Couchbase Lite database, and the video ends in airplane mode to show it all still works offline. See [The Store Associate Copilot](#the-store-associate-copilot) below for what each feature does.
-
-<!-- VIDEO: drag and drop the vector search demo video on the blank line below -->
-
 
 ### Peer-to-Peer Sync across iOS and Android
 
@@ -31,6 +25,18 @@ https://github.com/user-attachments/assets/eec4bbed-5fa3-4b55-8b07-f4df01574c33
 https://github.com/user-attachments/assets/781028cf-6f67-4ad9-abd5-a52daf4c83d6
 
 https://github.com/user-attachments/assets/72f61f2b-118f-4bc6-8f43-30dfac6e8f5e
+
+### On-Device Vector Search (Store Associate Copilot)
+
+A walkthrough of the Copilot tab on iPhone: finding products by describing them, checking a shelf against its planogram, and answering a shopper's question from the store's own product knowledge. Every search runs on the phone against the local Couchbase Lite database, and the video ends in airplane mode to show it all still works offline. See [The Store Associate Copilot](#the-store-associate-copilot) below for what each feature does.
+
+
+
+https://github.com/user-attachments/assets/71bcd212-79ab-4361-8859-7984dbba7e98
+
+
+
+
 
 ## New to Couchbase? Start Here
 
