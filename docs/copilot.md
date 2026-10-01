@@ -100,5 +100,3 @@ visible and nothing new can be fetched.
   and a dataset that the base setup does not cover.
 - [How the vector search works](./architecture.md), for the data model, the queries, and the
   thresholds.
-- [Planogram test plan](../PLANOGRAM-TEST-PLAN.md), for the expected numbers per shelf and a
-  symptom to cause table.
