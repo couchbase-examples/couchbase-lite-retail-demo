@@ -123,6 +123,7 @@ struct StoreProfileView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             loadProfile()
         }

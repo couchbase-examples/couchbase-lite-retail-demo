@@ -272,6 +272,7 @@ struct DemoCredentialsView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
     }
     
 }

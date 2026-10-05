@@ -113,6 +113,7 @@ struct InventoryView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             setupReactiveQuery()  // Setup Reactive API publisher
             // Load profile name from Capella

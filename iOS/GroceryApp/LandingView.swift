@@ -82,6 +82,7 @@ struct LandingView: View {
                 .padding()
             }
         }
+        .navigationViewStyle(.stack)
         .fullScreenCover(isPresented: $showInventory) {
             InventoryView()
         }

@@ -65,6 +65,7 @@ struct OrderFormView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
     }
 }
 

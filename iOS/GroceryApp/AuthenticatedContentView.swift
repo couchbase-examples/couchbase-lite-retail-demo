@@ -256,6 +256,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             profileName = databaseManager.getStoreProfile()?.name
         }

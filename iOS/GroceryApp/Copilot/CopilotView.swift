@@ -109,6 +109,7 @@ struct CopilotView: View {
                 .environmentObject(databaseManager)
             }
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             if searchService == nil {
                 searchService = CopilotSearchService(databaseManager: databaseManager)

@@ -157,6 +157,7 @@ struct CopilotDiagnosticsView: View {
             }
             .task { loadStoredVector() }
         }
+        .navigationViewStyle(.stack)
     }
 
     private func row(_ label: String, _ value: String) -> some View {

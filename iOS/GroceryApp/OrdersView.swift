@@ -85,6 +85,7 @@ struct OrdersView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             setupReactiveQuery()
         }

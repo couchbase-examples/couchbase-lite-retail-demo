@@ -84,6 +84,7 @@ struct SimpleMerchandisingView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationViewStyle(.stack)
         /* COMMENTED OUT: Camera functionality for future implementation
         .onAppear {
             print("🎬 SimpleMerchandisingView appeared - checking camera status")
