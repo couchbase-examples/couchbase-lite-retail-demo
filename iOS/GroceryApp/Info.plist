@@ -14,8 +14,6 @@
 	<string>nyc-store-01@supermarket.com</string>
 	<key>CBL_PASSWORD</key>
 	<string>P@ssword1</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_couchbaseP2P._tcp</string>

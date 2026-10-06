@@ -451,6 +451,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
@@ -488,6 +489,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Retail Demo ";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "GroceryApp uses Bluetooth to synchronize your grocery inventory with nearby devices when Wi-Fi is unavailable. This enables peer-to-peer sync over Bluetooth LE.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used to scan a product on the shelf so the app can identify it on-device and tell you which aisle and shelf it belongs to.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "GroceryApp uses the local network to synchronize your grocery inventory with other devices in your area. This enables real-time P2P sync between multiple devices using the same app.";
